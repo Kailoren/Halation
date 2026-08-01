@@ -89,8 +89,8 @@ as inferred and can never trigger a "do not install" verdict.
 
 ## Status
 
-Early development. The analysis core is implemented and tested; the user interface and
-rule set are in progress.
+Early development. The analysis core, the rule set and the desktop interface are implemented
+and tested. The optional deep pass described above is not built yet.
 
 ## Building
 
@@ -99,4 +99,10 @@ Requires the .NET 10 SDK.
 ```
 dotnet test
 dotnet run --project VibeCheck.App
+```
+
+A release build is a single self-contained `VibeCheck.exe` with no runtime to install:
+
+```
+dotnet publish VibeCheck.App -p:PublishProfile=win-x64 -o <output folder>
 ```

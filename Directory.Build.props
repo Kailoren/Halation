@@ -1,0 +1,20 @@
+<Project>
+
+  <!-- Shared release identity. Scanner.Version reads the assembly version at runtime and
+       stamps it into every exported report, so this is the single place a build is named. -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Product>VibeCheck</Product>
+    <Authors>Kailoren</Authors>
+    <Company>Kailoren</Company>
+    <Copyright>Copyright (c) 2026 Kailoren</Copyright>
+    <Description>A drag-and-drop security scanner for AI-generated applications.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <!-- Line numbers survive into a release build's stack traces, which is what makes the
+         crash log App.ReportCrash writes worth reading. Embedded rather than a loose .pdb,
+         so a single-file publish really does produce one file. -->
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+</Project>

@@ -10,6 +10,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+
+    <!-- The shipped executable is VibeCheck.exe; only the project is called VibeCheck.App. -->
+    <AssemblyName>VibeCheck</AssemblyName>
+    <RootNamespace>VibeCheck.App</RootNamespace>
+
+    <!-- ICSharpCode.Decompiler ships translations of its diagnostics that the UI never
+         surfaces; dropping them removes 13 satellite directories from the bundle. -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
 </Project>

@@ -34,6 +34,9 @@
             <Grid>
                 <StackPanel Orientation="Horizontal" Margin="14,0" VerticalAlignment="Center">
                     <TextBlock Text="VibeCheck" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Version, StringFormat=v{0}}"
+                               Style="{StaticResource Caption}" Margin="7,0,0,0"
+                               VerticalAlignment="Center"/>
                     <TextBlock Text="security scanner for AI-generated apps"
                                Style="{StaticResource Caption}" Margin="10,0,0,0"
                                VerticalAlignment="Center"/>

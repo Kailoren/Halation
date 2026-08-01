@@ -41,6 +41,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ExportJsonCommand = new RelayCommand(_ => Export("json"), _ => Report is not null);
     }
 
+    /// <summary>The build's own version, shown in the title bar and stamped into reports.</summary>
+    /// <remarks>An instance property, not a static one: WPF resolves binding paths against
+    /// the DataContext instance and would silently find nothing on a static.</remarks>
+    public string Version => Scanner.Version;
+
     // ---- State -------------------------------------------------------------
 
     public AppState State
