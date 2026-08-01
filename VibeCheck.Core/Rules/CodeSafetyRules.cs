@@ -15,6 +15,14 @@ namespace VibeCheck.Core.Rules;
 /// </remarks>
 public static class CodeSafetyRules
 {
+    /// <summary>
+    /// A bare <c>Name = 1234,</c> line, which is an enum member rather than a use of
+    /// whatever the name refers to. Declared before the rules that reference it so static
+    /// initialisation sees it set.
+    /// </summary>
+    private static readonly Regex EnumMemberDeclaration = PatternRule.Compile(
+        """^\s*\w+\s*=\s*(?:0x[0-9a-fA-F]+|\d+)\s*,?\s*$""");
+
     /// <inheritdoc cref="SecretRules.All"/>
     public static IReadOnlyList<IRule> All =>
     [
@@ -186,11 +194,23 @@ public static class CodeSafetyRules
         Pattern = PatternRule.Compile(
             """(?:\bDES(?:CryptoServiceProvider)?\b|\bRC4\b|CipherMode\.ECB|MODE_ECB|["']AES-\d+-ECB["'])""",
             RegexOptions.IgnoreCase),
-        Ignore = (match, _) =>
+        Ignore = (match, context) =>
+        {
             // TripleDES is weak but not broken in the same way, and shares the substring.
-            match.Value.Contains("3DES", StringComparison.OrdinalIgnoreCase)
-            || match.Value.Contains("TripleDES", StringComparison.OrdinalIgnoreCase),
+            if (match.Value.Contains("3DES", StringComparison.OrdinalIgnoreCase)
+                || match.Value.Contains("TripleDES", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Naming a cipher is not using one. Observed firing on the members of
+            // SharpZipLib's EncryptionAlgorithm enum, where "Des = 26113," is a declaration
+            // of a value the library can recognise, not an algorithm the application chose.
+            return EnumMemberDeclaration.IsMatch(context.LineFor(match))
+                || Heuristics.IsInLineComment(context, match.Index);
+        },
     };
+
 
     private static PatternRule InsecureRandomForSecurity { get; } = new()
     {

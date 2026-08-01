@@ -233,6 +233,44 @@ public static class AssemblyInspector
     }
 
     /// <summary>
+    /// Collapses per-assembly signing findings into one.
+    /// </summary>
+    /// <remarks>
+    /// An application built from a dozen projects produced a dozen identical "not strong-name
+    /// signed" findings, which is one fact about the distribution repeated twelve times. It
+    /// padded the list and pushed the findings that differ further down.
+    /// </remarks>
+    public static List<Finding> Collapse(List<Finding> findings)
+    {
+        ArgumentNullException.ThrowIfNull(findings);
+
+        var signing = findings.Where(f => f.RuleId == "VC-BIN-001").ToList();
+        if (signing.Count <= 1)
+        {
+            return findings;
+        }
+
+        var names = signing
+            .Select(f => f.FilePath)
+            .Where(p => !string.IsNullOrEmpty(p))
+            .Take(6)
+            .ToList();
+
+        var summary = signing[0] with
+        {
+            Title = $"{signing.Count} assemblies are not strong-name signed",
+            Description =
+                $"{signing.Count} of the application's assemblies carry no strong name, so nothing "
+                + "binds them to a publisher and a modified copy is indistinguishable from the "
+                + $"original. Affected: {string.Join(", ", names)}"
+                + (signing.Count > names.Count ? ", and others." : "."),
+            FilePath = null,
+        };
+
+        return [.. findings.Where(f => f.RuleId != "VC-BIN-001"), summary];
+    }
+
+    /// <summary>
     /// Heuristic: obfuscators rename types to one or two characters, or to sequences that are
     /// not valid C# identifiers at all.
     /// </summary>

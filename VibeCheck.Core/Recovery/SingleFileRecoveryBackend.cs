@@ -1,4 +1,4 @@
-using VibeCheck.Core.Artifacts;
+﻿using VibeCheck.Core.Artifacts;
 using VibeCheck.Core.Model;
 
 namespace VibeCheck.Core.Recovery;
@@ -39,6 +39,7 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
         var notes = new List<string>();
         var budget = new DecompilationBudget();
         var bundlesRead = 0;
+        var ownership = AssemblyOwnership.VendorList;
 
         foreach (var launcher in launchers)
         {
@@ -57,6 +58,10 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
 
             bundlesRead++;
 
+            // The bundle carries its own dependency manifest, so read that before deciding
+            // which assemblies are the application's rather than guessing from names.
+            ownership = FindOwnership(entries) ?? ownership;
+
             foreach (var entry in entries)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -69,7 +74,8 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
                 switch (entry.Type)
                 {
                     case BundleFileType.Assembly:
-                        DecompileEntry(entry, launcher, budget, files, findings, notes, cancellationToken);
+                        DecompileEntry(
+                            entry, launcher, ownership, budget, files, findings, notes, cancellationToken);
                         break;
 
                     // The manifests are plain JSON and list every dependency with its exact
@@ -99,24 +105,39 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
         return Task.FromResult(new RecoveryResult
         {
             Files = files,
-            Findings = findings,
-            Coverage = CoverageBuilder.Build(files, budget, notes),
+            Findings = AssemblyInspector.Collapse(findings),
+            Coverage = CoverageBuilder.Build(files, budget, notes, ownership),
         });
+    }
+
+    /// <summary>Reads the dependency manifest out of the bundle, if it carries one.</summary>
+    private static AssemblyOwnership? FindOwnership(IReadOnlyList<SingleFileBundle.BundleEntry> entries)
+    {
+        foreach (var entry in entries.Where(e => e.Type == BundleFileType.DepsJson))
+        {
+            if (SafeArchive.DecodeText(entry.Content) is { } json
+                && AssemblyOwnership.FromDepsJson(json) is { } ownership)
+            {
+                return ownership;
+            }
+        }
+
+        return null;
     }
 
     private static void DecompileEntry(
         SingleFileBundle.BundleEntry entry,
         string launcher,
+        AssemblyOwnership ownership,
         DecompilationBudget budget,
         List<RecoveredFile> files,
         List<Finding> findings,
         List<string> notes,
         CancellationToken cancellationToken)
     {
-        // Bundles carry the whole framework alongside the application, exactly as a
-        // self-contained folder publish does, so the same exclusion applies.
-        var name = Path.GetFileNameWithoutExtension(entry.RelativePath);
-        if (DotNetRecoveryBackend.IsFrameworkAssembly(name))
+        // A bundle carries the framework and every NuGet dependency alongside the
+        // application, exactly as a folder publish does, so the same separation applies.
+        if (!ownership.IsApplicationCode(entry.RelativePath))
         {
             return;
         }

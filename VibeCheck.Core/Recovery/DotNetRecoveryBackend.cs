@@ -1,4 +1,4 @@
-using System.Reflection.PortableExecutable;
+﻿using System.Reflection.PortableExecutable;
 
 using VibeCheck.Core.Artifacts;
 using VibeCheck.Core.Model;
@@ -52,7 +52,15 @@ public sealed class DotNetRecoveryBackend : IRecoveryBackend
     {
         ArgumentNullException.ThrowIfNull(artifact);
 
-        var assemblies = artifact.IsDirectory ? FindAssemblies(artifact.Path) : [artifact.Path];
+        // A folder holds the application plus everything it ships; a single dropped file is
+        // itself the subject and is always analysed.
+        var ownership = artifact.IsDirectory
+            ? AssemblyOwnership.ForDirectory(artifact.Path)
+            : null;
+
+        var assemblies = artifact.IsDirectory
+            ? FindAssemblies(artifact.Path, ownership!)
+            : [artifact.Path];
 
         var files = new List<RecoveredFile>();
         var findings = new List<Finding>();
@@ -90,12 +98,12 @@ public sealed class DotNetRecoveryBackend : IRecoveryBackend
         return Task.FromResult(new RecoveryResult
         {
             Files = files,
-            Findings = findings,
-            Coverage = CoverageBuilder.Build(files, budget, notes),
+            Findings = AssemblyInspector.Collapse(findings),
+            Coverage = CoverageBuilder.Build(files, budget, notes, ownership),
         });
     }
 
-    private static IReadOnlyList<string> FindAssemblies(string directory)
+    private static IReadOnlyList<string> FindAssemblies(string directory, AssemblyOwnership ownership)
     {
         try
         {
@@ -103,7 +111,7 @@ public sealed class DotNetRecoveryBackend : IRecoveryBackend
                 .EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
                 .Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
                             || f.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                .Where(f => !IsFrameworkAssembly(Path.GetFileNameWithoutExtension(f)))
+                .Where(f => ownership.IsApplicationCode(f))
                 .Where(IsManaged)
                 .Take(200)
                 .ToList();
@@ -153,18 +161,27 @@ internal static class CoverageBuilder
     public static CoverageReport Build(
         List<RecoveredFile> files,
         DecompilationBudget budget,
-        List<string> notes)
+        List<string> notes,
+        AssemblyOwnership? ownership = null)
     {
         var percent = budget.TypesSeen == 0
             ? 0
             : (int)Math.Round(budget.TypesRecovered / (double)budget.TypesSeen * 100);
+
+        // How application code was told apart from its dependencies belongs in the report:
+        // an inferred separation may have set aside something the application actually wrote.
+        var separation = ownership is null
+            ? string.Empty
+            : $" Dependencies were separated from application code by {ownership.Method}"
+              + (ownership.IsApproximate ? " (approximate)." : ".");
 
         return new CoverageReport
         {
             Percent = Math.Clamp(percent, 0, 100),
             Basis = budget.TypesSeen == 0
                 ? "No managed types were found to decompile."
-                : $"Decompiled {budget.TypesRecovered:N0} of {budget.TypesSeen:N0} top-level types to C#.",
+                : $"Decompiled {budget.TypesRecovered:N0} of {budget.TypesSeen:N0} "
+                  + $"top-level types to C#.{separation}",
             RecoveredFileCount = files.Count,
             RecoveredBytes = files.Sum(f => (long)f.Content.Length),
             ChecksNotPossible = notes.Distinct(StringComparer.Ordinal).Take(50).ToList(),
