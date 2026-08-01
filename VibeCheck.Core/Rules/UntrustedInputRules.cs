@@ -24,6 +24,20 @@ namespace VibeCheck.Core.Rules;
 /// </remarks>
 public static class UntrustedInputRules
 {
+    /// <summary>
+    /// Recognises a scheme or host check ahead of a launch, in any of the usual spellings.
+    /// Declared before the rules that reference it so static initialisation sees it set.
+    /// </summary>
+    private static readonly Regex SchemeValidation = PatternRule.Compile(
+        """
+        Uri\.TryCreate
+        |UriSchemeHttps
+        |\.Scheme\s*(?:!=|==)
+        |\.Host\s*(?:\.Equals|!=|==)
+        |StartsWith\s*\(\s*"https://
+        """,
+        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+
     /// <inheritdoc cref="SecretRules.All"/>
     public static IReadOnlyList<IRule> All =>
     [
@@ -57,10 +71,59 @@ public static class UntrustedInputRules
             + "threshold. The usual shape is: allocate on the stack only when the size is below a "
             + "fixed limit such as 256 elements, and rent an array otherwise.",
         Pattern = PatternRule.Compile(
-            """stackalloc\s+\w+\s*\[\s*(?![\d\s]+\])""",
+            """stackalloc\s+\w+\s*\[\s*(?<size>[^\]]{1,80}?)\s*\]""",
             RegexOptions.IgnoreCase),
         Languages = [SourceLanguage.CSharp],
+        Ignore = (match, context) => IsBounded(match.Groups["size"].Value, context.LineFor(match)),
     };
+
+    /// <summary>
+    /// True when the allocation is already bounded.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The guarded ternary is the recommended fix for this very rule and keeps the check on
+    /// the same line as the allocation:
+    /// <c>name.Length > 256 ? new char[name.Length] : stackalloc char[name.Length]</c>.
+    /// Reporting that form tells a developer their correct fix is still a bug, which is worse
+    /// than missing the case entirely.
+    /// </para>
+    /// <para>
+    /// Matching guard keywords is not enough: the bound is often written against a local
+    /// (<c>len &lt;= 128</c>) rather than against a Length property. So this compares the
+    /// actual size expression used in the allocation against the comparisons on the line.
+    /// </para>
+    /// </remarks>
+    private static bool IsBounded(string sizeExpression, string line)
+    {
+        var size = sizeExpression.Trim();
+
+        if (size.Length == 0)
+        {
+            return true;
+        }
+
+        // A constant size is bounded by definition.
+        if (size.All(char.IsAsciiDigit))
+        {
+            return true;
+        }
+
+        // An explicit clamp inside the size expression itself.
+        if (size.Contains("Math.Min", StringComparison.OrdinalIgnoreCase)
+            || size.Contains("Math.Clamp", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var escaped = Regex.Escape(size);
+
+        return Regex.IsMatch(
+            line,
+            $@"{escaped}\s*(?:<=?|>=?)\s*\d+|\d+\s*(?:<=?|>=?)\s*{escaped}",
+            RegexOptions.None,
+            PatternRule.MatchTimeout);
+    }
 
     /// <summary>
     /// Shell-opening a URL held in a variable.
@@ -89,6 +152,7 @@ public static class UntrustedInputRules
             """Process\.Start\s*\(\s*(?:new\s+ProcessStartInfo\s*\(\s*)?\w*(?:url|uri|link|address|href)\w*""",
             RegexOptions.IgnoreCase),
         Languages = [SourceLanguage.CSharp],
+        Ignore = (match, context) => Heuristics.PrecededBy(context, match.Index, SchemeValidation),
     };
 
     /// <summary>

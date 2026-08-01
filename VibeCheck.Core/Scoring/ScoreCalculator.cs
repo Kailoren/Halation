@@ -78,7 +78,7 @@ public static class ScoreCalculator
             {
                 Score = score,
                 Band = blockingAtLowCoverage.Count > 0
-                    ? ScoreBand.DoNotInstall
+                    ? ScoreBand.CriticalIssues
                     : ScoreBand.InsufficientCoverage,
                 AdviseAgainstInstall = blockingAtLowCoverage.Count > 0,
                 BlockingReasons = blockingAtLowCoverage
@@ -144,7 +144,7 @@ public static class ScoreCalculator
     /// </summary>
     private static ScoreBand BandFor(int score) => score switch
     {
-        <= 39 => ScoreBand.DoNotInstall,
+        <= 39 => ScoreBand.CriticalIssues,
         <= 69 => ScoreBand.SeriousIssues,
         <= 89 => ScoreBand.NeedsWork,
         _ => ScoreBand.NoKnownIssues,

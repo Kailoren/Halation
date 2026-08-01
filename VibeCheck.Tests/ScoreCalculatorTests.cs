@@ -1,4 +1,4 @@
-using VibeCheck.Core.Model;
+﻿using VibeCheck.Core.Model;
 using VibeCheck.Core.Scoring;
 
 namespace VibeCheck.Tests;
@@ -40,7 +40,7 @@ public class ScoreCalculatorTests
         var verdict = ScoreCalculator.Calculate([Make(Severity.Critical)]);
 
         Assert.True(verdict.Score <= 39, $"expected <= 39, got {verdict.Score}");
-        Assert.Equal(ScoreBand.DoNotInstall, verdict.Band);
+        Assert.Equal(ScoreBand.CriticalIssues, verdict.Band);
     }
 
     [Theory]
@@ -100,7 +100,7 @@ public class ScoreCalculatorTests
                 var verdict = ScoreCalculator.Calculate([Make(a), Make(b)]);
                 var expected = verdict.Score switch
                 {
-                    <= 39 => ScoreBand.DoNotInstall,
+                    <= 39 => ScoreBand.CriticalIssues,
                     <= 69 => ScoreBand.SeriousIssues,
                     <= 89 => ScoreBand.NeedsWork,
                     _ => ScoreBand.NoKnownIssues,

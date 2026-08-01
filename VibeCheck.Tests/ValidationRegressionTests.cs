@@ -1,4 +1,4 @@
-using VibeCheck.Core;
+﻿using VibeCheck.Core;
 using VibeCheck.Core.Artifacts;
 using VibeCheck.Core.Model;
 using VibeCheck.Core.Recovery;
@@ -79,7 +79,7 @@ public class ValidationRegressionTests : IDisposable
         var verdict = ScoreCalculator.Calculate([blocking], coveragePercent: 0);
 
         Assert.True(verdict.AdviseAgainstInstall);
-        Assert.Equal(ScoreBand.DoNotInstall, verdict.Band);
+        Assert.Equal(ScoreBand.CriticalIssues, verdict.Band);
     }
 
     [Theory]
@@ -216,6 +216,130 @@ public class ValidationRegressionTests : IDisposable
         Assert.Contains(
             RunRules("Process.Start(new ProcessStartInfo(downloadUrl) { UseShellExecute = true });", "Update.cs"),
             f => f.RuleId == "VC-INPUT-002");
+
+    // ---- Found by unpacking and scanning real single-file applications ----
+
+    /// <summary>
+    /// The guarded ternary is the recommended fix for this rule, and the rule was reporting
+    /// it. Telling a developer their correct fix is still a bug is worse than missing it.
+    /// </summary>
+    [Theory]
+    [InlineData("Span<char> s = ((name.Length > 256) ? new char[name.Length] : stackalloc char[name.Length]);")]
+    [InlineData("Span<byte> b = len <= 128 ? stackalloc byte[len] : new byte[len];")]
+    [InlineData("Span<char> c = stackalloc char[Math.Min(input.Length, 256)];")]
+    public void GuardedStackAlloc_IsNotFlagged(string line) =>
+        Assert.DoesNotContain(
+            RunRules(line, "Parser.cs"),
+            f => f.RuleId == "VC-INPUT-001");
+
+    [Fact]
+    public void UnguardedStackAlloc_IsStillFlagged() =>
+        Assert.Contains(
+            RunRules("Span<char> s = stackalloc char[input.Length];", "Parser.cs"),
+            f => f.RuleId == "VC-INPUT-001");
+
+    /// <summary>
+    /// The .NET runtimeconfig switch that disables BinaryFormatter was being reported as
+    /// unsafe deserialisation. The mitigation is not the vulnerability.
+    /// </summary>
+    [Theory]
+    [InlineData("""  "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false,""")]
+    [InlineData("EnableUnsafeBinaryFormatterSerialization = false;")]
+    public void DisablingSwitchForBinaryFormatter_IsNotFlagged(string line) =>
+        Assert.DoesNotContain(
+            RunRules(line, "app.runtimeconfig.json"),
+            f => f.RuleId == "VC-CODE-004");
+
+    [Fact]
+    public void ActualBinaryFormatterUse_IsStillFlagged() =>
+        Assert.Contains(
+            RunRules("var f = new BinaryFormatter();", "Program.cs"),
+            f => f.RuleId == "VC-CODE-004");
+
+    /// <summary>
+    /// PresentationUI was absent from the exclusion list, so a Microsoft help link inside it
+    /// was reported as the application's own cleartext endpoint.
+    /// </summary>
+    [Theory]
+    [InlineData("PresentationUI")]
+    [InlineData("PresentationBuildTasks")]
+    public void AllPresentationAssemblies_AreExcluded(string name) =>
+        Assert.True(DotNetRecoveryBackend.IsFrameworkAssembly(name), $"{name} should be excluded");
+
+    /// <summary>
+    /// A legitimate application scored 38 and was labelled "Do not install" while the verdict
+    /// itself correctly advised nothing of the sort. A low score means the application has
+    /// problems; only a blocking rule means its user is at risk.
+    /// </summary>
+    [Fact]
+    public void LowScoreAlone_DoesNotClaimTheUserIsAtRisk()
+    {
+        var verdict = ScoreCalculator.Calculate([
+            Finding(Severity.Critical), Finding(Severity.High),
+        ]);
+
+        Assert.Equal(ScoreBand.CriticalIssues, verdict.Band);
+        Assert.False(verdict.AdviseAgainstInstall);
+        Assert.DoesNotContain("install", verdict.BandLabel, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// A real application validated the scheme and host ten lines before launching, which is
+    /// exactly the fix this rule recommends, and the rule reported it anyway because it only
+    /// looked at the matched line.
+    /// </summary>
+    [Fact]
+    public void ShellOpenGuardedByAnEarlierSchemeCheck_IsNotFlagged()
+    {
+        var guarded = """
+            private void OpenUpdate()
+            {
+                if (_updateUrl == null) return;
+
+                if (!Uri.TryCreate(_updateUrl, UriKind.Absolute, out var uri)
+                    || uri.Scheme != Uri.UriSchemeHttps
+                    || !uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                try
+                {
+                    Process.Start(new ProcessStartInfo(_updateUrl) { UseShellExecute = true });
+                }
+                catch { }
+            }
+            """;
+
+        Assert.DoesNotContain(RunRules(guarded, "MainViewModel.cs"), f => f.RuleId == "VC-INPUT-002");
+    }
+
+    [Fact]
+    public void UnguardedShellOpen_IsStillFlagged()
+    {
+        var unguarded = """
+            private void OpenUpdate()
+            {
+                Process.Start(new ProcessStartInfo(_updateUrl) { UseShellExecute = true });
+            }
+            """;
+
+        Assert.Contains(RunRules(unguarded, "MainViewModel.cs"), f => f.RuleId == "VC-INPUT-002");
+    }
+
+    [Fact]
+    public void NoBandLabel_ClaimsInstallSafety()
+    {
+        // No score range may imply a safety verdict in either direction; that judgement
+        // belongs to the blocking rules alone.
+        foreach (var band in Enum.GetValues<ScoreBand>())
+        {
+            var label = new Verdict { Score = 50, Band = band, AdviseAgainstInstall = false }.BandLabel;
+
+            Assert.DoesNotContain("install", label, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("safe", label, StringComparison.OrdinalIgnoreCase);
+        }
+    }
 
     private static IReadOnlyList<Finding> RunRules(string content, string path = "src/app.js") =>
         new RuleEngine().Analyse([new RecoveredFile

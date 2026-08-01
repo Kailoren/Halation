@@ -39,6 +39,7 @@ public sealed class Scanner
         _backends = backends?.ToList() ??
         [
             new DotNetRecoveryBackend(),
+            new SingleFileRecoveryBackend(),
             new ElectronRecoveryBackend(),
             new SourceRecoveryBackend(),
             new NativeRecoveryBackend(),

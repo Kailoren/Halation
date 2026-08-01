@@ -160,6 +160,34 @@ public static class Heuristics
     }
 
     /// <summary>
+    /// True when <paramref name="guard"/> appears within the preceding lines.
+    /// </summary>
+    /// <remarks>
+    /// Some checks are guarded by an earlier statement rather than on the same line, and a
+    /// line-scoped rule cannot see that. A validated shell-open is the standard shape:
+    /// <c>if (!Uri.TryCreate(..) || uri.Scheme != Https || uri.Host != "github.com") return;</c>
+    /// followed several lines later by the launch. Reporting the launch anyway tells a
+    /// developer that code which already does the right thing is still wrong.
+    /// </remarks>
+    public static bool PrecededBy(RuleContext context, int offset, Regex guard, int lines = 15)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(guard);
+
+        var line = context.LineAt(offset);
+
+        for (var i = Math.Max(1, line - lines); i <= line; i++)
+        {
+            if (guard.IsMatch(context.LineText(i)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// True for files whose contents are examples rather than shipped code.
     /// </summary>
     /// <remarks>

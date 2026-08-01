@@ -134,6 +134,19 @@ public static class CodeSafetyRules
             |TypeNameHandling\s*=\s*TypeNameHandling\.(?:All|Objects|Auto))
             """,
             RegexOptions.IgnorePatternWhitespace),
+        Ignore = (match, context) =>
+        {
+            var line = context.LineFor(match);
+
+            // A runtime switch that turns the dangerous behaviour off is the mitigation, not
+            // the vulnerability. Observed firing on the .NET runtimeconfig entry
+            // "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false,
+            // which is exactly the setting that disables it.
+            return line.Contains(": false", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("=false", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("= false", StringComparison.OrdinalIgnoreCase)
+                || Heuristics.IsInLineComment(context, match.Index);
+        },
     };
 
     private static PatternRule WeakPasswordHashing { get; } = new()

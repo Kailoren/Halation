@@ -47,7 +47,7 @@ public sealed record Verdict
     /// <summary>Short label for the band, for display next to the score.</summary>
     public string BandLabel => Band switch
     {
-        ScoreBand.DoNotInstall => "Do not install",
+        ScoreBand.CriticalIssues => "Critical issues",
         ScoreBand.SeriousIssues => "Serious issues",
         ScoreBand.NeedsWork => "Needs work",
         ScoreBand.NoKnownIssues => "No known issues found",

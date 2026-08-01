@@ -67,7 +67,18 @@ public enum FindingSource
 /// </summary>
 public enum ScoreBand
 {
-    DoNotInstall,
+    /// <summary>
+    /// The lowest score range.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not called "do not install". Advising against installation is a separate
+    /// decision driven by blocking rules, and conflating the two produced a real
+    /// contradiction in testing: a legitimate application scored 38 and was labelled "Do not
+    /// install" while the verdict itself correctly advised nothing of the sort. A low score
+    /// means the application has serious problems, not that its user is in danger.
+    /// </remarks>
+    CriticalIssues,
+
     SeriousIssues,
     NeedsWork,
     NoKnownIssues,

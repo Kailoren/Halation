@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 using VibeCheck.Core;
 using VibeCheck.Core.Model;
@@ -101,7 +101,7 @@ public class ScannerIntegrationTests : IDisposable
 
         // The Supabase service_role key alone should force the red band.
         Assert.True(report.Verdict.Score <= 39, $"expected <= 39, got {report.Verdict.Score}");
-        Assert.Equal(ScoreBand.DoNotInstall, report.Verdict.Band);
+        Assert.Equal(ScoreBand.CriticalIssues, report.Verdict.Band);
         Assert.True(report.CountOf(Severity.Critical) > 0);
     }
 
@@ -169,7 +169,7 @@ public class ScannerIntegrationTests : IDisposable
 
         Assert.True(report.Verdict.AdviseAgainstInstall);
         Assert.NotEmpty(report.Verdict.BlockingReasons);
-        Assert.Equal(ScoreBand.DoNotInstall, report.Verdict.Band);
+        Assert.Equal(ScoreBand.CriticalIssues, report.Verdict.Band);
     }
 
     [Fact]
