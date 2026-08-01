@@ -32,45 +32,7 @@ public sealed class ElectronRecoveryBackend : IRecoveryBackend
         {
             using (stream)
             {
-                IReadOnlyList<AsarReader.AsarEntry> entries;
-                try
-                {
-                    entries = AsarReader.Read(stream, warnings, cancellationToken: cancellationToken);
-                }
-                catch (EndOfStreamException)
-                {
-                    warnings.Add($"{label} is truncated.");
-                    continue;
-                }
-                catch (IOException)
-                {
-                    warnings.Add($"{label} could not be read.");
-                    continue;
-                }
-
-                foreach (var entry in entries)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (!IsInteresting(entry.Path))
-                    {
-                        continue;
-                    }
-
-                    considered++;
-
-                    if (AsarReader.AsText(entry) is not { } text)
-                    {
-                        continue;
-                    }
-
-                    files.Add(new RecoveredFile
-                    {
-                        RelativePath = entry.Path,
-                        Content = text,
-                        Language = RecoveredFile.LanguageOf(entry.Path),
-                    });
-                }
+                considered += ReadAsarInto(stream, label, files, warnings, cancellationToken);
             }
         }
 
@@ -198,10 +160,73 @@ public sealed class ElectronRecoveryBackend : IRecoveryBackend
     }
 
     /// <summary>
+    /// Reads one asar into <paramref name="files"/>, returning how many entries were worth
+    /// reading, which is the denominator of the coverage figure.
+    /// </summary>
+    /// <remarks>
+    /// Shared with <see cref="InstallerRecoveryBackend"/>: an asar lifted out of an installer
+    /// is the same artifact as one found in an installed folder, and letting the two paths
+    /// drift would mean the same application scored differently depending on which form of it
+    /// was dropped in.
+    /// </remarks>
+    internal static int ReadAsarInto(
+        Stream stream,
+        string label,
+        ICollection<RecoveredFile> files,
+        IList<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<AsarReader.AsarEntry> entries;
+
+        try
+        {
+            entries = AsarReader.Read(stream, warnings, cancellationToken: cancellationToken);
+        }
+        catch (EndOfStreamException)
+        {
+            warnings.Add($"{label} is truncated.");
+            return 0;
+        }
+        catch (IOException)
+        {
+            warnings.Add($"{label} could not be read.");
+            return 0;
+        }
+
+        var considered = 0;
+
+        foreach (var entry in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!IsInteresting(entry.Path))
+            {
+                continue;
+            }
+
+            considered++;
+
+            if (AsarReader.AsText(entry) is not { } text)
+            {
+                continue;
+            }
+
+            files.Add(new RecoveredFile
+            {
+                RelativePath = entry.Path,
+                Content = text,
+                Language = RecoveredFile.LanguageOf(entry.Path),
+            });
+        }
+
+        return considered;
+    }
+
+    /// <summary>
     /// Bundled Electron apps ship their dependencies inside the asar, so vendored paths are
     /// filtered here rather than analysed as application code.
     /// </summary>
-    private static bool IsInteresting(string path)
+    internal static bool IsInteresting(string path)
     {
         var name = Path.GetFileName(path);
 

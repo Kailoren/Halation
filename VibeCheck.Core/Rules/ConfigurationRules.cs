@@ -177,8 +177,41 @@ public static class ConfigurationRules
             || match.Value.Contains("://xmlns.", StringComparison.OrdinalIgnoreCase)
             || match.Value.Contains(".xsd", StringComparison.OrdinalIgnoreCase)
             || match.Value.Contains(".dtd", StringComparison.OrdinalIgnoreCase)
+            || IsPackageMetadata(match, context)
             || Heuristics.IsInLineComment(context, match.Index),
     };
+
+    /// <summary>
+    /// An npm manifest's own homepage, repository and issue URLs are frequently http, and
+    /// none of them is a request the application makes.
+    /// </summary>
+    /// <remarks>
+    /// Found scanning a real Electron installer: it vendors hundreds of dependency
+    /// manifests, and six of them carried an http repository URL. That was enough to put a
+    /// clean application in the "serious issues" band on nothing but package metadata, which
+    /// is exactly the kind of confident wrong answer that makes a scanner not worth running.
+    /// The suppression is keyed on the metadata fields rather than on the file, so an actual
+    /// endpoint configured in a manifest is still reported.
+    /// </remarks>
+    private static bool IsPackageMetadata(Match match, RuleContext context)
+    {
+        var name = Path.GetFileName(context.File.RelativePath);
+
+        if (!name.Equals("package.json", StringComparison.OrdinalIgnoreCase)
+            && !name.Equals("package-lock.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return MetadataField.IsMatch(context.LineFor(match));
+    }
+
+    private static readonly Regex MetadataField = new(
+        """
+        "(?:homepage|repository|url|web|site|bugs|funding|author|maintainers|contributors|email|issues|docs|resolved|tarball)"\s*:
+        """,
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+        PatternRule.MatchTimeout);
 
     /// <summary>
     /// Binding to every interface, which is what turns a local helper into a network service.

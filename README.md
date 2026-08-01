@@ -47,8 +47,18 @@ rules, never by the score alone.
 | Source folder, zip, or repository | read directly | full |
 | .NET executable or library | decompiled (ILSpy) | full, near-original C# |
 | Electron application or `.asar` | unpacked | full, often unminified |
+| NSIS installer | unpacked, then as above | as deep as what it contains |
 | Java archive | decompiled | good |
 | Native Windows binary | not possible | signing and hardening flags only |
+
+Installers matter more than that table makes them look, because almost nothing is downloaded
+as a bare executable. An installer is a native stub with the application attached, so reading
+only the stub writes off everything worth checking. VibeCheck unpacks NSIS installers, which
+is what `electron-builder` produces, and then treats what it finds as the artifact it is.
+Nothing is executed and nothing is written to disk: the installer is read, never run.
+
+Installers built with Inno Setup, or NSIS installers using solid compression, cannot be
+unpacked yet. Those say so rather than reporting an empty result.
 
 ## Dependency checks and isolate mode
 

@@ -130,8 +130,15 @@ public static class ArtifactDetector
             // A .NET single-file publish is a native launcher with the managed assemblies
             // embedded, so it has no CLI metadata of its own and would otherwise be filed as
             // an ordinary native binary and silently written off as unreadable.
-            return Recovery.SingleFileBundle.IsBundle(path)
-                ? (ArtifactKind.DotNetSingleFile, ".NET single-file bundle (embedded assemblies).")
+            if (Recovery.SingleFileBundle.IsBundle(path))
+            {
+                return (ArtifactKind.DotNetSingleFile, ".NET single-file bundle (embedded assemblies).");
+            }
+
+            // Same reasoning: an installer is a native stub with the real application attached,
+            // so classifying it on the stub alone writes off everything that matters.
+            return Recovery.NsisArchive.IsInstaller(path)
+                ? (ArtifactKind.WindowsInstaller, "NSIS installer (packed application payload).")
                 : (ArtifactKind.NativeWindows, "Native PE without CLI metadata.");
         }
         catch (BadImageFormatException)

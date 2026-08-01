@@ -44,6 +44,7 @@ public sealed class Scanner
             new DotNetRecoveryBackend(),
             new SingleFileRecoveryBackend(),
             new ElectronRecoveryBackend(),
+            new InstallerRecoveryBackend(),
             new SourceRecoveryBackend(),
             new NativeRecoveryBackend(),
         ];

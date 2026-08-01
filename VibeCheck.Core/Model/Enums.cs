@@ -117,6 +117,18 @@ public enum ArtifactKind
     /// <summary>Unmanaged PE. No source recovery is possible; hygiene checks only.</summary>
     NativeWindows,
 
+    /// <summary>
+    /// A Windows installer with an application packed inside it.
+    /// </summary>
+    /// <remarks>
+    /// Its own kind because it is native by every structural test but is not a dead end: the
+    /// application is inside, and for an Electron installer that is the difference between no
+    /// coverage and reading the whole source. Treating installers as ordinary native binaries
+    /// made the tool useless for the case it exists to serve, since an installer is the usual
+    /// shape of anything downloaded.
+    /// </remarks>
+    WindowsInstaller,
+
     /// <summary>A directory or installer containing resources/app.asar.</summary>
     ElectronApp,
 

@@ -63,6 +63,7 @@ public sealed record ScanReport
         ArtifactKind.DotNetAssembly => ".NET assembly",
         ArtifactKind.DotNetSingleFile => ".NET single-file application",
         ArtifactKind.NativeWindows => "Native Windows binary",
+        ArtifactKind.WindowsInstaller => "Windows installer",
         ArtifactKind.ElectronApp => "Electron application",
         ArtifactKind.AsarArchive => "Electron asar archive",
         ArtifactKind.JavaArchive => "Java archive",

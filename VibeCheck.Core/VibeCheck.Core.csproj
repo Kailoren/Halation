@@ -8,6 +8,14 @@
 
   <ItemGroup>
     <PackageReference Include="ICSharpCode.Decompiler" Version="10.1.1.8388" />
+
+    <!-- Reads the 7z archive nested inside an NSIS installer; .NET has no LZMA decoder.
+         Pinned to 0.50.3, not 1.0.0: that version is unlisted upstream as a build mistake.
+         Every advisory against this package (CVE-2026-44788, CVE-2021-39208,
+         CVE-2018-1002206) is path traversal while extracting to disk, all fixed well before
+         this version - and we never extract to disk, so the class does not apply. Keep it
+         that way: read entries as streams, never WriteToDirectory. -->
+    <PackageReference Include="SharpCompress" Version="0.50.3" />
   </ItemGroup>
 
 </Project>
