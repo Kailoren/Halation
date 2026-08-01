@@ -30,7 +30,15 @@ public sealed record ScanReport
     /// <summary>Per-category subscores, on the same 0-100 scale as the overall score.</summary>
     public required IReadOnlyDictionary<FindingCategory, int> CategoryScores { get; init; }
 
-    public required VulnerabilityDataInfo VulnerabilityData { get; init; }
+    public required Dependencies.VulnerabilityDataProvenance VulnerabilityData { get; init; }
+
+    /// <summary>
+    /// Where the offline data bundle for this scan was written, when one was produced.
+    /// </summary>
+    public string? BundlePath { get; init; }
+
+    /// <summary>True when the scan made no network calls of any kind.</summary>
+    public bool RanIsolated { get; init; }
 
     /// <summary>Whether the optional BYOK deep pass contributed to this report.</summary>
     public bool DeepPassRan { get; init; }

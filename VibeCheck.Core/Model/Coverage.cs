@@ -36,26 +36,3 @@ public sealed record CoverageReport
     };
 }
 
-/// <summary>
-/// Provenance of the bundled vulnerability data.
-/// </summary>
-/// <remarks>
-/// The database ships inside the app so dependency scanning works air-gapped. That makes
-/// its age a first-class part of the result: a clean dependency report from a six-month-old
-/// snapshot is a different claim from a clean one from yesterday, so the date is stamped
-/// on every report rather than being a settings-screen detail.
-/// </remarks>
-public sealed record VulnerabilityDataInfo
-{
-    /// <summary>When the bundled snapshot was published.</summary>
-    public required DateOnly SnapshotDate { get; init; }
-
-    /// <summary>Number of advisories in the snapshot.</summary>
-    public required int AdvisoryCount { get; init; }
-
-    /// <summary>True when the snapshot is old enough to warrant a refresh prompt.</summary>
-    public bool IsStale(DateOnly today, int stalenessDays = 30) =>
-        today.DayNumber - SnapshotDate.DayNumber > stalenessDays;
-
-    public string Describe() => $"{AdvisoryCount:N0} advisories, as of {SnapshotDate:yyyy-MM-dd}";
-}

@@ -254,13 +254,41 @@ public static class MarkdownReportWriter
 
     private static void WriteFooter(StringBuilder output, ScanReport report)
     {
+        var provenance = report.VulnerabilityData;
+
+        output.AppendLine("## Vulnerability data");
+        output.AppendLine();
+        output.AppendLine($"Dependency checks used {provenance.Describe(report.ScannedAt)}.");
+        output.AppendLine();
+
+        // Age is stated rather than merely dated. A result checked against data three months
+        // old is a materially weaker claim than one checked a second ago, and the difference
+        // is invisible unless the report says so.
+        if (provenance.IsStale(report.ScannedAt))
+        {
+            output.AppendLine($"> **This data is {provenance.AgeInDays(report.ScannedAt)} days old.** "
+                              + "Anything published since is not reflected here. Re-run with a "
+                              + "network connection for a current answer.");
+            output.AppendLine();
+        }
+
+        if (report.RanIsolated)
+        {
+            output.AppendLine("> This scan ran in isolate mode and made no network requests.");
+            output.AppendLine();
+        }
+
+        if (report.BundlePath is { } bundle)
+        {
+            output.AppendLine($"An offline data bundle for this artifact was written to "
+                              + $"`{Path.GetFileName(bundle)}`. Carry it alongside the artifact to "
+                              + "reproduce this dependency result on a machine with no network.");
+            output.AppendLine();
+        }
+
         output.AppendLine("---");
         output.AppendLine();
         output.AppendLine($"VibeCheck {report.ScannerVersion}");
-
-        output.AppendLine(report.VulnerabilityData.AdvisoryCount == 0
-            ? " · Dependency checks unavailable: no vulnerability data is bundled in this build."
-            : $" · Vulnerability data: {report.VulnerabilityData.Describe()}");
 
         if (report.DeepPassRan)
         {

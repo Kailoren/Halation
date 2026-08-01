@@ -174,7 +174,7 @@ public class ValidationRegressionTests : IDisposable
         File.WriteAllText(Path.Combine(app, "MyApp.pdb"), "symbols");
         File.WriteAllText(Path.Combine(app, "readme.txt"), "hello");
 
-        var report = await new Scanner().ScanAsync(app);
+        var report = await new Scanner().ScanAsync(app, ScanOptions.NoDependencyCheck);
 
         Assert.Contains(report.Findings, f => f.RuleId == "VC-PKG-001");
     }
@@ -187,13 +187,13 @@ public class ValidationRegressionTests : IDisposable
         File.WriteAllText(Path.Combine(app, ".env"), "SECRET=abc");
         File.WriteAllText(Path.Combine(app, "index.js"), "run();");
 
-        var withEnv = await new Scanner().ScanAsync(app);
+        var withEnv = await new Scanner().ScanAsync(app, ScanOptions.NoDependencyCheck);
         Assert.Contains(withEnv.Findings, f => f.RuleId == "VC-PKG-002");
 
         File.Delete(Path.Combine(app, ".env"));
         File.WriteAllText(Path.Combine(app, ".env.example"), "SECRET=");
 
-        var withExample = await new Scanner().ScanAsync(app);
+        var withExample = await new Scanner().ScanAsync(app, ScanOptions.NoDependencyCheck);
         Assert.DoesNotContain(withExample.Findings, f => f.RuleId == "VC-PKG-002");
     }
 
@@ -410,7 +410,7 @@ public class ValidationRegressionTests : IDisposable
             File.WriteAllBytes(Path.Combine(app, $"module{i}.pyc"), [0x6F, 0x0D, 0x0D, 0x0A]);
         }
 
-        var report = await new Scanner().ScanAsync(app);
+        var report = await new Scanner().ScanAsync(app, ScanOptions.NoDependencyCheck);
 
         Assert.Equal(ArtifactKind.PythonBundle, report.Kind);
         Assert.True(report.Coverage.Percent < 10, $"expected low coverage, got {report.Coverage.Percent}%");

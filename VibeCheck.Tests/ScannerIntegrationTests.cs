@@ -94,7 +94,7 @@ public class ScannerIntegrationTests : IDisposable
     [Fact]
     public async Task VulnerableProject_ProducesCriticalFindingsAndLowScore()
     {
-        var report = await new Scanner().ScanAsync(BuildVulnerableProject());
+        var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
 
         Assert.Equal(ArtifactKind.SourceTree, report.Kind);
         Assert.NotEmpty(report.Findings);
@@ -108,7 +108,7 @@ public class ScannerIntegrationTests : IDisposable
     [Fact]
     public async Task VulnerableProject_FindsEachPlantedIssue()
     {
-        var report = await new Scanner().ScanAsync(BuildVulnerableProject());
+        var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
         var fired = report.Findings.Select(f => f.RuleId).ToHashSet(StringComparer.Ordinal);
 
         Assert.Contains("VC-SEC-011", fired);  // Supabase service_role key
@@ -126,7 +126,7 @@ public class ScannerIntegrationTests : IDisposable
     [Fact]
     public async Task CorrectlyWrittenFile_ProducesNoFindings()
     {
-        var report = await new Scanner().ScanAsync(BuildVulnerableProject());
+        var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
 
         Assert.DoesNotContain(
             report.Findings,
@@ -146,7 +146,7 @@ public class ScannerIntegrationTests : IDisposable
             }
             """);
 
-        var report = await new Scanner().ScanAsync(root);
+        var report = await new Scanner().ScanAsync(root, ScanOptions.NoDependencyCheck);
 
         Assert.Empty(report.Findings);
         Assert.Equal(100, report.Verdict.Score);
@@ -165,7 +165,7 @@ public class ScannerIntegrationTests : IDisposable
             upload(read(creds), read(wallet));
             """);
 
-        var report = await new Scanner().ScanAsync(root);
+        var report = await new Scanner().ScanAsync(root, ScanOptions.NoDependencyCheck);
 
         Assert.True(report.Verdict.AdviseAgainstInstall);
         Assert.NotEmpty(report.Verdict.BlockingReasons);
@@ -177,7 +177,7 @@ public class ScannerIntegrationTests : IDisposable
     {
         var kernel32 = Path.Combine(Environment.SystemDirectory, "kernel32.dll");
 
-        var report = await new Scanner().ScanAsync(kernel32);
+        var report = await new Scanner().ScanAsync(kernel32, ScanOptions.NoDependencyCheck);
 
         Assert.Equal(ArtifactKind.NativeWindows, report.Kind);
         Assert.Equal(0, report.Coverage.Percent);
@@ -189,8 +189,8 @@ public class ScannerIntegrationTests : IDisposable
     {
         var project = BuildVulnerableProject();
 
-        var first = await new Scanner().ScanAsync(project);
-        var second = await new Scanner().ScanAsync(project);
+        var first = await new Scanner().ScanAsync(project, ScanOptions.NoDependencyCheck);
+        var second = await new Scanner().ScanAsync(project, ScanOptions.NoDependencyCheck);
 
         Assert.Equal(first.Sha256, second.Sha256);
         Assert.Equal(first.Verdict.Score, second.Verdict.Score);
@@ -204,7 +204,7 @@ public class ScannerIntegrationTests : IDisposable
         await cancelled.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => new Scanner().ScanAsync(BuildVulnerableProject(), cancellationToken: cancelled.Token));
+            () => new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck, cancellationToken: cancelled.Token));
     }
 
     /// <summary>
@@ -214,7 +214,7 @@ public class ScannerIntegrationTests : IDisposable
     [Fact]
     public async Task MarkdownReport_IsCompleteAndCarriesItsCaveats()
     {
-        var report = await new Scanner().ScanAsync(BuildVulnerableProject());
+        var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
         var markdown = MarkdownReportWriter.Write(report);
 
         File.WriteAllText(
