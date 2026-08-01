@@ -222,16 +222,36 @@ public static class ArtifactDetector
 
         if (binaries.Count > 0)
         {
-            // A published .NET app folder usually holds one single-file launcher plus data.
-            // Classifying that as a plain assembly folder finds nothing to decompile and
-            // yields an empty, falsely reassuring result.
-            if (binaries.Any(b => ClassifyPortableExecutable(b).Item1 == ArtifactKind.DotNetSingleFile))
+            // Classify by what the binaries actually are, not by their presence. Assuming
+            // .NET because a folder holds a .exe misfiled a Python application and a native
+            // one, and both then reported zero coverage with a .NET-flavoured explanation
+            // that told the user nothing about why.
+            var kinds = binaries
+                .Take(60)
+                .Select(b => ClassifyPortableExecutable(b).Item1)
+                .ToList();
+
+            if (kinds.Contains(ArtifactKind.DotNetAssembly))
             {
-                return (ArtifactKind.DotNetSingleFile,
-                    "Contains a .NET single-file application.");
+                return (ArtifactKind.DotNetAssembly, "Contains managed .NET assemblies.");
             }
 
-            return (ArtifactKind.DotNetAssembly, "Contains Windows binaries; will scan each.");
+            if (kinds.Contains(ArtifactKind.DotNetSingleFile))
+            {
+                return (ArtifactKind.DotNetSingleFile, "Contains a .NET single-file application.");
+            }
+
+            if (LooksLikePythonApplication(path))
+            {
+                return (ArtifactKind.PythonBundle, "Contains a bundled Python application.");
+            }
+
+            return (ArtifactKind.NativeWindows, "Contains native Windows binaries only.");
+        }
+
+        if (LooksLikePythonApplication(path))
+        {
+            return (ArtifactKind.PythonBundle, "Contains a bundled Python application.");
         }
 
         return EnumerateSafely(path, "*.*").Any()
@@ -272,6 +292,35 @@ public static class ArtifactDetector
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Recognises a frozen Python application, as produced by PyInstaller or cx_Freeze.
+    /// </summary>
+    /// <remarks>
+    /// The launcher is an ordinary native executable, so nothing about the binary itself
+    /// gives it away. The interpreter and its extension modules shipped alongside do.
+    /// </remarks>
+    private static bool LooksLikePythonApplication(string path)
+    {
+        string[] markers = ["*.pyd", "python3*.dll", "base_library.zip", "*.pyc"];
+
+        foreach (var marker in markers)
+        {
+            if (EnumerateSafely(path, marker).Any())
+            {
+                return true;
+            }
+
+            // PyInstaller's one-folder layout puts everything under _internal.
+            var inner = Path.Combine(path, "_internal");
+            if (Directory.Exists(inner) && EnumerateSafely(inner, marker).Any())
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static IEnumerable<string> EnumerateSafely(string path, string pattern)

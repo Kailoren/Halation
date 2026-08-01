@@ -23,7 +23,7 @@ namespace VibeCheck.Core.Recovery;
 public sealed class NativeRecoveryBackend : IRecoveryBackend
 {
     public bool CanHandle(ArtifactKind kind) =>
-        kind is ArtifactKind.NativeWindows or ArtifactKind.Unknown or ArtifactKind.PythonBundle;
+        kind is ArtifactKind.NativeWindows or ArtifactKind.Unknown;
 
     public Task<RecoveryResult> RecoverAsync(
         ArtifactDescriptor artifact,
@@ -42,10 +42,18 @@ public sealed class NativeRecoveryBackend : IRecoveryBackend
             "Dependency versions and their known vulnerabilities.",
         };
 
-        if (artifact.Kind == ArtifactKind.NativeWindows && !artifact.IsDirectory)
+        if (artifact.Kind == ArtifactKind.NativeWindows)
         {
-            findings.AddRange(InspectPortableExecutable(artifact));
-            basis = "Native binary: hygiene checks only, no source could be recovered.";
+            if (artifact.IsDirectory)
+            {
+                basis = "This application is built from native binaries, which cannot be "
+                        + "decompiled to analysable source. Nothing in it was read.";
+            }
+            else
+            {
+                findings.AddRange(InspectPortableExecutable(artifact));
+                basis = "Native binary: hygiene checks only, no source could be recovered.";
+            }
         }
 
         return Task.FromResult(new RecoveryResult

@@ -341,6 +341,85 @@ public class ValidationRegressionTests : IDisposable
         }
     }
 
+    // ---- Found scanning a second batch of third-party applications --------
+
+    /// <summary>
+    /// A dependency-injection library's error message satisfied SELECT..FROM followed by a
+    /// placeholder and was reported as SQL injection, twice, at Critical.
+    /// </summary>
+    [Theory]
+    [InlineData("""Error = Of("Unable to select single public constructor from implementation type {0}:" + Environment.NewLine);""")]
+    [InlineData("""throw new Exception("Cannot select handler from registry for {0}" + name);""")]
+    [InlineData("""log.Warn("Failed to delete from cache: " + key);""")]
+    public void EnglishSentencesWithSqlWords_AreNotFlagged(string line) =>
+        Assert.DoesNotContain(RunRules(line, "Error.cs"), f => f.RuleId == "VC-CODE-001");
+
+    /// <summary>
+    /// Lower-case SQL is still SQL when it carries a real clause keyword, so the prose
+    /// filter must not swallow it.
+    /// </summary>
+    [Theory]
+    [InlineData("""var sql = "select id from users where name = '" + name + "'";""")]
+    [InlineData("""cmd = "SELECT * FROM orders" + filter;""")]
+    public void RealSqlInEitherCase_IsStillFlagged(string line) =>
+        Assert.Contains(RunRules(line, "Repo.cs"), f => f.RuleId == "VC-CODE-001");
+
+    /// <summary>
+    /// A folder holding a .exe was classified as .NET regardless of what the binaries were,
+    /// so a native application and a Python one both reported zero coverage with a
+    /// .NET-flavoured explanation that told the user nothing.
+    /// </summary>
+    [Fact]
+    public void FolderOfNativeBinaries_IsNotClassifiedAsDotNet()
+    {
+        var app = Path.Combine(_scratch, "native-app");
+        Directory.CreateDirectory(app);
+        File.Copy(
+            Path.Combine(Environment.SystemDirectory, "kernel32.dll"),
+            Path.Combine(app, "engine.dll"));
+
+        Assert.Equal(ArtifactKind.NativeWindows, ArtifactDetector.Detect(app).Kind);
+    }
+
+    [Fact]
+    public void FrozenPythonApplication_IsRecognised()
+    {
+        var app = Path.Combine(_scratch, "python-app");
+        Directory.CreateDirectory(app);
+        File.WriteAllText(Path.Combine(app, "launcher.py"), "import sys");
+        File.WriteAllBytes(Path.Combine(app, "_ssl.pyd"), [0x4D, 0x5A, 0x90, 0x00]);
+
+        Assert.Equal(ArtifactKind.PythonBundle, ArtifactDetector.Detect(app).Kind);
+    }
+
+    /// <summary>
+    /// Coverage was measuring recovery success on the files it could see rather than the
+    /// share of the application examined, so thirteen readable files inside a 98 MB Python
+    /// application reported 100% coverage and a near-perfect score.
+    /// </summary>
+    [Fact]
+    public async Task CompiledPythonModules_CountAgainstCoverage()
+    {
+        var app = Path.Combine(_scratch, "mostly-compiled");
+        Directory.CreateDirectory(app);
+        File.WriteAllText(Path.Combine(app, "main.py"), "import os");
+        File.WriteAllBytes(Path.Combine(app, "_ssl.pyd"), [0x4D, 0x5A, 0x90, 0x00]);
+
+        foreach (var i in Enumerable.Range(0, 200))
+        {
+            File.WriteAllBytes(Path.Combine(app, $"module{i}.pyc"), [0x6F, 0x0D, 0x0D, 0x0A]);
+        }
+
+        var report = await new Scanner().ScanAsync(app);
+
+        Assert.Equal(ArtifactKind.PythonBundle, report.Kind);
+        Assert.True(report.Coverage.Percent < 10, $"expected low coverage, got {report.Coverage.Percent}%");
+        Assert.False(report.Verdict.HasMeaningfulScore);
+        Assert.Contains(
+            report.Coverage.ChecksNotPossible,
+            c => c.Contains("compiled Python", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static IReadOnlyList<Finding> RunRules(string content, string path = "src/app.js") =>
         new RuleEngine().Analyse([new RecoveredFile
         {

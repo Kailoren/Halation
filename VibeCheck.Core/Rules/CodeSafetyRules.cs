@@ -23,6 +23,16 @@ public static class CodeSafetyRules
     private static readonly Regex EnumMemberDeclaration = PatternRule.Compile(
         """^\s*\w+\s*=\s*(?:0x[0-9a-fA-F]+|\d+)\s*,?\s*$""");
 
+    /// <summary>The statement keyword a SQL match opens with. See <c>IsProseNotSql</c>.</summary>
+    private static readonly Regex LeadingKeyword = PatternRule.Compile(
+        """^\s*(SELECT|INSERT|UPDATE|DELETE|DROP)""",
+        RegexOptions.IgnoreCase);
+
+    /// <summary>A clause keyword beyond the opening one, which prose rarely carries.</summary>
+    private static readonly Regex SecondClauseKeyword = PatternRule.Compile(
+        """\b(WHERE|VALUES|SET|JOIN|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|RETURNING)\b""",
+        RegexOptions.IgnoreCase);
+
     /// <inheritdoc cref="SecretRules.All"/>
     public static IReadOnlyList<IRule> All =>
     [
@@ -67,8 +77,35 @@ public static class CodeSafetyRules
             (?:\$\{[^}]+\}|"\s*\+\s*\w|'\s*\+\s*\w|\+\s*\w+\s*\+|%s|\{\d+\}|\{\w+\})
             """,
             RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace),
-        Ignore = (match, context) => Heuristics.IsInLineComment(context, match.Index),
+        Ignore = (match, context) =>
+            Heuristics.IsInLineComment(context, match.Index) || IsProseNotSql(match.Value),
     };
+
+    /// <summary>
+    /// Distinguishes a SQL statement from an English sentence containing the same words.
+    /// </summary>
+    /// <remarks>
+    /// Requiring the full statement shape was not enough on its own. A dependency-injection
+    /// library's error message, "Unable to select single public constructor from
+    /// implementation type {0}", satisfies SELECT..FROM followed by a placeholder and was
+    /// reported as SQL injection.
+    /// <para>
+    /// Two signals separate them reliably: code that builds SQL almost always writes the
+    /// keywords in upper case, and a real statement almost always carries a second clause
+    /// keyword. Prose has neither. Either signal alone is enough to accept the match.
+    /// </para>
+    /// </remarks>
+    private static bool IsProseNotSql(string matched)
+    {
+        var leading = LeadingKeyword.Match(matched);
+
+        if (leading.Success && leading.Value.Trim() == leading.Value.Trim().ToUpperInvariant())
+        {
+            return false;
+        }
+
+        return !SecondClauseKeyword.IsMatch(matched);
+    }
 
     private static PatternRule DynamicCodeEvaluation { get; } = new()
     {
