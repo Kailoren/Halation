@@ -237,6 +237,12 @@ public static class SafeArchive
     /// Decodes recovered bytes as text, rejecting anything that looks binary so the rule
     /// engine is never handed a decompressed image or native payload to regex over.
     /// </summary>
+    /// <remarks>
+    /// Byte order marks are honoured and stripped. This is not cosmetic: a leading U+FEFF
+    /// makes <c>JsonDocument.Parse</c> throw, and Visual Studio and PowerShell both write
+    /// UTF-8 BOMs by default. Left in, a manifest saved by either tool was discarded and the
+    /// application's entire dependency inventory silently went unchecked.
+    /// </remarks>
     public static string? DecodeText(byte[] content)
     {
         ArgumentNullException.ThrowIfNull(content);
@@ -246,13 +252,31 @@ public static class SafeArchive
             return string.Empty;
         }
 
+        var span = content.AsSpan();
+
+        // UTF-16 is full of NUL bytes, so it has to be recognised before the binary probe
+        // below would reject it.
+        if (span.StartsWith<byte>([0xFF, 0xFE]))
+        {
+            return Encoding.Unicode.GetString(span[2..]);
+        }
+
+        if (span.StartsWith<byte>([0xFE, 0xFF]))
+        {
+            return Encoding.BigEndianUnicode.GetString(span[2..]);
+        }
+
+        if (span.StartsWith<byte>([0xEF, 0xBB, 0xBF]))
+        {
+            span = span[3..];
+        }
+
         // A NUL byte in the first block is the cheapest reliable binary signal.
-        var probe = content.AsSpan(0, Math.Min(content.Length, 8000));
-        if (probe.Contains((byte)0))
+        if (span[..Math.Min(span.Length, 8000)].Contains((byte)0))
         {
             return null;
         }
 
-        return new UTF8Encoding(false, throwOnInvalidBytes: false).GetString(content);
+        return new UTF8Encoding(false, throwOnInvalidBytes: false).GetString(span);
     }
 }

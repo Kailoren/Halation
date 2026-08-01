@@ -420,6 +420,53 @@ public class ValidationRegressionTests : IDisposable
             c => c.Contains("compiled Python", StringComparison.OrdinalIgnoreCase));
     }
 
+    // ---- Found by running the application against a real folder -----------
+
+    /// <summary>
+    /// A leading U+FEFF makes JsonDocument.Parse throw, and Visual Studio and PowerShell
+    /// both write UTF-8 BOMs by default. Left unhandled, a manifest saved by either tool was
+    /// discarded and the application's whole dependency inventory silently went unchecked.
+    /// </summary>
+    [Fact]
+    public async Task ManifestWithAUtf8Bom_IsStillParsed()
+    {
+        var app = Path.Combine(_scratch, "bom-manifest");
+        Directory.CreateDirectory(app);
+
+        File.WriteAllText(
+            Path.Combine(app, "package-lock.json"),
+            """{"lockfileVersion":3,"packages":{"node_modules/lodash":{"version":"4.17.15"}}}""",
+            new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+        var report = await new Scanner().ScanAsync(app, ScanOptions.NoDependencyCheck);
+
+        Assert.DoesNotContain(
+            report.Coverage.ChecksNotPossible,
+            c => c.Contains("not valid JSON", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Theory]
+    [InlineData(new byte[] { 0xEF, 0xBB, 0xBF })]      // UTF-8
+    [InlineData(new byte[] { 0xFF, 0xFE })]            // UTF-16 little endian
+    [InlineData(new byte[] { 0xFE, 0xFF })]            // UTF-16 big endian
+    public void ByteOrderMarks_AreHonouredAndStripped(byte[] bom)
+    {
+        var encoding = bom[0] switch
+        {
+            0xEF => (System.Text.Encoding)new System.Text.UTF8Encoding(false),
+            0xFF => System.Text.Encoding.Unicode,
+            _ => System.Text.Encoding.BigEndianUnicode,
+        };
+
+        byte[] bytes = [.. bom, .. encoding.GetBytes("""{"a":1}""")];
+
+        Assert.Equal("""{"a":1}""", SafeArchive.DecodeText(bytes));
+    }
+
+    [Fact]
+    public void ActualBinaryContent_IsStillRejected() =>
+        Assert.Null(SafeArchive.DecodeText([0x89, 0x50, 0x4E, 0x47, 0x00, 0x01]));
+
     private static IReadOnlyList<Finding> RunRules(string content, string path = "src/app.js") =>
         new RuleEngine().Analyse([new RecoveredFile
         {
