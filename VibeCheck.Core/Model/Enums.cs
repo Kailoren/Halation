@@ -71,6 +71,18 @@ public enum ScoreBand
     SeriousIssues,
     NeedsWork,
     NoKnownIssues,
+
+    /// <summary>
+    /// Too little of the artifact could be read for any score to be meaningful.
+    /// </summary>
+    /// <remarks>
+    /// This band exists because of a real failure observed in testing: a self-contained
+    /// single-file application produced no readable code at all, and the scan reported
+    /// "100/100, no known issues found". Separating coverage from the score is not on its own
+    /// enough, because the band label still reads as reassurance. When nothing was read,
+    /// the honest output is a refusal to score rather than a perfect one.
+    /// </remarks>
+    InsufficientCoverage,
 }
 
 /// <summary>
@@ -83,6 +95,13 @@ public enum ArtifactKind
 
     /// <summary>Managed PE. Decompiles to near-original C#.</summary>
     DotNetAssembly,
+
+    /// <summary>
+    /// A .NET single-file publish: a native launcher with the managed assemblies embedded.
+    /// Looks native to a PE reader, so it needs its own kind to avoid being silently treated
+    /// as an unreadable binary.
+    /// </summary>
+    DotNetSingleFile,
 
     /// <summary>Unmanaged PE. No source recovery is possible; hygiene checks only.</summary>
     NativeWindows,

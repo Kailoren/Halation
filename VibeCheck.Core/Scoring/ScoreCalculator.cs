@@ -42,12 +42,51 @@ public static class ScoreCalculator
         _ => 100,
     };
 
+    /// <summary>
+    /// Coverage at or below this percentage means no score is reported.
+    /// </summary>
+    /// <remarks>
+    /// Set from observed behaviour rather than intuition: scanning a self-contained
+    /// single-file application yielded zero readable code and, before this gate existed,
+    /// a confident "100/100, no known issues found".
+    /// </remarks>
+    public const int MinimumMeaningfulCoverage = 5;
+
     /// <summary>Computes the overall verdict for a complete finding set.</summary>
-    public static Verdict Calculate(IReadOnlyList<Finding> findings)
+    /// <param name="findings">Everything found, from every stage.</param>
+    /// <param name="coveragePercent">
+    /// How much of the artifact was readable. Below <see cref="MinimumMeaningfulCoverage"/>,
+    /// the verdict refuses to score rather than reporting a high one, because a scan that
+    /// read nothing has found nothing for reasons that say nothing about the application.
+    /// </param>
+    public static Verdict Calculate(IReadOnlyList<Finding> findings, int coveragePercent = 100)
     {
         ArgumentNullException.ThrowIfNull(findings);
 
         var score = ScoreFor(findings);
+
+        // Findings can still exist at zero coverage: a native binary yields signing and
+        // hardening observations without a line of source. Those are reported, but they do
+        // not license a score for the application as a whole.
+        if (coveragePercent < MinimumMeaningfulCoverage)
+        {
+            var blockingAtLowCoverage = findings
+                .Where(f => f.IsBlocking && f.Source == FindingSource.Rule)
+                .ToList();
+
+            return new Verdict
+            {
+                Score = score,
+                Band = blockingAtLowCoverage.Count > 0
+                    ? ScoreBand.DoNotInstall
+                    : ScoreBand.InsufficientCoverage,
+                AdviseAgainstInstall = blockingAtLowCoverage.Count > 0,
+                BlockingReasons = blockingAtLowCoverage
+                    .Select(f => f.Title)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList(),
+            };
+        }
 
         // Only deterministic rules may advise against installation. An inferred finding is
         // not a defensible basis for telling someone not to run software they downloaded,

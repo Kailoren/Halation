@@ -53,6 +53,7 @@ public sealed record ScanReport
     public string KindLabel => Kind switch
     {
         ArtifactKind.DotNetAssembly => ".NET assembly",
+        ArtifactKind.DotNetSingleFile => ".NET single-file application",
         ArtifactKind.NativeWindows => "Native Windows binary",
         ArtifactKind.ElectronApp => "Electron application",
         ArtifactKind.AsarArchive => "Electron asar archive",

@@ -289,6 +289,32 @@ public sealed class DotNetRecoveryBackend : IRecoveryBackend
         };
     }
 
+    /// <summary>
+    /// Assembly name prefixes belonging to the .NET runtime and framework rather than to the
+    /// application.
+    /// </summary>
+    /// <remarks>
+    /// A self-contained publish ships the whole framework beside the application, so without
+    /// this filter the scanner decompiles Microsoft's WPF and BCL code and reports its
+    /// findings against the user's app. Observed in testing: scanning a real self-contained
+    /// WPF application produced 25 findings, every one of them in PresentationFramework or
+    /// PresentationCore, including BinaryFormatter usage inside Microsoft's own clipboard
+    /// implementation. The user can act on none of it, and it buried the application entirely.
+    /// <para>
+    /// This is the same reasoning that skips node_modules: report on what the developer
+    /// wrote and ships, not on the platform underneath it.
+    /// </para>
+    /// </remarks>
+    private static readonly string[] FrameworkAssemblyPrefixes =
+    [
+        "System.", "Microsoft.", "mscorlib", "netstandard", "WindowsBase",
+        "PresentationCore", "PresentationFramework", "ReachFramework", "UIAutomation",
+        "DirectWriteForwarder", "PenImc", "D3DCompiler", "vcruntime", "ucrtbase",
+        "api-ms-win", "hostfxr", "hostpolicy", "clrjit", "coreclr", "clretwrc",
+        "mscordaccore", "mscordbi", "msquic", "createdump", "WindowsFormsIntegration",
+        "Accessibility", "wpfgfx", "SOS.NETCore",
+    ];
+
     private static IReadOnlyList<string> FindAssemblies(string directory)
     {
         try
@@ -297,6 +323,7 @@ public sealed class DotNetRecoveryBackend : IRecoveryBackend
                 .EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
                 .Where(f => f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
                             || f.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                .Where(f => !IsFrameworkAssembly(Path.GetFileNameWithoutExtension(f)))
                 .Where(IsManaged)
                 .Take(200)
                 .ToList();
@@ -310,6 +337,11 @@ public sealed class DotNetRecoveryBackend : IRecoveryBackend
             return [];
         }
     }
+
+    /// <summary>True for runtime and framework assemblies the application merely carries.</summary>
+    public static bool IsFrameworkAssembly(string assemblyName) =>
+        FrameworkAssemblyPrefixes.Any(prefix =>
+            assemblyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
 
     private static bool IsManaged(string path)
     {

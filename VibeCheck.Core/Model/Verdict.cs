@@ -26,6 +26,24 @@ public sealed record Verdict
     /// <summary>The specific findings behind <see cref="AdviseAgainstInstall"/>.</summary>
     public IReadOnlyList<string> BlockingReasons { get; init; } = [];
 
+    /// <summary>
+    /// Whether a numeric score is meaningful for this result. False when too little of the
+    /// artifact could be read; callers should show <see cref="BandLabel"/> alone rather than
+    /// a number that would imply the application was examined.
+    /// </summary>
+    public bool HasMeaningfulScore => Band != ScoreBand.InsufficientCoverage;
+
+    /// <summary>
+    /// The headline result as it should be shown, in one place.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Score"/> still holds a number when <see cref="HasMeaningfulScore"/> is
+    /// false, because the deduction arithmetic ran over whatever findings did exist. Rendering
+    /// that number would tell the reader the application scored well when in fact it was never
+    /// read. Every display path should use this rather than formatting the score itself.
+    /// </remarks>
+    public string ScoreDisplay => HasMeaningfulScore ? $"{Score}/100" : "Not scored";
+
     /// <summary>Short label for the band, for display next to the score.</summary>
     public string BandLabel => Band switch
     {
@@ -33,6 +51,7 @@ public sealed record Verdict
         ScoreBand.SeriousIssues => "Serious issues",
         ScoreBand.NeedsWork => "Needs work",
         ScoreBand.NoKnownIssues => "No known issues found",
+        ScoreBand.InsufficientCoverage => "Could not analyse",
         _ => "Unknown",
     };
 }

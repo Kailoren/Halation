@@ -23,7 +23,10 @@ namespace VibeCheck.Core.Recovery;
 public sealed class NativeRecoveryBackend : IRecoveryBackend
 {
     public bool CanHandle(ArtifactKind kind) =>
-        kind is ArtifactKind.NativeWindows or ArtifactKind.Unknown or ArtifactKind.PythonBundle;
+        kind is ArtifactKind.NativeWindows
+            or ArtifactKind.Unknown
+            or ArtifactKind.PythonBundle
+            or ArtifactKind.DotNetSingleFile;
 
     public Task<RecoveryResult> RecoverAsync(
         ArtifactDescriptor artifact,
@@ -34,11 +37,36 @@ public sealed class NativeRecoveryBackend : IRecoveryBackend
 
         var findings = new List<Finding>();
         var basis = "This artifact contains no recoverable source.";
+        var limitations = new List<string>
+        {
+            "Hardcoded credentials and API keys (requires readable source).",
+            "Injection, unsafe deserialisation, and other code-level flaws.",
+            "Authentication and access-control logic.",
+            "Dependency versions and their known vulnerabilities.",
+        };
 
-        if (artifact.Kind == ArtifactKind.NativeWindows && !artifact.IsDirectory)
+        if (artifact.Kind == ArtifactKind.DotNetSingleFile)
+        {
+            // The managed code is present and decompilable in principle, it is simply
+            // packed. Saying so is very different from "this binary is unreadable", and the
+            // distinction matters because the user can act on it by scanning the unpacked
+            // build folder instead.
+            basis = "This is a .NET single-file application; its embedded assemblies are not "
+                    + "unpacked by this build, so none of its code was analysed.";
+            limitations.Insert(0,
+                "The application's own code: it is embedded in a single-file bundle that this "
+                + "build cannot unpack. Scanning the unpacked publish folder instead will give "
+                + "full coverage.");
+        }
+        else if (artifact.Kind == ArtifactKind.NativeWindows && !artifact.IsDirectory)
         {
             findings.AddRange(InspectPortableExecutable(artifact));
             basis = "Native binary: hygiene checks only, no source could be recovered.";
+        }
+
+        if (!artifact.IsDirectory && artifact.Kind == ArtifactKind.DotNetSingleFile)
+        {
+            findings.AddRange(InspectPortableExecutable(artifact));
         }
 
         return Task.FromResult(new RecoveryResult
@@ -49,13 +77,7 @@ public sealed class NativeRecoveryBackend : IRecoveryBackend
             {
                 Percent = 0,
                 Basis = basis,
-                ChecksNotPossible =
-                [
-                    "Hardcoded credentials and API keys (requires readable source).",
-                    "Injection, unsafe deserialisation, and other code-level flaws.",
-                    "Authentication and access-control logic.",
-                    "Dependency versions and their known vulnerabilities.",
-                ],
+                ChecksNotPossible = limitations,
             },
         });
     }

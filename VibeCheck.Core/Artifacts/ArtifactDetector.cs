@@ -122,8 +122,16 @@ public static class ArtifactDetector
             using var stream = File.OpenRead(path);
             using var reader = new PEReader(stream);
 
-            return reader.HasMetadata
-                ? (ArtifactKind.DotNetAssembly, "Managed PE with CLI metadata.")
+            if (reader.HasMetadata)
+            {
+                return (ArtifactKind.DotNetAssembly, "Managed PE with CLI metadata.");
+            }
+
+            // A .NET single-file publish is a native launcher with the managed assemblies
+            // embedded, so it has no CLI metadata of its own and would otherwise be filed as
+            // an ordinary native binary and silently written off as unreadable.
+            return ContainsSingleFileBundle(path)
+                ? (ArtifactKind.DotNetSingleFile, ".NET single-file bundle (embedded assemblies).")
                 : (ArtifactKind.NativeWindows, "Native PE without CLI metadata.");
         }
         catch (BadImageFormatException)
@@ -210,8 +218,19 @@ public static class ArtifactDetector
             return (ArtifactKind.SourceTree, "Contains a .NET project or solution file.");
         }
 
-        if (EnumerateSafely(path, "*.dll").Concat(EnumerateSafely(path, "*.exe")).Any())
+        var binaries = EnumerateSafely(path, "*.exe").Concat(EnumerateSafely(path, "*.dll")).ToList();
+
+        if (binaries.Count > 0)
         {
+            // A published .NET app folder usually holds one single-file launcher plus data.
+            // Classifying that as a plain assembly folder finds nothing to decompile and
+            // yields an empty, falsely reassuring result.
+            if (binaries.Any(b => ClassifyPortableExecutable(b).Item1 == ArtifactKind.DotNetSingleFile))
+            {
+                return (ArtifactKind.DotNetSingleFile,
+                    "Contains a .NET single-file application.");
+            }
+
             return (ArtifactKind.DotNetAssembly, "Contains Windows binaries; will scan each.");
         }
 
@@ -344,6 +363,69 @@ public static class ArtifactDetector
         catch (UnauthorizedAccessException)
         {
             return [];
+        }
+    }
+
+    /// <summary>
+    /// The fixed signature the .NET host writes into a single-file bundle, used here to tell
+    /// a bundled application apart from an ordinary native executable.
+    /// </summary>
+    private static ReadOnlySpan<byte> BundleSignature =>
+    [
+        0x8b, 0x12, 0x02, 0xb9, 0x6a, 0x61, 0x20, 0x38,
+        0x72, 0x7b, 0x93, 0x02, 0x14, 0xd7, 0xa0, 0x32,
+        0x13, 0xf5, 0xb9, 0xe6, 0xef, 0xae, 0x33, 0x18,
+        0xee, 0x3b, 0x2d, 0xce, 0x24, 0xb3, 0x6a, 0xae,
+    ];
+
+    /// <summary>Streams the file looking for the bundle marker, with overlap across chunks.</summary>
+    private static bool ContainsSingleFileBundle(string path)
+    {
+        const int ChunkSize = 1024 * 1024;
+
+        try
+        {
+            var info = new FileInfo(path);
+
+            // A bundle carries a whole runtime; anything small enough to rule out is skipped
+            // rather than read end to end.
+            if (info.Length < 1024 * 1024)
+            {
+                return false;
+            }
+
+            using var stream = File.OpenRead(path);
+
+            var overlap = BundleSignature.Length - 1;
+            var buffer = new byte[ChunkSize + overlap];
+            var carried = 0;
+
+            while (true)
+            {
+                var read = stream.Read(buffer, carried, ChunkSize);
+                if (read == 0)
+                {
+                    return false;
+                }
+
+                var available = carried + read;
+                if (buffer.AsSpan(0, available).IndexOf(BundleSignature) >= 0)
+                {
+                    return true;
+                }
+
+                // Carry the tail forward so a signature straddling two chunks is still found.
+                buffer.AsSpan(available - overlap, overlap).CopyTo(buffer);
+                carried = overlap;
+            }
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
         }
     }
 
