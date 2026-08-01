@@ -1,0 +1,40 @@
+## .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]64/
+publish/
+*.user
+*.suo
+*.userprefs
+
+## Visual Studio / Rider / VS Code
+.vs/
+.idea/
+*.swp
+
+## Test + coverage output
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+*.coverage
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+
+## Local scan scratch space and sample binaries.
+## Never commit test malware or third-party binaries to a public repo.
+samples/
+scratch/
+*.bak
+
+## Local settings that may hold a user's BYOK API key.
+## The key is stored via DPAPI outside the repo, but guard against stray copies.
+appsettings.local.json
+*.apikey

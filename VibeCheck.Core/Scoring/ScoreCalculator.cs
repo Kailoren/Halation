@@ -1,0 +1,113 @@
+using VibeCheck.Core.Model;
+
+namespace VibeCheck.Core.Scoring;
+
+/// <summary>
+/// Turns a set of findings into the headline score, band, and install verdict.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The design point here is the cap. Scores that average across many checks reward breadth
+/// of passing trivia: an app can pass fifty header-style checks, ship a live API key in its
+/// bundle, and still score in the nineties. That number is worse than no number, because it
+/// actively tells the reader the app is fine.
+/// </para>
+/// <para>
+/// So deductions accumulate normally, and then the score is hard-capped by the single worst
+/// finding present. Any critical finding caps at 39 no matter what else passed. Fifty clean
+/// checks cannot lift an app with a leaked service key out of the red band.
+/// </para>
+/// </remarks>
+public static class ScoreCalculator
+{
+    /// <summary>Points removed per finding, by severity. Multiple issues compound.</summary>
+    private static int DeductionFor(Severity severity) => severity switch
+    {
+        Severity.Critical => 40,
+        Severity.High => 20,
+        Severity.Medium => 8,
+        Severity.Low => 3,
+        _ => 0,
+    };
+
+    /// <summary>
+    /// The hard ceiling implied by the worst finding present. These align with the band
+    /// thresholds so the number and the label can never disagree.
+    /// </summary>
+    private static int CapFor(Severity worst) => worst switch
+    {
+        Severity.Critical => 39,
+        Severity.High => 69,
+        Severity.Medium => 89,
+        _ => 100,
+    };
+
+    /// <summary>Computes the overall verdict for a complete finding set.</summary>
+    public static Verdict Calculate(IReadOnlyList<Finding> findings)
+    {
+        ArgumentNullException.ThrowIfNull(findings);
+
+        var score = ScoreFor(findings);
+
+        // Only deterministic rules may advise against installation. An inferred finding is
+        // not a defensible basis for telling someone not to run software they downloaded,
+        // and the deep pass is optional, so letting it block would make the strongest claim
+        // in the report depend on whether the user happened to supply an API key.
+        var blocking = findings
+            .Where(f => f.IsBlocking && f.Source == FindingSource.Rule)
+            .ToList();
+
+        return new Verdict
+        {
+            Score = score,
+            Band = BandFor(score),
+            AdviseAgainstInstall = blocking.Count > 0,
+            BlockingReasons = blocking
+                .Select(f => f.Title)
+                .Distinct(StringComparer.Ordinal)
+                .ToList(),
+        };
+    }
+
+    /// <summary>
+    /// Per-category subscores, so the headline number is explainable. Categories with no
+    /// findings score 100; that means "nothing found here", which the report states plainly
+    /// alongside the coverage meter rather than implying the category is clean.
+    /// </summary>
+    public static IReadOnlyDictionary<FindingCategory, int> CategoryScores(
+        IReadOnlyList<Finding> findings)
+    {
+        ArgumentNullException.ThrowIfNull(findings);
+
+        return Enum.GetValues<FindingCategory>()
+            .ToDictionary(
+                category => category,
+                category => ScoreFor(findings.Where(f => f.Category == category).ToList()));
+    }
+
+    /// <summary>Applies accumulated deductions, then the worst-finding cap.</summary>
+    private static int ScoreFor(IReadOnlyList<Finding> findings)
+    {
+        if (findings.Count == 0)
+        {
+            return 100;
+        }
+
+        var score = 100 - findings.Sum(f => DeductionFor(f.Severity));
+        var cap = CapFor(findings.Max(f => f.Severity));
+
+        return Math.Clamp(Math.Min(score, cap), 0, 100);
+    }
+
+    /// <summary>
+    /// Maps a score to its band. Thresholds mirror <see cref="CapFor"/> exactly, so a
+    /// capped score always lands in the band its worst finding implies.
+    /// </summary>
+    private static ScoreBand BandFor(int score) => score switch
+    {
+        <= 39 => ScoreBand.DoNotInstall,
+        <= 69 => ScoreBand.SeriousIssues,
+        <= 89 => ScoreBand.NeedsWork,
+        _ => ScoreBand.NoKnownIssues,
+    };
+}
