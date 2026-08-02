@@ -404,7 +404,8 @@
                                              theme that restates the ramp restates this too and
                                              the outline can never disagree with the label it
                                              surrounds. -->
-                                        <Border Margin="0,0,0,8" CornerRadius="4"
+                                        <Border Margin="0,0,0,8"
+                                                CornerRadius="{DynamicResource ButtonRadius}"
                                                 Background="{StaticResource PanelRaised}"
                                                 BorderThickness="1"
                                                 BorderBrush="{Binding Severity,
@@ -464,7 +465,8 @@
                                                             Visibility="{Binding Expanded,
                                                                          Converter={StaticResource BoolToVisibility}}">
 
-                                                    <Border Padding="10" CornerRadius="4" Margin="0,0,0,10"
+                                                    <Border Padding="10" Margin="0,0,0,10"
+                                                            CornerRadius="{DynamicResource ButtonRadius}"
                                                             Background="#2A2418" BorderThickness="1"
                                                             BorderBrush="{StaticResource Medium}"
                                                             Visibility="{Binding IsAssisted,
@@ -475,7 +477,8 @@
 
                                                     <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
 
-                                                    <Border Margin="0,10,0,0" Padding="10" CornerRadius="4"
+                                                    <Border Margin="0,10,0,0" Padding="10"
+                                                            CornerRadius="{DynamicResource ButtonRadius}"
                                                             Background="{StaticResource Bg}"
                                                             Visibility="{Binding Evidence,
                                                                          Converter={StaticResource NullToVisibility}}">
