@@ -60,7 +60,7 @@ Nothing is executed and nothing is written to disk: the installer is read, never
 Installers built with Inno Setup, or NSIS installers using solid compression, cannot be
 unpacked yet. Those say so rather than reporting an empty result.
 
-## Dependency checks and isolate mode
+## Dependency checks
 
 Out-of-date dependencies are one of the most common real problems in shipped applications,
 so VibeCheck checks them against [OSV.dev](https://osv.dev) **at the moment you scan**. A
@@ -70,18 +70,7 @@ cite CVE identifiers and link through to the NVD entry.
 What is sent: the package names and versions the application declares, and nothing else. No
 source, no file contents, nothing identifying you or the artifact.
 
-**Isolate mode** exists for the case that matters most: a normal scan flags something, and
-you want to examine it on a machine deliberately cut off from everything.
-
-1. Scan normally. A small **data bundle** is written beside the artifact, holding its hash,
-   its dependency list, and the advisories that matched.
-2. Carry the artifact and the bundle to the isolated machine.
-3. Scan there with isolate mode on. **No network request is made at all**, and you get the
-   same dependency result, with the hash proving the bundle belongs to that artifact.
-
-A bundle is typically a few hundred kilobytes, against 1.3 GB for the whole database.
-
-For a machine that will never see a network, you can instead download a local mirror,
+For a machine that will never see a network, you can download a local mirror instead,
 choosing the ecosystems you care about: NuGet is around 2 MB, PyPI 31 MB, npm 203 MB.
 
 Every report states which of these it used and how old the data was. A result checked
@@ -109,7 +98,7 @@ matched. Both of those bounds are deliberate:
 
 The report lists exactly which files were read and how much the pass cost.
 
-**Bounds on it.** Off unless you tick it, per scan, and never on an isolated scan. Your key
+**Bounds on it.** Off unless you turn it on, per scan. Your key
 is encrypted to your Windows account and stored outside the application folder. Findings from
 this pass are labelled as inferred, carry a confidence level, and **can never trigger a "do
 not install" verdict** — the strongest claim in a report must not depend on whether the reader

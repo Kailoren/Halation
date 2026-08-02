@@ -87,7 +87,7 @@ public static class ThemeGuard
 
         // Brushes. No ImageBrush and no VisualBrush: the first takes a URI, which is a file read
         // or a network request depending on how it is spelled, and this application has an
-        // isolate mode that promises neither happens.
+        // promise that neither happens.
         "SolidColorBrush", "LinearGradientBrush", "RadialGradientBrush", "DrawingBrush",
         "GradientStop", "GradientStopCollection", "Pen",
 

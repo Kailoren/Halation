@@ -50,7 +50,6 @@ public partial class App : Application
         {
             if (MainWindow?.DataContext is MainViewModel model)
             {
-                model.Isolate = e.Args.Contains("--isolate", StringComparer.OrdinalIgnoreCase);
                 await model.ScanAsync(path);
             }
         });

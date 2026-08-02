@@ -543,14 +543,6 @@ public class DeepPassBackendSelectionTests
     public void Is_on_when_the_local_cli_was_chosen_without_a_key() =>
         Assert.True(new ScanOptions { DeepPassUseLocalCli = true }.DeepPassEnabled);
 
-    /// <summary>
-    /// Isolate mode promises no network requests whatsoever. A local CLI still makes them, so
-    /// the promise has to cover this route as well as the API one.
-    /// </summary>
-    [Fact]
-    public void Is_off_in_isolate_mode_even_with_the_local_cli_chosen() =>
-        Assert.False(new ScanOptions { Isolate = true, DeepPassUseLocalCli = true }.DeepPassEnabled);
-
     [Fact]
     public void Is_still_off_when_nothing_was_chosen() =>
         Assert.False(new ScanOptions().DeepPassEnabled);

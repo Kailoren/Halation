@@ -28,9 +28,9 @@ public sealed record ScanProgress(ScanStage Stage, string Message, int? Percent 
 /// catalog, check its dependencies, and score the result.
 /// </summary>
 /// <remarks>
-/// The only step that can touch the network is the dependency check, and only when the
-/// options allow it. Everything else is local, so an isolated scan is a scan with that one
-/// step pointed at an offline source.
+/// Two steps can touch the network and both are opt-out or opt-in: the dependency check,
+/// which sends package names and versions only, and the deep pass, which is off unless asked
+/// for. Everything else is local, including all recovery and every rule.
 /// </remarks>
 public sealed class Scanner
 {
@@ -99,10 +99,8 @@ public sealed class Scanner
         progress?.Report(new ScanProgress(ScanStage.CheckingDependencies, "Checking dependencies"));
 
         var dependencies = DependencyInventory.Extract(recovery.Files);
-        var lookup = await CheckDependenciesAsync(dependencies, options, artifact, cancellationToken)
+        var lookup = await CheckDependenciesAsync(dependencies, options, cancellationToken)
             .ConfigureAwait(false);
-
-        var bundlePath = WriteBundleIfRequested(options, artifact, sha256, dependencies, lookup);
 
         // The optional reasoning pass, after the deterministic one so it can be told what has
         // already been found and triage against it rather than duplicating it.
@@ -166,7 +164,7 @@ public sealed class Scanner
                 FilesChecked = analysis.FilesAnalysed,
                 PackagesResolved = dependencies.Dependencies.Count,
 
-                // Resolved and checked differ whenever the lookup declined: isolate mode with
+                // Resolved and checked differ whenever the lookup declined:
                 // no bundle, no network, or the check switched off. Reporting the resolved
                 // count as though it had been checked would claim work that did not happen.
                 PackagesChecked = lookup.Provenance.Origin == VulnerabilityDataOrigin.None
@@ -174,8 +172,6 @@ public sealed class Scanner
                     : dependencies.Dependencies.Count,
                 VulnerabilityData = lookup.Provenance,
             },
-            BundlePath = bundlePath,
-            RanIsolated = options.Isolate,
             Checks = new CheckSummary { Checks = analysis.Checks },
             DeepPassRan = options.DeepPassEnabled,
 
@@ -219,16 +215,11 @@ public sealed class Scanner
     }
 
     /// <summary>
-    /// Selects the vulnerability tier and runs it.
+    /// Looks the dependencies up against published advisories.
     /// </summary>
-    /// <remarks>
-    /// Isolate mode never constructs a network-backed source, so the guarantee is structural
-    /// rather than a condition checked at the point of use.
-    /// </remarks>
     private static async Task<VulnerabilityLookupResult> CheckDependenciesAsync(
         DependencyInventoryResult dependencies,
         ScanOptions options,
-        ArtifactDescriptor artifact,
         CancellationToken cancellationToken)
     {
         if (!options.CheckDependencies)
@@ -237,100 +228,11 @@ public sealed class Scanner
                 "Dependency checking was switched off for this scan.");
         }
 
-        var source = SelectSource(options, artifact);
-
-        if (options.Isolate && source.RequiresNetwork)
-        {
-            throw new InvalidOperationException(
-                "An isolated scan must not use a network-backed vulnerability source.");
-        }
+        var source = options.VulnerabilitySource
+                     ?? new LiveVulnerabilitySource(OsvClient.Create());
 
         return await source.LookupAsync(dependencies.Dependencies, cancellationToken)
             .ConfigureAwait(false);
-    }
-
-    private static IVulnerabilitySource SelectSource(ScanOptions options, ArtifactDescriptor artifact)
-    {
-        if (options.VulnerabilitySource is { } supplied)
-        {
-            return supplied;
-        }
-
-        if (!options.Isolate)
-        {
-            return new LiveVulnerabilitySource(OsvClient.Create());
-        }
-
-        var bundlePath = options.BundlePath ?? DefaultBundlePath(artifact);
-
-        if (bundlePath is not null && ScanBundle.Load(bundlePath) is { } bundle)
-        {
-            return new ScanBundleVulnerabilitySource(bundle, ArtifactDetector.ComputeSha256(artifact));
-        }
-
-        return new NoVulnerabilitySource(
-            "This scan ran isolated with no offline data bundle available, so dependencies "
-            + "were not checked. Run a normal scan first to produce a bundle, then bring it "
-            + "here alongside the artifact.");
-    }
-
-    /// <summary>
-    /// Writes the offline bundle beside the artifact, never inside it.
-    /// </summary>
-    /// <remarks>
-    /// Writing into a scanned folder would modify the very thing under examination, which is
-    /// unacceptable when the artifact may be evidence.
-    /// </remarks>
-    private static string? WriteBundleIfRequested(
-        ScanOptions options,
-        ArtifactDescriptor artifact,
-        string sha256,
-        DependencyInventoryResult dependencies,
-        VulnerabilityLookupResult lookup)
-    {
-        if (!options.WriteBundle
-            || options.Isolate
-            || lookup.Provenance.Origin != VulnerabilityDataOrigin.Live)
-        {
-            return null;
-        }
-
-        var directory = options.BundleDirectory ?? Path.GetDirectoryName(artifact.Path.TrimEnd(
-            Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-
-        if (string.IsNullOrEmpty(directory))
-        {
-            return null;
-        }
-
-        var target = Path.Combine(directory, ScanBundle.FileNameFor(artifact.Name));
-
-        try
-        {
-            ScanBundle
-                .From(artifact.Name, sha256, dependencies.Dependencies, lookup)
-                .Save(target);
-
-            return target;
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return null;
-        }
-    }
-
-    private static string? DefaultBundlePath(ArtifactDescriptor artifact)
-    {
-        var directory = Path.GetDirectoryName(artifact.Path.TrimEnd(
-            Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-
-        return string.IsNullOrEmpty(directory)
-            ? null
-            : Path.Combine(directory, ScanBundle.FileNameFor(artifact.Name));
     }
 
     /// <summary>

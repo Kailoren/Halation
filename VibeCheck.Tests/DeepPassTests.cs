@@ -7,7 +7,7 @@ namespace VibeCheck.Tests;
 
 /// <summary>
 /// The deep pass costs the reader money and sends their code to a third party, so its
-/// guarantees are the tested part: it never runs unasked, never runs on an isolated scan,
+/// guarantees are the tested part: it never runs unasked,
 /// and its findings can never make the strongest claim in the report.
 /// </summary>
 public class DeepPassTests
@@ -37,17 +37,17 @@ public class DeepPassTests
     public void Is_off_when_no_key_is_supplied() =>
         Assert.False(new ScanOptions().DeepPassEnabled);
 
+    [Fact]
+    public void Is_on_with_a_key() =>
+        Assert.True(new ScanOptions { DeepPassApiKey = "sk-ant-test" }.DeepPassEnabled);
+
     /// <summary>
-    /// Isolate mode promises no network access at all. A stored key must not quietly
-    /// override that promise.
+    /// Whitespace is not a key. Without this a stored-but-empty value would turn the pass on
+    /// and every file would fail against an API that was never given a credential.
     /// </summary>
     [Fact]
-    public void Is_off_in_isolate_mode_even_with_a_key() =>
-        Assert.False(new ScanOptions { Isolate = true, DeepPassApiKey = "sk-ant-test" }.DeepPassEnabled);
-
-    [Fact]
-    public void Is_on_only_with_a_key_and_no_isolation() =>
-        Assert.True(new ScanOptions { DeepPassApiKey = "sk-ant-test" }.DeepPassEnabled);
+    public void Is_off_when_the_key_is_blank() =>
+        Assert.False(new ScanOptions { DeepPassApiKey = "   " }.DeepPassEnabled);
 
     [Fact]
     public async Task Produces_nothing_when_disabled()

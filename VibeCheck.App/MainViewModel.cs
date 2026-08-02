@@ -40,7 +40,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private Audience _audience = AudienceStore.Load() ?? Audience.Developer;
     private string _progressMessage = string.Empty;
     private int _progressPercent;
-    private bool _isolate;
     private bool _isDragging;
     private bool _isMinimised;
     private string? _error;
@@ -488,29 +487,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         private set => Set(ref _error, value);
     }
 
-    /// <summary>
-    /// When set, the scan makes no network request of any kind.
-    /// </summary>
-    /// <remarks>
-    /// Intended for examining a sample on a machine cut off from everything, using the data
-    /// bundle a previous online scan left beside it.
-    /// </remarks>
-    public bool Isolate
-    {
-        get => _isolate;
-        set
-        {
-            if (Set(ref _isolate, value))
-            {
-                Notify(nameof(IsolateExplanation));
-            }
-        }
-    }
-
-    public string IsolateExplanation => Isolate
-        ? "No network requests. Dependencies are checked only against a data bundle from an earlier scan."
-        : "Dependencies are checked against current advisories. Only package names and versions are sent.";
-
     // ---- Progress ----------------------------------------------------------
 
     public string ProgressMessage
@@ -541,7 +517,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                              nameof(AdviseAgainstInstall), nameof(BlockingReasons),
                              nameof(CoveragePercent), nameof(CoverageBasis), nameof(CoverageIsLow),
                              nameof(SummaryLine), nameof(VulnerabilitySummary),
-                             nameof(VulnerabilityIsStale), nameof(BundleNote), nameof(Sha256),
+                             nameof(VulnerabilityIsStale), nameof(Sha256),
                              nameof(DurationLabel), nameof(ScoreCaption),
                          })
                 {
@@ -629,10 +605,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool VulnerabilityIsStale =>
         Report is not null && Report.VulnerabilityData.IsStale(Report.ScannedAt);
 
-    public string? BundleNote => Report?.BundlePath is { } path
-        ? $"Offline data bundle written: {Path.GetFileName(path)}"
-        : null;
-
     // ---- Commands ----------------------------------------------------------
 
     public ICommand ScanCommand { get; }
@@ -669,12 +641,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         var options = new ScanOptions
         {
-            Isolate = Isolate,
-            WriteBundle = !Isolate,
             Audience = Audience,
 
             // Only when the reader switched the pass on for this scan and chose a source that
-            // can answer. Isolate mode ignores both, since it promises no network at all.
+            // can answer.
             DeepPassApiKey = DeepPassEnabled && !DeepPassUsesLocalCli ? ApiKeyStore.Load() : null,
             DeepPassUseLocalCli = DeepPassEnabled && DeepPassUsesLocalCli,
         };

@@ -476,20 +476,6 @@ public static class MarkdownReportWriter
             output.AppendLine();
         }
 
-        if (report.RanIsolated)
-        {
-            output.AppendLine("> This scan ran in isolate mode and made no network requests.");
-            output.AppendLine();
-        }
-
-        if (report.BundlePath is { } bundle)
-        {
-            output.AppendLine($"An offline data bundle for this artifact was written to "
-                              + $"`{Path.GetFileName(bundle)}`. Carry it alongside the artifact to "
-                              + "reproduce this dependency result on a machine with no network.");
-            output.AppendLine();
-        }
-
         output.AppendLine("---");
         output.AppendLine();
         output.AppendLine($"VibeCheck {report.ScannerVersion}");

@@ -143,15 +143,6 @@
                     </StackPanel>
                 </ContentControl>
 
-                <ContentControl Style="{StaticResource Card}" Margin="0,18,0,0">
-                    <StackPanel>
-                        <CheckBox Content="Isolate mode (make no network requests)"
-                                  IsChecked="{Binding Isolate}"
-                                  Foreground="{StaticResource Text}"/>
-                        <TextBlock Text="{Binding IsolateExplanation}" Style="{StaticResource Caption}"
-                                   TextWrapping="Wrap" Margin="24,6,0,0"/>
-                    </StackPanel>
-                </ContentControl>
 
                 <!-- The audience card that used to sit here is gone. It offered a one-click
                      toggle at a point where nothing had been scanned yet, so it changed a
@@ -233,7 +224,7 @@
                             </StackPanel>
 
                             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,10,0,0"
-                                       Text="Only the files that handle untrusted input are sent, never the whole application, and never on an isolated scan. Both routes send them to Anthropic; they differ in what they spend, not in what leaves this machine. Your API key, if you set one, is encrypted to your Windows account and stored outside the application folder. The report names which files were read and what answered."/>
+                                       Text="Only the files that handle untrusted input are sent, never the whole application. Both routes send them to Anthropic; they differ in what they spend, not in what leaves this machine. Your API key, if you set one, is encrypted to your Windows account and stored outside the application folder. The report names which files were read and what answered."/>
                         </StackPanel>
                     </StackPanel>
                 </ContentControl>

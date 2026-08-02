@@ -33,7 +33,6 @@ public static class JsonReportWriter
             scanner = report.ScannerVersion,
             scannedAt = report.ScannedAt,
             durationSeconds = Math.Round(report.Duration.TotalSeconds, 2),
-            ranIsolated = report.RanIsolated,
 
             artifact = new
             {

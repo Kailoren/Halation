@@ -38,14 +38,6 @@ public sealed record ScanReport
     public required ScanEffort Effort { get; init; }
 
     /// <summary>
-    /// Where the offline data bundle for this scan was written, when one was produced.
-    /// </summary>
-    public string? BundlePath { get; init; }
-
-    /// <summary>True when the scan made no network calls of any kind.</summary>
-    public bool RanIsolated { get; init; }
-
-    /// <summary>
     /// Every check and how it ended, passes included.
     /// </summary>
     /// <remarks>
