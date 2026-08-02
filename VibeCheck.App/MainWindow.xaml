@@ -190,6 +190,25 @@
                                         Click="OnSetApiKey"/>
                             </StackPanel>
 
+                            <!-- Beside the key row and outside the switch for the same reason:
+                                 this is what makes a source available, so gating it behind the
+                                 switch would strand somebody behind the control that would
+                                 unlock it. Runs Claude Code's own browser sign-in, so the
+                                 credential goes to its store and never through this
+                                 application, which is the whole reason this route was
+                                 preferred over asking for a key. -->
+                            <StackPanel Orientation="Horizontal" Margin="24,8,0,0"
+                                        Visibility="{Binding CanSignInToClaudeCode,
+                                                     Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                           Text="Claude Code:"/>
+                                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                           Margin="6,0,0,0" Text="found, not signed in"/>
+                                <Button Command="{Binding SignInToClaudeCodeCommand}"
+                                        Content="Sign in" Style="{StaticResource Btn}"
+                                        Margin="12,0,0,0"/>
+                            </StackPanel>
+
                             <!-- What the switch above unlocks. Dimmed as a whole rather than
                                  control by control, so it reads as one thing that is off. -->
                             <StackPanel Margin="24,14,0,0" IsEnabled="{Binding DeepPassEnabled}">

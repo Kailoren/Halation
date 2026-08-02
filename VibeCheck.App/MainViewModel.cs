@@ -63,6 +63,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
             _ => State = AppState.ChoosingAudience,
             _ => State != AppState.Scanning);
 
+        SignInToClaudeCodeCommand = new RelayCommand(
+            _ => _ = SignInToClaudeCodeAsync(),
+            _ => SignInEnabled);
+
         // Started, not awaited. The answer only decides whether one option is offerable, and
         // the audience question is on screen first regardless; the status line says it is
         // still looking until it knows.
@@ -318,8 +322,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         (_, null, _) => "Not found on this machine. Install Claude Code to use this option.",
 
-        (_, _, false) => "Found, but not signed in. Run \"claude auth login\" in a terminal, "
-                         + "then reopen VibeCheck.",
+        (_, _, false) => IsSigningIn
+            ? "Signing in. Finish in the window that opened, then come back here."
+            : "Found, but not signed in.",
 
         _ when Audience != Audience.Developer =>
             "Only offered when reporting for whoever ships this. Claude Code can act on this "
@@ -327,6 +332,91 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         _ => _localCli!.Description,
     };
+
+    /// <summary>
+    /// Whether to offer the sign-in button: Claude Code is here, it just has no credential.
+    /// </summary>
+    public bool CanSignInToClaudeCode =>
+        _localCliSearched && _localCli is not null && !_localCliSignedIn;
+
+    private bool _isSigningIn;
+
+    /// <summary>True while the sign-in window is open, so the button cannot be pressed twice.</summary>
+    public bool IsSigningIn
+    {
+        get => _isSigningIn;
+        private set
+        {
+            if (Set(ref _isSigningIn, value))
+            {
+                Notify(nameof(LocalCliStatus));
+                Notify(nameof(SignInEnabled));
+            }
+        }
+    }
+
+    public bool SignInEnabled => CanSignInToClaudeCode && !IsSigningIn;
+
+    public ICommand SignInToClaudeCodeCommand { get; }
+
+    /// <summary>
+    /// Runs the CLI's own interactive sign-in, then re-checks.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The credential never passes through this application and is not supposed to. Claude Code
+    /// opens its own browser flow, the reader authenticates with Anthropic directly, and the
+    /// result lands in the CLI's own store. VibeCheck learns only what <c>auth status</c> tells
+    /// it afterwards, which is a yes or a no.
+    /// </para>
+    /// <para>
+    /// The arguments are a fixed literal and nothing the reader typed reaches the command line.
+    /// The only variable is the executable path, and that came from the locator's own search
+    /// rather than from input. <c>UseShellExecute</c> is on because this is the one place the
+    /// process is meant to be seen: it is an interactive sign-in and it needs a console of its
+    /// own to run in.
+    /// </para>
+    /// </remarks>
+    private async Task SignInToClaudeCodeAsync()
+    {
+        if (_localCli is not { } cli || IsSigningIn)
+        {
+            return;
+        }
+
+        IsSigningIn = true;
+
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(
+                new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = cli.Path,
+                    Arguments = "auth login --claudeai",
+                    UseShellExecute = true,
+                });
+
+            if (process is not null)
+            {
+                await process.WaitForExitAsync().ConfigureAwait(true);
+            }
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception
+                                      or InvalidOperationException or IOException)
+        {
+            Error = "Could not start Claude Code to sign in. Run \"claude auth login\" in a "
+                    + "terminal instead.";
+        }
+        finally
+        {
+            IsSigningIn = false;
+        }
+
+        // Re-asked rather than assumed. Closing the window is not the same as completing the
+        // sign-in, and a reader who cancelled must not be shown a route that will fail.
+        _localCliSearched = false;
+        await DetectLocalCliAsync().ConfigureAwait(true);
+    }
 
     /// <summary>What the chosen source spends, said plainly next to the choice.</summary>
     public string DeepPassCostLine => DeepPassUsesLocalCli
@@ -431,6 +521,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Notify(nameof(LocalCliStatus));
         Notify(nameof(CanRunDeepPass));
         Notify(nameof(CanChooseLocalCli));
+        Notify(nameof(CanSignInToClaudeCode));
+        Notify(nameof(SignInEnabled));
+        CommandManager.InvalidateRequerySuggested();
     }
 
     /// <summary>The build's own version, shown in the title bar and stamped into reports.</summary>
