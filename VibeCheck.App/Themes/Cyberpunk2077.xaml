@@ -191,26 +191,26 @@
          the way that throws, because a brush is a Freezable and WPF will have frozen it. The
          static tiles and one translating rectangle get the same effect and cannot fail.
 
-         It repeats forever, which means the render thread never idles while VibeCheck is open.
-         That is a real cost on a laptop and it is the price of this look. A nine second cycle
-         keeps it near the floor.
+         It repeats forever, so it is held down at both ends.
+
+         DesiredFrameRate caps the clock at 20 rather than letting it free-run at the
+         compositor's rate. The sweep crosses the window over nine seconds, which is about two
+         pixels a frame at 20, so there is no visible difference and roughly two thirds of the
+         wake-ups stop happening. That is the cheapest fix available for any slow animation and
+         it is worth reaching for before arguing about whether the animation should exist.
+
+         Minimising pauses it outright. A minimised window still ticks its clocks and still
+         asks the render thread for frames nobody can see, which on a laptop left open all
+         afternoon is the whole of the cost and none of the benefit. It resumes where it
+         stopped, and pausing while invisible is why the frozen position never shows.
+
+         Deactivating deliberately does not pause it. It was tried: a paused sweep stops
+         wherever it happens to be, and a static yellow band lying across a window you can
+         still see reads as a rendering fault rather than as a considered saving.
          ==================================================================== -->
 
     <ControlTemplate x:Key="WindowBackdrop" TargetType="ContentControl">
         <Grid ClipToBounds="True">
-
-            <Grid.Triggers>
-                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                    <BeginStoryboard>
-                        <Storyboard RepeatBehavior="Forever">
-                            <DoubleAnimation Storyboard.TargetName="Sweep"
-                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
-                                             From="-280" To="1600"
-                                             Duration="0:0:9"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-            </Grid.Triggers>
 
             <!-- 1. Wash. Warm at the top where the title bar is, falling to the flat near
                  black the palette calls Bg by the bottom of the window. -->
@@ -281,6 +281,47 @@
             </Rectangle>
 
         </Grid>
+
+        <!-- On the template rather than on the Grid, which is where it used to be. Pause and
+             Resume find their storyboard by name, and the name is only in scope within the same
+             trigger collection, so the one that starts it has to live beside the ones that
+             stop it. -->
+        <!-- One DataTrigger starts and stops the sweep, and there is no Loaded trigger at all.
+             Both of the obvious alternatives were tried and neither works here:
+
+             A Loaded EventTrigger in ControlTemplate.Triggers never fires. It parses, it
+             raises nothing, and the sweep sits at its start value forever. That failure is
+             invisible in a screenshot, and it survived one round of checking because the drop
+             zone breathing elsewhere on screen made consecutive frames differ, which was read
+             as proof the sweep was moving. It was not. Reading the animated offset is the only
+             honest check.
+
+             Pause and Resume need their BeginStoryboard's name in the same trigger collection.
+             The collection that does work for Loaded is the root Grid's own Triggers, and that
+             one accepts nothing but EventTriggers, so the pause could never live beside the
+             thing it pauses.
+
+             Driving it from IsMinimised solves both at once: the trigger fires on load because
+             the value starts false, and the same trigger owns the stop. Stopping rather than
+             pausing means the sweep restarts its pass on restore instead of resuming mid-way,
+             which for a nine second ambient drift is not a difference anyone can see. -->
+        <ControlTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsMinimised}" Value="False">
+                <DataTrigger.EnterActions>
+                    <BeginStoryboard x:Name="Sweeping">
+                        <Storyboard RepeatBehavior="Forever" Timeline.DesiredFrameRate="20">
+                            <DoubleAnimation Storyboard.TargetName="Sweep"
+                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                             From="-280" To="1600"
+                                             Duration="0:0:9"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </DataTrigger.EnterActions>
+                <DataTrigger.ExitActions>
+                    <StopStoryboard BeginStoryboardName="Sweeping"/>
+                </DataTrigger.ExitActions>
+            </DataTrigger>
+        </ControlTemplate.Triggers>
     </ControlTemplate>
 
     <!-- ====================================================================
@@ -516,19 +557,6 @@
                 <ControlTemplate TargetType="ContentControl">
                     <Grid>
 
-                        <Grid.Triggers>
-                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                                <BeginStoryboard>
-                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-                                        <DoubleAnimation Storyboard.TargetName="Pulse"
-                                                         Storyboard.TargetProperty="Opacity"
-                                                         From="0.25" To="0.7"
-                                                         Duration="0:0:1.9"/>
-                                    </Storyboard>
-                                </BeginStoryboard>
-                            </EventTrigger>
-                        </Grid.Triggers>
-
                         <Border x:Name="Bd"
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
@@ -570,6 +598,28 @@
                     </Grid>
 
                     <ControlTemplate.Triggers>
+                        <!-- The breath, started and stopped exactly like the backdrop sweep and
+                             for the same reasons. A Loaded EventTrigger is not an option here at
+                             all: in a template that arrives through a Style setter it throws
+                             outright, "'Pulse' name cannot be found in the name scope of
+                             ControlTemplate", on the first render rather than at parse time. -->
+                        <DataTrigger Binding="{Binding IsMinimised}" Value="False">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard x:Name="Breathing">
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True"
+                                                Timeline.DesiredFrameRate="20">
+                                        <DoubleAnimation Storyboard.TargetName="Pulse"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0.25" To="0.7"
+                                                         Duration="0:0:1.9"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="Breathing"/>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+
                         <DataTrigger Binding="{Binding IsDragging}" Value="True">
                             <DataTrigger.EnterActions>
                                 <BeginStoryboard>

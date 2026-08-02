@@ -13,6 +13,14 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = _model;
+
+        // Published so a theme can stop animating something nobody can see. It goes through the
+        // view model rather than being read off the window because a template trigger binds
+        // against the DataContext, and a RelativeSource walk up to the Window from inside a
+        // template silently resolves to nothing: the trigger simply never fires, which looks
+        // exactly like a theme that chose not to animate. IsDragging already works this way and
+        // this follows it.
+        StateChanged += (_, _) => _model.IsMinimised = WindowState == WindowState.Minimized;
     }
 
     // ---- Window chrome -----------------------------------------------------

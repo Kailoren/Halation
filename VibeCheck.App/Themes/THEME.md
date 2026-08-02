@@ -192,6 +192,45 @@ animating a *layer* that carries it. Every hover in this application is a second
 exactly on the first with its opacity taken from 0 to 1. That is why `Btn` and `DropZone` each
 have an otherwise pointless-looking extra `Border` in their templates.
 
+### Looping animations
+
+Start a looping animation from a `DataTrigger`, never from a `Loaded` `EventTrigger`, and give
+the same trigger the `StopStoryboard`:
+
+```xml
+<DataTrigger Binding="{Binding IsMinimised}" Value="False">
+    <DataTrigger.EnterActions>
+        <BeginStoryboard x:Name="Sweeping">…</BeginStoryboard>
+    </DataTrigger.EnterActions>
+    <DataTrigger.ExitActions>
+        <StopStoryboard BeginStoryboardName="Sweeping"/>
+    </DataTrigger.ExitActions>
+</DataTrigger>
+```
+
+That shape avoids three separate problems at once.
+
+A `Loaded` `EventTrigger` in `ControlTemplate.Triggers` **does not work**, and fails in two
+different ways depending on how the template was applied. Where the template is a local value it
+silently never fires and the animation sits at its starting value forever. Where the template
+came from a `Style` setter it throws on the first render, not at parse time, with
+`'Pulse' name cannot be found in the name scope of ControlTemplate`. Neither failure is visible
+in a screenshot, and the silent one survived a round of checking here because something else on
+screen was moving and made consecutive frames differ.
+
+`PauseStoryboard` and `ResumeStoryboard` need their `BeginStoryboard`'s name in the same trigger
+collection. The collection that *does* work for `Loaded` is the root element's own `Triggers`,
+and that one accepts nothing but `EventTrigger`s, so a pause can never sit beside the thing it
+would pause. Starting from a `DataTrigger` puts the start and the stop in one place.
+
+Anything that loops forever should also stop when nothing can see it, and carry
+`Timeline.DesiredFrameRate` so it is cheap while it runs. A nine second drift gains nothing from
+sixty frames a second; `20` looks identical and asks for a third of the work. `IsMinimised` is
+published on the view model for exactly this, alongside `IsDragging`.
+
+**Verify motion by reading the animated value, not by comparing screenshots.** A wash at six
+percent alpha barely moves a pixel, so a frame diff measures whatever else happens to be moving.
+
 Two more traps worth knowing:
 
 - **`x:Shared="False"` does not work in a loose theme.** It is only honoured in compiled XAML

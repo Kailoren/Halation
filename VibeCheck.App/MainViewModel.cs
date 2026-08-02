@@ -41,6 +41,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private int _progressPercent;
     private bool _isolate;
     private bool _isDragging;
+    private bool _isMinimised;
     private string? _error;
     private ScanReport? _report;
 
@@ -226,6 +227,19 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         get => _isDragging;
         set => Set(ref _isDragging, value);
+    }
+
+    /// <summary>True while the window is minimised, for themes that animate.</summary>
+    /// <remarks>
+    /// Nothing in the report depends on this. It exists so a theme with a looping background
+    /// can stop the loop while there is nothing on screen to look at, which is the difference
+    /// between an idle application costing nothing and costing a frame every 50 milliseconds
+    /// for as long as it is left open.
+    /// </remarks>
+    public bool IsMinimised
+    {
+        get => _isMinimised;
+        set => Set(ref _isMinimised, value);
     }
 
     public string? Error
