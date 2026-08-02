@@ -246,6 +246,70 @@ public class ValidationRegressionTests : IDisposable
             RunRules("// was GetStringAsync(url) before the size cap went in", "Client.cs"),
             f => f.RuleId == "VC-INPUT-004");
 
+    /// <summary>
+    /// A helper taking a maximum is the fix this rule recommends, and it keeps the familiar
+    /// name so call sites read unchanged. The first application fixed against this rule was
+    /// then flagged for its own fix.
+    /// </summary>
+    [Theory]
+    [InlineData("var json = await BoundedHttp.GetStringAsync(Http, url, MaxResponseBytes, ct);")]
+    [InlineData("var body = await ReadAsStringAsync(response, maxBytes, ct);")]
+    [InlineData("var text = await Http.GetStringAsync(url).WithLimit(1048576);")]
+    public void BoundedWrapperAroundARemoteRead_IsNotFlagged(string line) =>
+        Assert.DoesNotContain(RunRules(line, "Client.cs"), f => f.RuleId == "VC-INPUT-004");
+
+    /// <summary>
+    /// Decompiling an async method emits both the readable await and the state machine behind
+    /// it, so one call site arrived as up to three findings pointing at names that exist in no
+    /// source file. Measured on a real single-file app: 22 findings became 8.
+    /// </summary>
+    [Theory]
+    [InlineData("val = <result>5__4.Content.ReadAsStringAsync().GetAwaiter();")]
+    [InlineData("val2 = <>c__DisplayClass3_0.Content.ReadAsStringAsync().GetAwaiter();")]
+    public void DecompiledStateMachineDuplicate_IsNotFlagged(string line) =>
+        Assert.DoesNotContain(RunRules(line, "Helper.cs"), f => f.RuleId == "VC-INPUT-004");
+
+    /// <summary>The suppression must not swallow an ordinary generic call.</summary>
+    [Fact]
+    public void GenericTypeOnTheLine_IsStillFlagged() =>
+        Assert.Contains(
+            RunRules("List<string> raw = await response.Content.ReadAsStringAsync();", "Helper.cs"),
+            f => f.RuleId == "VC-INPUT-004");
+
+    /// <summary>
+    /// Packaging checks describe what an application ships, so local build output is not
+    /// theirs to report. Dropping in a source folder called bin/Debug/App.pdb "debug symbols
+    /// shipped with the release", which is wrong three times over.
+    /// </summary>
+    [Fact]
+    public async Task BuildScratchInASourceTree_IsNotReportedAsShipped()
+    {
+        var root = Path.Combine(_scratch, "source-tree");
+        Directory.CreateDirectory(Path.Combine(root, "bin", "Debug"));
+        Directory.CreateDirectory(Path.Combine(root, "obj"));
+        File.WriteAllText(Path.Combine(root, "Program.cs"), "class P { }");
+        File.WriteAllText(Path.Combine(root, "bin", "Debug", "App.pdb"), "symbols");
+        File.WriteAllText(Path.Combine(root, "obj", "App.pdb"), "symbols");
+
+        var report = await new Scanner().ScanAsync(root, ScanOptions.NoDependencyCheck);
+
+        Assert.DoesNotContain(report.Findings, f => f.RuleId == "VC-PKG-001");
+    }
+
+    /// <summary>bin/Release is the release, so a .pdb there is the real mistake.</summary>
+    [Fact]
+    public async Task SymbolsInReleaseOutput_AreStillReported()
+    {
+        var root = Path.Combine(_scratch, "release-output");
+        Directory.CreateDirectory(Path.Combine(root, "bin", "Release"));
+        File.WriteAllText(Path.Combine(root, "Program.cs"), "class P { }");
+        File.WriteAllText(Path.Combine(root, "bin", "Release", "App.pdb"), "symbols");
+
+        var report = await new Scanner().ScanAsync(root, ScanOptions.NoDependencyCheck);
+
+        Assert.Contains(report.Findings, f => f.RuleId == "VC-PKG-001");
+    }
+
     // ---- Found by unpacking and scanning real single-file applications ----
 
     /// <summary>

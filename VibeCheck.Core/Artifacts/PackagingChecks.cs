@@ -128,14 +128,54 @@ public static class PackagingChecks
         });
     }
 
+    /// <summary>
+    /// True for local build output that no distribution contains.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// These checks describe what an application ships, so they only mean anything about files
+    /// that would actually reach a user. Dropping in a source folder, which is the whole
+    /// before-you-ship case, otherwise reported <c>bin/Debug/App.pdb</c> as "debug symbols
+    /// shipped with the release" - a Debug artifact, in a directory that is not the release,
+    /// in a tree that is not a distribution.
+    /// </para>
+    /// <para>
+    /// <c>bin/Release</c> is deliberately still counted: that one is the release, and a .pdb
+    /// sitting in it is exactly the mistake this check exists to catch. Nor is <c>.git</c>
+    /// excluded here, because VC-PKG-004 is looking for it.
+    /// </para>
+    /// </remarks>
+    private static bool IsBuildScratch(string relativePath)
+    {
+        var segments = relativePath.Split('/');
+
+        for (var i = 0; i < segments.Length; i++)
+        {
+            if (segments[i].Equals("obj", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (segments[i].Equals("bin", StringComparison.OrdinalIgnoreCase)
+                && i + 1 < segments.Length
+                && segments[i + 1].Equals("Debug", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static IReadOnlyList<string> Enumerate(string root)
     {
         try
         {
             return Directory
                 .EnumerateFiles(root, "*", SearchOption.AllDirectories)
-                .Take(50_000)
                 .Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'))
+                .Where(f => !IsBuildScratch(f))
+                .Take(50_000)
                 .ToList();
         }
         catch (UnauthorizedAccessException)

@@ -69,7 +69,14 @@ public static class UntrustedInputRules
     {
         Id = "VC-INPUT-004",
         Title = "Reads an entire remote response with no size limit",
-        Severity = Severity.Medium,
+
+        // Low, deliberately, and the same tier as the throwing-parse rule above. On its own this
+        // is a robustness problem rather than a way in, and it is common enough in ordinary .NET
+        // that reporting it as Medium made a networked application look far worse than it is: one
+        // real app came back with twenty-two of these, burying an actual BinaryFormatter finding
+        // underneath them. What made it serious in the application this rule came from was the
+        // unbounded value reaching a stackalloc, and that pairing is VC-INPUT-001's to report.
+        Severity = Severity.Low,
         Category = FindingCategory.Network,
         Description =
             "The response body is read into a single string or array in one call, so its size is "
@@ -92,8 +99,47 @@ public static class UntrustedInputRules
             """,
             RegexOptions.IgnorePatternWhitespace),
         Languages = [SourceLanguage.CSharp],
-        Ignore = (match, context) => Heuristics.IsInLineComment(context, match.Index),
+        Ignore = (match, context) =>
+            Heuristics.IsInLineComment(context, match.Index)
+            || IsGivenACeiling(context.LineFor(match))
+            || IsDecompilerArtifact(context.LineFor(match)),
     };
+
+    /// <summary>
+    /// True for a line the decompiler produced from an async state machine rather than from
+    /// what anyone wrote.
+    /// </summary>
+    /// <remarks>
+    /// Decompiling an async method can emit both the readable <c>await</c> and the raw state
+    /// machine that implements it, so one call site arrives twice. Reporting both counted a
+    /// single mistake up to three times in one file and pointed the second copy at
+    /// <c>&lt;result&gt;5__4</c>, a name that exists in no source file and that the reader
+    /// cannot go and look at. The readable form is the one worth keeping.
+    /// </remarks>
+    private static bool IsDecompilerArtifact(string line) => StateMachineField.IsMatch(line);
+
+    // Matches <result>5__4 and <>c__DisplayClass, and deliberately not List<string>: the
+    // digits-then-underscores suffix is what distinguishes a generated name from a generic.
+    private static readonly Regex StateMachineField = PatternRule.Compile(
+        """<[A-Za-z0-9_]*>\d*[a-z]?__""",
+        RegexOptions.None);
+
+    /// <summary>
+    /// True when the call is handed a limit, which is what a bounded wrapper looks like.
+    /// </summary>
+    /// <remarks>
+    /// The fix this rule asks for is a helper that takes a maximum, and such a helper almost
+    /// always keeps the familiar name so its call sites read unchanged. Without this the rule
+    /// reported the very shape it recommends: the first application fixed against it wrote
+    /// <c>BoundedHttp.GetStringAsync(http, url, MaxResponseBytes, ct)</c> and was flagged
+    /// again for it. Telling someone their correct fix is still a bug is worse than missing
+    /// the case, and it is the same trap the stackalloc rule already needed guarding against.
+    /// </remarks>
+    private static bool IsGivenACeiling(string line) => CeilingArgument.IsMatch(line);
+
+    private static readonly Regex CeilingArgument = PatternRule.Compile(
+        """\b(?:max|limit|cap|ceiling|bounded)\w*|\b\d{4,}\b""",
+        RegexOptions.IgnoreCase);
 
     /// <summary>
     /// Stack allocation sized from a variable.
