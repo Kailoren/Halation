@@ -2,6 +2,8 @@ using System.IO;
 using System.Windows;
 using System.Windows.Markup;
 
+using VibeCheck.Core.Theming;
+
 namespace VibeCheck.App;
 
 /// <summary>
@@ -19,9 +21,23 @@ namespace VibeCheck.App;
 /// with colours should get their application back with a message about the mistake, not a
 /// window that refuses to open and no way to find out why.
 /// </para>
+/// <para>
+/// A theme is checked by <see cref="ThemeGuard"/> before it is parsed, and the order matters
+/// more than it looks. <c>XamlReader.Load</c> constructs types as it reads them, so a check
+/// performed on the result has already run whatever it was meant to be checking. Until that
+/// check existed, a theme file was an executable: XAML names types and the parser builds them,
+/// and <c>ObjectDataProvider</c> exists to call a method on one.
+/// </para>
 /// </remarks>
 public static class ThemeLoader
 {
+    /// <summary>
+    /// Refused above this size. The largest theme in the repository is under 40 KB, so this is
+    /// generous by an order of magnitude and still small enough that nothing pathological gets
+    /// as far as the parser.
+    /// </summary>
+    private const long MaxBytes = 1024 * 1024;
+
     /// <summary>Where a user theme is read from, whether or not one is there.</summary>
     public static string Path => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -44,6 +60,22 @@ public static class ThemeLoader
         try
         {
             using var stream = File.OpenRead(Path);
+
+            if (stream.Length > MaxBytes)
+            {
+                return $"{Path} is larger than {MaxBytes / 1024} KB and was ignored, which no "
+                       + "theme should be.";
+            }
+
+            // Checked before it is parsed, and the order is the whole point: XamlReader.Load
+            // constructs types as it reads, so anything that inspects the object afterwards has
+            // already run whatever it was inspecting. See ThemeGuard for what is allowed.
+            if (ThemeGuard.Check(stream) is { } unsafeTheme)
+            {
+                return unsafeTheme;
+            }
+
+            stream.Position = 0;
 
             if (XamlReader.Load(stream) is not ResourceDictionary theme)
             {

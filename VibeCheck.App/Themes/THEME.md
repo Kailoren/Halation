@@ -17,11 +17,37 @@ executable, so it cannot be lost, and there is nothing to reinstall.
 A theme that fails to parse is reported in a message box once and then ignored, so a bad edit
 gives you the application back with an explanation rather than a window that will not open.
 
-> **Install themes you trust.** A theme is XAML, and XAML is not a data format: it constructs
-> whatever objects it names, and there are well-known constructions that start processes. Write
-> your own or read one before you install it, and treat a theme downloaded from a stranger the
-> way you would treat any other executable from a stranger, which is the thing this application
-> exists to talk you out of.
+## What a theme is allowed to be
+
+A theme is checked against an allowlist before it is parsed, and refused with a message naming
+whatever it was that broke the rule.
+
+This exists because XAML is not a data format. It names types and the parser constructs them,
+and a few of the types reachable from the WPF namespace do more than describe a colour:
+`ObjectDataProvider` is there to call a method, and it will call one on `Process` as readily as
+on anything else. Until the check existed, a theme file was an executable wearing a
+stylesheet's clothes, which is a poor thing to be shipped by the application whose entire
+purpose is talking people out of running software a stranger handed them.
+
+A theme may use:
+
+- the three namespaces at the top of `Theme.xaml`, and no others, since `clr-namespace:` is how
+  any type in any assembly gets imported
+- the brushes, shapes, geometry, transforms, effects, templates, triggers and animations listed
+  in `ThemeGuard`, which is generous about anything that draws
+- `Binding`, `StaticResource`, `DynamicResource`, `TemplateBinding`, `RelativeSource`, `x:Null`
+  and `x:Type`
+
+A theme may not use anything else, whether or not it is harmful. That includes `x:Static`, which
+reads a static member and so calls a getter; `x:FactoryMethod`; `ImageBrush` and `ShaderEffect`,
+which take a URI and therefore a file or a socket; and any `Source` property, which is the quiet
+one, because a merged dictionary with a `Source` makes the parser fetch and parse a second
+document that no check ever sees.
+
+Being straight about what that is worth: it narrows a theme to a drawing vocabulary, which makes
+installing one mean what you think it means. It is not a proof that the vocabulary is inert. The
+only airtight answer is to not parse a stranger's XAML at all, so a theme from someone you have
+no reason to trust is still worth reading before you install it.
 
 A minimal override is legitimate and is the recommended shape:
 
