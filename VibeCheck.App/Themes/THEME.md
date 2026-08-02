@@ -262,13 +262,20 @@ Restyling rather than recolouring means overriding these whole. Copy the one you
 | *(implicit)* `ScrollBar` | Every scroll bar in every window |
 | `ScrollThumb` | The draggable part, used by the above |
 | `ScrollPage` | The click-to-page halves of the track, used by the above |
+| *(implicit)* `PasswordBox` | The API key field, including its focus ring |
+| *(implicit)* `CheckBox` | The box, the tick, and the states of both |
 
-The scroll bar is templated in full for the same reason the audience choices are: WPF's stock
-one takes its colours from the framework's own theme dictionary, so no palette here could reach
-it and a native light grey bar sat down the side of a dark window. It is implicit, so it applies
-everywhere without being asked for, and it names no colours of its own beyond `Muted` and
-`Accent` at graded opacities. A theme that never mentions scroll bars still gets one that
-matches it.
+The last four are templated in full for the reason that kept recurring while this file was being
+written: **WPF's stock control templates take their colours from the framework's own theme
+dictionary, which no palette here can reach.** The Aero2 mouse-over blue on a button, the light
+grey scroll bar down the side of a dark window, the blue focus ring on a password box and the
+white box of a check box were all the same defect, found four separate times, each time by
+noticing something on screen that no key in this file could explain.
+
+That is the tell worth remembering. If a control looks wrong and nothing in the palette accounts
+for it, the control has no style here and is falling through to the framework. The fix is always
+a template, and the templates above name no colours of their own beyond the palette keys, so a
+theme that never mentions any of these still gets versions that match it.
 
 > **Every clickable control needs a style here, including the ones that look fine without one.**
 > The audience choices had none for a while, so they fell through to WPF's stock `Button`

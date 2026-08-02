@@ -76,8 +76,11 @@ public static class ThemeGuard
         "Viewbox", "Decorator", "ContentControl", "ContentPresenter", "ItemsPresenter",
         "RowDefinition", "ColumnDefinition", "TextBlock", "Run", "Separator",
 
-        // Controls that appear inside the templates a theme replaces.
+        // Controls that appear inside the templates a theme replaces. ScrollViewer is here
+        // because a PasswordBox template has to supply one as PART_ContentHost; it scrolls and
+        // clips and does nothing else, so it costs nothing to allow.
         "Button", "RepeatButton", "ToggleButton", "Thumb", "Track", "ScrollBar", "ProgressBar",
+        "ScrollViewer", "ScrollContentPresenter",
 
         // Shapes.
         "Rectangle", "Ellipse", "Line", "Path", "Polygon", "Polyline",

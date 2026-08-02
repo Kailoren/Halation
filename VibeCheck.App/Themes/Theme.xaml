@@ -498,6 +498,154 @@
     </Style>
 
     <!-- ====================================================================
+         Inputs
+
+         Both templated in full, and both for the reason that keeps recurring: WPF's stock
+         templates take their colours from the framework's own theme dictionary. The focus ring
+         on a PasswordBox and the hover fill on a CheckBox are the Aero2 blues, they are not
+         reachable from any palette in this file, and they were the last two places a dark
+         yellow application still lit up in Windows blue.
+
+         Implicit, so the two check boxes and the one password box get them without being told,
+         and so does anything added later. Neither names a colour of its own.
+         ==================================================================== -->
+
+    <Style TargetType="PasswordBox">
+        <Setter Property="Background" Value="{DynamicResource PanelRaised}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Edge}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="8,0"/>
+        <Setter Property="FontFamily" Value="{DynamicResource MonoFont}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource Accent}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Grid>
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource ButtonRadius}"/>
+
+                        <!-- Focus and hover get a layer each rather than sharing one. They can
+                             be true at the same time, and a single layer driven by both means
+                             moving the pointer away clears a ring that should have stayed for
+                             as long as the caret is in the field. -->
+                        <Border x:Name="Hot" Opacity="0"
+                                BorderBrush="{DynamicResource Muted}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource ButtonRadius}"/>
+
+                        <Border x:Name="Focused" Opacity="0"
+                                BorderBrush="{DynamicResource Accent}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource ButtonRadius}"
+                                Effect="{DynamicResource ButtonGlow}"/>
+
+                        <!-- Named by contract, not by choice: PasswordBox finds where to draw
+                             its content by looking for PART_ContentHost and shows nothing at
+                             all without it. -->
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center"
+                                      Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Hot" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Focused"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="{StaticResource SwiftDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Focused"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="{StaticResource CalmDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <!-- Transparent rather than unset, so the whole row including the gap
+                         between box and label is clickable the way the stock one is. -->
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Grid Width="16" Height="16" VerticalAlignment="Center">
+                            <Border x:Name="Box"
+                                    Background="{DynamicResource PanelRaised}"
+                                    BorderBrush="{DynamicResource Edge}"
+                                    BorderThickness="1"
+                                    CornerRadius="{DynamicResource ButtonRadius}"/>
+
+                            <Border x:Name="Hot" Opacity="0"
+                                    BorderBrush="{DynamicResource Accent}"
+                                    BorderThickness="1"
+                                    CornerRadius="{DynamicResource ButtonRadius}"
+                                    Effect="{DynamicResource ButtonGlow}"/>
+
+                            <!-- Stretch="None" on purpose: a stretched Path scales its stroke
+                                 with the geometry, so a tick drawn to fit would come out
+                                 thicker on one axis than the other. -->
+                            <Path x:Name="Tick" Opacity="0"
+                                  Stretch="None"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center"
+                                  Stroke="{DynamicResource Accent}" StrokeThickness="2"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Data="M 0,4 L 3,7 L 9,0"/>
+                        </Grid>
+
+                        <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </StackPanel>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Tick" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Hot" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Hot" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ====================================================================
          Scroll bars
 
          Templated in full because WPF's stock scroll bar has no seam worth using: its colours

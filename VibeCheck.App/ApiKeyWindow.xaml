@@ -51,11 +51,9 @@
 
             <!-- PasswordBox, not TextBox: the key should not be readable over a shoulder or in a
                  screenshot, and it is never displayed again once stored. -->
-            <PasswordBox x:Name="KeyBox" Height="30" Padding="8,0" VerticalContentAlignment="Center"
-                         Background="{StaticResource PanelRaised}"
-                         Foreground="{StaticResource Text}"
-                         BorderBrush="{StaticResource Edge}" BorderThickness="1"
-                         FontFamily="{DynamicResource MonoFont}"/>
+            <!-- Everything this used to state inline now comes from the implicit PasswordBox
+                 style, including the focus ring that used to be Windows blue. -->
+            <PasswordBox x:Name="KeyBox" Height="30"/>
 
             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,12,0,0"
                        Text="Only the files selected by triage are sent, and only on scans where you tick the deep pass box. Nothing is sent on an isolated scan. Leave the box empty and save to remove a stored key."/>
