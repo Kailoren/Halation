@@ -200,41 +200,57 @@
                                    Visibility="{Binding DeepPassOfferedHere,
                                                 Converter={StaticResource InverseBoolToVisibility}}"/>
 
-                        <StackPanel Margin="24,12,0,0"
-                                    Visibility="{Binding DeepPassOfferedHere,
+                        <StackPanel Visibility="{Binding DeepPassOfferedHere,
                                                  Converter={StaticResource BoolToVisibility}}">
-                            <RadioButton GroupName="DeepPassSource"
-                                         Content="Use my Anthropic API key"
-                                         IsChecked="{Binding DeepPassUsesApiKey}"
-                                         IsEnabled="{Binding HasApiKey}"
-                                         Foreground="{StaticResource Text}"/>
-                            <StackPanel Orientation="Horizontal" Margin="20,4,0,0">
+
+                            <!-- Outside the switch on purpose. Storing a key is configuration
+                                 rather than part of this scan's choice, and putting it behind
+                                 the switch would leave somebody with no key unable to reach
+                                 the control that would give them one. -->
+                            <StackPanel Orientation="Horizontal" Margin="24,12,0,0">
                                 <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
-                                           Margin="0,0,0,0" FontFamily="{DynamicResource MonoFont}"
+                                           Text="Anthropic API key:"/>
+                                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                           Margin="6,0,0,0" FontFamily="{DynamicResource MonoFont}"
                                            Text="{Binding ApiKeyStatus}"/>
                                 <Button Content="Set key" Style="{StaticResource Btn}" Margin="12,0,0,0"
                                         Click="OnSetApiKey"/>
                             </StackPanel>
 
-                            <!-- Disabled rather than hidden when unavailable: the status line
-                                 underneath is the point, since every reason it is unavailable
-                                 is one the reader can do something about. -->
-                            <RadioButton GroupName="DeepPassSource"
-                                         Content="Use Claude Code on this machine (your subscription)"
-                                         IsChecked="{Binding DeepPassUsesLocalCli}"
-                                         IsEnabled="{Binding LocalCliReady}"
-                                         Margin="0,14,0,0"
-                                         Foreground="{StaticResource Text}"/>
-                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
-                                       Margin="20,4,0,0" Text="{Binding LocalCliStatus}"/>
-                        </StackPanel>
+                            <!-- What the switch above unlocks. Dimmed as a whole rather than
+                                 control by control, so it reads as one thing that is off. -->
+                            <StackPanel Margin="24,14,0,0" IsEnabled="{Binding DeepPassEnabled}">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter Property="Opacity" Value="0.4"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
 
-                        <StackPanel Visibility="{Binding DeepPassOfferedHere,
-                                                 Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,12,0,0"
-                                       Text="{Binding DeepPassCostLine}"/>
+                                <RadioButton GroupName="DeepPassSource"
+                                             Content="Use my Anthropic API key"
+                                             IsChecked="{Binding DeepPassUsesApiKey}"
+                                             IsEnabled="{Binding CanChooseApiKey}"/>
 
-                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,8,0,0"
+                                <!-- Disabled rather than hidden when unavailable: the status
+                                     line underneath is the point, since every reason it is
+                                     unavailable is one the reader can do something about. -->
+                                <RadioButton GroupName="DeepPassSource"
+                                             Content="Use Claude Code on this machine (your subscription)"
+                                             IsChecked="{Binding DeepPassUsesLocalCli}"
+                                             IsEnabled="{Binding CanChooseLocalCli}"
+                                             Margin="0,12,0,0"/>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Margin="24,4,0,0" Text="{Binding LocalCliStatus}"/>
+
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Margin="0,12,0,0" Text="{Binding DeepPassCostLine}"/>
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,10,0,0"
                                        Text="Only the files that handle untrusted input are sent, never the whole application, and never on an isolated scan. Both routes send them to Anthropic; they differ in what they spend, not in what leaves this machine. Your API key, if you set one, is encrypted to your Windows account and stored outside the application folder. The report names which files were read and what answered."/>
                         </StackPanel>
                     </StackPanel>

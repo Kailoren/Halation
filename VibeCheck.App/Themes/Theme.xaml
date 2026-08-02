@@ -645,6 +645,59 @@
         </Setter>
     </Style>
 
+    <!-- The same control as the CheckBox above in everything but shape, and deliberately so:
+         a round mark for "one of these" against a square one for "on or off" is the only thing
+         that tells a reader which kind of choice they are looking at. Stock WPF renders both as
+         a white Aero2 disc that no palette here can reach, which is the same hole every other
+         framework control left. -->
+    <Style TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <StackPanel Orientation="Horizontal" Background="Transparent">
+                        <Grid Width="16" Height="16" VerticalAlignment="Center">
+                            <Ellipse x:Name="Box"
+                                     Fill="{DynamicResource PanelRaised}"
+                                     Stroke="{DynamicResource Edge}"
+                                     StrokeThickness="1"/>
+
+                            <Ellipse x:Name="Hot" Opacity="0"
+                                     Stroke="{DynamicResource Accent}"
+                                     StrokeThickness="1"
+                                     Effect="{DynamicResource ButtonGlow}"/>
+
+                            <Ellipse x:Name="Dot" Opacity="0"
+                                     Width="8" Height="8"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                     Fill="{DynamicResource Accent}"/>
+                        </Grid>
+
+                        <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </StackPanel>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Dot" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Hot" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Hot" Property="Opacity" Value="1"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ====================================================================
          Scroll bars
 

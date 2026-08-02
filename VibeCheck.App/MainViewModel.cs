@@ -193,17 +193,55 @@ public sealed class MainViewModel : INotifyPropertyChanged
         get => _deepPassEnabled;
         set
         {
-            if (Set(ref _deepPassEnabled, value) && value && !DeepPassSourceReady)
+            if (!Set(ref _deepPassEnabled, value))
             {
-                // Nothing to run with. Turn it back off rather than letting the checkbox
-                // claim a pass that will not happen.
+                return;
+            }
+
+            // Turning it on moves to a source that can answer rather than refusing the tick.
+            // Refusing was the old behaviour and it made the checkbox useless: the API key
+            // route is selected by default, so a reader with no key but a working Claude Code
+            // install found the box would not stay ticked, with nothing on screen saying why.
+            // They had to discover that picking the other option first was the real action,
+            // which left the checkbox doing nothing at all.
+            if (value && !DeepPassSourceReady)
+            {
+                if (LocalCliReady)
+                {
+                    DeepPassUsesLocalCli = true;
+                }
+                else if (HasApiKey)
+                {
+                    DeepPassUsesLocalCli = false;
+                }
+            }
+
+            // Still nothing available. Untick rather than claim a pass that will not happen.
+            if (value && !DeepPassSourceReady)
+            {
                 Set(ref _deepPassEnabled, false);
                 Notify(nameof(DeepPassEnabled));
             }
 
             Notify(nameof(PrivacyLine));
+            Notify(nameof(CanChooseApiKey));
+            Notify(nameof(CanChooseLocalCli));
         }
     }
+
+    /// <summary>
+    /// Whether the source choice is live.
+    /// </summary>
+    /// <remarks>
+    /// The checkbox is the switch and these are the settings behind it, which is the only
+    /// arrangement where the checkbox earns its place. Storing an API key stays reachable
+    /// whether or not the pass is on, because it is configuration rather than part of this
+    /// scan's choice, and gating it behind the switch would leave someone with no key unable
+    /// to reach the control that would give them one.
+    /// </remarks>
+    public bool CanChooseApiKey => DeepPassEnabled && HasApiKey;
+
+    public bool CanChooseLocalCli => DeepPassEnabled && LocalCliReady;
 
     /// <summary>
     /// Whether the pass runs through a Claude Code installation on this machine rather than a
@@ -347,6 +385,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Notify(nameof(HasApiKey));
         Notify(nameof(ApiKeyStatus));
         Notify(nameof(CanRunDeepPass));
+        Notify(nameof(CanChooseApiKey));
         Notify(nameof(DeepPassEnabled));
         Notify(nameof(PrivacyLine));
     }
@@ -408,6 +447,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Notify(nameof(LocalCliReady));
         Notify(nameof(LocalCliStatus));
         Notify(nameof(CanRunDeepPass));
+        Notify(nameof(CanChooseLocalCli));
     }
 
     /// <summary>The build's own version, shown in the title bar and stamped into reports.</summary>
