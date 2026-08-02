@@ -66,7 +66,7 @@ public static class PackagingChecks
                 UserDescription =
                     "A settings file of the kind normally used to hold passwords and keys was shipped "
                     + "inside the application, so everyone who downloaded it has whatever was in there. "
-                    + "Most of that is the developer own to lose, but if one of those values opens a "
+                    + "Most of that is the developer's own to lose, but if one of those values opens a "
                     + "database holding your data, it is open to everyone else too.",
                 Category = FindingCategory.Secrets,
                 Description =

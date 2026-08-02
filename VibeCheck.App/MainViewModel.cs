@@ -30,9 +30,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly Scanner _scanner = new();
     private CancellationTokenSource? _cancellation;
 
-    private AppState _state = AudienceStore.Load() is null
-        ? AppState.ChoosingAudience
-        : AppState.Waiting;
+    // Asked on every launch, not only the first. Which question you want answered is a
+    // property of the artifact about to be checked rather than a fixed fact about the person:
+    // the same reader audits their own build one day and something they downloaded the next.
+    // The stored value is a starting point for the question, never a reason to skip it.
+    private AppState _state = AppState.ChoosingAudience;
 
     private Audience _audience = AudienceStore.Load() ?? Audience.Developer;
     private string _progressMessage = string.Empty;
@@ -75,6 +77,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Notify(nameof(IsEndUser));
             Notify(nameof(AudienceSummary));
             Notify(nameof(SwitchAudienceLabel));
+            Notify(nameof(AudienceLabel));
+            Notify(nameof(LastWasDeveloper));
+            Notify(nameof(LastWasEndUser));
 
             // The score is a different number for the other reader, not the same number
             // relabelled, so everything downstream of it has to be rebuilt.
@@ -94,6 +99,19 @@ public sealed class MainViewModel : INotifyPropertyChanged
         : "Switch to the end user view";
 
     public bool IsChoosingAudience => State == AppState.ChoosingAudience;
+
+    /// <summary>
+    /// What was chosen last time, marked on the prompt so the common case is confirming
+    /// rather than re-deciding. Null the very first time, when there is nothing to recall.
+    /// </summary>
+    public bool LastWasDeveloper => AudienceStore.Load() == Audience.Developer;
+
+    public bool LastWasEndUser => AudienceStore.Load() == Audience.EndUser;
+
+    /// <summary>Lets the reader change their mind without going back to the prompt.</summary>
+    public string AudienceLabel => Audience == Audience.EndUser
+        ? "Reporting for someone who downloaded this"
+        : "Reporting for whoever ships this";
 
     public bool IsEndUser => Audience == Audience.EndUser;
 

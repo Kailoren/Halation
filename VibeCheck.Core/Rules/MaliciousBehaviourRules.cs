@@ -193,7 +193,7 @@ public static class MaliciousBehaviourRules
             + "device before confirming any transfer made from this machine.",
         UserDescription =
             "This application watches your clipboard for cryptocurrency addresses. This is the "
-            + "pattern used to swap the address you copied for the attacker own, so that a payment "
+            + "pattern used to swap the address you copied for the attacker's own, so that a payment "
             + "you thought you were sending to yourself goes to them instead.",
         UserRemediation =
             "Do not run this application. If you already have, check the address carefully on any "
