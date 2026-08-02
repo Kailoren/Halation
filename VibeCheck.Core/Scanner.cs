@@ -180,6 +180,31 @@ public sealed class Scanner
     }
 
     /// <summary>
+    /// Re-answers an existing report for the other reader, without rescanning.
+    /// </summary>
+    /// <remarks>
+    /// Every finding already carries a severity for both audiences, so switching reader is
+    /// arithmetic over what is in hand rather than new work. Nothing about the artifact is
+    /// re-examined, which also means the two views can never disagree about what was found,
+    /// only about what it means for the person reading.
+    /// </remarks>
+    public static ScanReport Rescore(ScanReport report, Audience audience)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        if (report.Verdict.Audience == audience)
+        {
+            return report;
+        }
+
+        return report with
+        {
+            Verdict = ScoreCalculator.Calculate(report.Findings, report.Coverage.Percent, audience),
+            CategoryScores = ScoreCalculator.CategoryScores(report.Findings, audience),
+        };
+    }
+
+    /// <summary>
     /// Selects the vulnerability tier and runs it.
     /// </summary>
     /// <remarks>

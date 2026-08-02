@@ -306,7 +306,10 @@ public static class MarkdownReportWriter
             output.AppendLine();
         }
 
-        if (!string.IsNullOrWhiteSpace(finding.Reference))
+        // An advisory link is the most useful line in the developer's copy and a dead end in
+        // the other: it opens a page about a component the reader cannot upgrade, written for
+        // somebody who can.
+        if (audience == Audience.Developer && !string.IsNullOrWhiteSpace(finding.Reference))
         {
             output.AppendLine($"Reference: {finding.Reference}");
             output.AppendLine();

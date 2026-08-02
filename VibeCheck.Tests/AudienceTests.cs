@@ -159,6 +159,58 @@ public class AudienceTests
     }
 
     /// <summary>
+    /// Switching reader re-answers the report in hand rather than rescanning, so the two views
+    /// can disagree about what a finding means but never about what was found.
+    /// </summary>
+    [Fact]
+    public async Task Switching_reader_rescores_without_changing_the_findings()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "vc-aud-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+
+        try
+        {
+            // A leaked key and a shell-opened link: one demotes for the end user, one promotes.
+            File.WriteAllText(Path.Combine(root, "app.js"), """
+                const key = "sk_live_4eC39HqLyjWDarjtT1zdp7dcabcd";
+                function open(u) { require("child_process").exec("start " + u); }
+                """);
+
+            var developer = await new Scanner().ScanAsync(
+                root,
+                ScanOptions.NoDependencyCheck with { Audience = Audience.Developer });
+
+            var endUser = Scanner.Rescore(developer, Audience.EndUser);
+
+            Assert.Equal(Audience.Developer, developer.Audience);
+            Assert.Equal(Audience.EndUser, endUser.Audience);
+
+            // Same evidence, different answer.
+            Assert.Equal(developer.Findings, endUser.Findings);
+
+            // Re-answering for the reader it already answers is a no-op, not a recalculation.
+            Assert.Same(endUser, Scanner.Rescore(endUser, Audience.EndUser));
+
+            // The two documents differ in what they carry, not only in how they read. The rule
+            // identifier is a support handle for whoever can act on it and a serial number
+            // attached to anxiety for whoever cannot.
+            var developerText = MarkdownReportWriter.Write(developer);
+            var endUserText = MarkdownReportWriter.Write(endUser);
+
+            Assert.Contains("VC-SEC-", developerText, StringComparison.Ordinal);
+            Assert.DoesNotContain("VC-SEC-", endUserText, StringComparison.Ordinal);
+
+            Assert.Contains("How to fix", developerText, StringComparison.Ordinal);
+            Assert.Contains("Risk to you in running this", endUserText, StringComparison.Ordinal);
+            Assert.Contains("not your problem", endUserText, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>
     /// The end user's copy must not carry the identifiers that are meaningless to them. This
     /// is the specific thing that makes the two reports different documents rather than one
     /// document in two fonts.

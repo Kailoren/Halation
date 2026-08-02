@@ -50,6 +50,53 @@
             </Grid>
         </Border>
 
+        <!-- ============ Who is reading ============
+             Asked once, before any scan. The answer changes which question the score answers,
+             not merely how the findings are worded, so there is no useful scan to offer until
+             it has been given. -->
+        <Grid Grid.Row="1"
+              Visibility="{Binding IsChoosingAudience, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="620">
+
+                <TextBlock Text="Who is this for?" FontSize="26" FontWeight="Light"
+                           HorizontalAlignment="Center"/>
+
+                <TextBlock Style="{StaticResource Caption}" Margin="0,10,0,0" TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           Text="The same application is a different risk depending on whether you wrote it or downloaded it, so VibeCheck answers a different question for each. You can change this later."/>
+
+                <Border Style="{StaticResource Card}" Margin="0,22,0,0">
+                    <StackPanel>
+                        <Button Command="{Binding ChooseAudienceCommand}"
+                                CommandParameter="Developer"
+                                HorizontalContentAlignment="Left" Padding="14,12"
+                                Background="{StaticResource Panel}" BorderThickness="0"
+                                Foreground="{StaticResource Text}" Cursor="Hand">
+                            <StackPanel>
+                                <TextBlock Text="I built this application" FontSize="15"/>
+                                <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0"
+                                           TextWrapping="Wrap"
+                                           Text="Everything, including leaked keys and packaging mistakes, with rule identifiers, advisory links, and how to fix each one."/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Command="{Binding ChooseAudienceCommand}"
+                                CommandParameter="EndUser" Margin="0,10,0,0"
+                                HorizontalContentAlignment="Left" Padding="14,12"
+                                Background="{StaticResource Panel}" BorderThickness="0"
+                                Foreground="{StaticResource Text}" Cursor="Hand">
+                            <StackPanel>
+                                <TextBlock Text="I downloaded this application" FontSize="15"/>
+                                <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0"
+                                           TextWrapping="Wrap"
+                                           Text="What it could do to you and your machine, in plain language. The developer own mistakes are still listed, marked as not your problem."/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
         <!-- ============ Waiting ============ -->
         <Grid Grid.Row="1" Visibility="{Binding IsWaiting, Converter={StaticResource BoolToVisibility}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="640">
@@ -210,6 +257,29 @@
                                            Foreground="{Binding Band, Converter={StaticResource BandBrush}}"/>
                             </StackPanel>
 
+                            <!-- Which question the number answered. Never omitted: the same
+                                 artifact scores differently for the two readers. -->
+                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                <TextBlock Text="{Binding ScoreCaption}"
+                                           Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Text="  ·  " Style="{StaticResource Caption}"
+                                           VerticalAlignment="Center"/>
+
+                                <!-- Switching re-answers the report already in hand. Nothing is
+                                     rescanned, so the two views can never disagree about what
+                                     was found, only about what it means for the reader. -->
+                                <Button Command="{Binding SwitchAudienceCommand}"
+                                        Content="{Binding SwitchAudienceLabel}"
+                                        Background="Transparent" BorderThickness="0" Padding="0"
+                                        Cursor="Hand" VerticalAlignment="Center"
+                                        Foreground="{StaticResource Accent}" FontSize="12"/>
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding AudienceSummary}"
+                                       Style="{StaticResource Caption}" Margin="0,6,0,0"
+                                       TextWrapping="Wrap"/>
+
                             <TextBlock Text="{Binding SummaryLine}" Margin="0,10,0,0" TextWrapping="Wrap"/>
 
                             <!-- Shown when nothing meaningful could be read. Stated plainly so
@@ -335,8 +405,12 @@
                                                             <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
                                                                 <TextBlock Text="{Binding RuleId}"
                                                                            Style="{StaticResource Caption}"
-                                                                           FontFamily="Consolas"/>
-                                                                <TextBlock Text="  ·  " Style="{StaticResource Caption}"/>
+                                                                           FontFamily="Consolas"
+                                                                           Visibility="{Binding ShowRuleId,
+                                                                                        Converter={StaticResource BoolToVisibility}}"/>
+                                                                <TextBlock Text="  ·  " Style="{StaticResource Caption}"
+                                                                           Visibility="{Binding ShowRuleId,
+                                                                                        Converter={StaticResource BoolToVisibility}}"/>
                                                                 <TextBlock Text="{Binding Location}"
                                                                            Style="{StaticResource Caption}"
                                                                            FontFamily="Consolas"
@@ -374,7 +448,8 @@
                                                     <StackPanel Margin="0,10,0,0"
                                                                 Visibility="{Binding Remediation,
                                                                              Converter={StaticResource NullToVisibility}}">
-                                                        <TextBlock Text="How to fix" FontWeight="SemiBold" FontSize="12"/>
+                                                        <TextBlock Text="{Binding RemediationLabel}"
+                                                                   FontWeight="SemiBold" FontSize="12"/>
                                                         <TextBlock Text="{Binding Remediation}" TextWrapping="Wrap"
                                                                    Margin="0,4,0,0"/>
                                                     </StackPanel>

@@ -13,6 +13,12 @@ namespace VibeCheck.App;
 
 public enum AppState
 {
+    /// <summary>
+    /// The one-time question about who is reading. Ahead of Waiting because the answer
+    /// changes what a scan means, not merely how it looks, so there is no useful scan to
+    /// offer before it is answered.
+    /// </summary>
+    ChoosingAudience,
     Waiting,
     Scanning,
     Results,
@@ -24,7 +30,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private readonly Scanner _scanner = new();
     private CancellationTokenSource? _cancellation;
 
-    private AppState _state = AppState.Waiting;
+    private AppState _state = AudienceStore.Load() is null
+        ? AppState.ChoosingAudience
+        : AppState.Waiting;
+
+    private Audience _audience = AudienceStore.Load() ?? Audience.Developer;
     private string _progressMessage = string.Empty;
     private int _progressPercent;
     private bool _isolate;
@@ -39,6 +49,75 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ResetCommand = new RelayCommand(_ => Reset(), _ => State != AppState.Scanning);
         ExportMarkdownCommand = new RelayCommand(_ => Export("md"), _ => Report is not null);
         ExportJsonCommand = new RelayCommand(_ => Export("json"), _ => Report is not null);
+        ChooseAudienceCommand = new RelayCommand(a => ChooseAudience(a as string));
+        SwitchAudienceCommand = new RelayCommand(_ => Audience =
+            Audience == Audience.EndUser ? Audience.Developer : Audience.EndUser);
+    }
+
+    // ---- Who is reading ----------------------------------------------------
+
+    /// <summary>
+    /// Which of the two reports this person gets. Changing it re-renders the findings from
+    /// the report already in hand, so switching does not mean rescanning: the severities for
+    /// both readers were computed during the scan.
+    /// </summary>
+    public Audience Audience
+    {
+        get => _audience;
+        set
+        {
+            if (!Set(ref _audience, value))
+            {
+                return;
+            }
+
+            AudienceStore.Save(value);
+            Notify(nameof(IsEndUser));
+            Notify(nameof(AudienceSummary));
+            Notify(nameof(SwitchAudienceLabel));
+
+            // The score is a different number for the other reader, not the same number
+            // relabelled, so everything downstream of it has to be rebuilt.
+            if (Report is not null)
+            {
+                Report = Scanner.Rescore(Report, value);
+            }
+        }
+    }
+
+    public ICommand ChooseAudienceCommand { get; }
+
+    public ICommand SwitchAudienceCommand { get; }
+
+    public string SwitchAudienceLabel => Audience == Audience.EndUser
+        ? "Switch to the developer view"
+        : "Switch to the end user view";
+
+    public bool IsChoosingAudience => State == AppState.ChoosingAudience;
+
+    public bool IsEndUser => Audience == Audience.EndUser;
+
+    /// <summary>Shown on the results screen so the reader knows which report they are in.</summary>
+    public string AudienceSummary => Audience == Audience.EndUser
+        ? "Written for someone deciding whether to run this. Switch to the developer view for "
+          + "rule identifiers, advisory links, and how to fix each finding."
+        : "Written for whoever ships this. Switch to the end user view to see what someone "
+          + "who downloaded it would be told.";
+
+    private void ChooseAudience(string? name)
+    {
+        if (!Enum.TryParse<Audience>(name, out var audience))
+        {
+            return;
+        }
+
+        Audience = audience;
+        AudienceStore.Save(audience);
+
+        if (State == AppState.ChoosingAudience)
+        {
+            State = AppState.Waiting;
+        }
     }
 
     // ---- Deep pass ---------------------------------------------------------
@@ -110,6 +189,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             if (Set(ref _state, value))
             {
+                Notify(nameof(IsChoosingAudience));
                 Notify(nameof(IsWaiting));
                 Notify(nameof(IsScanning));
                 Notify(nameof(HasResults));
@@ -190,7 +270,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                              nameof(CoveragePercent), nameof(CoverageBasis), nameof(CoverageIsLow),
                              nameof(SummaryLine), nameof(VulnerabilitySummary),
                              nameof(VulnerabilityIsStale), nameof(BundleNote), nameof(Sha256),
-                             nameof(DurationLabel),
+                             nameof(DurationLabel), nameof(ScoreCaption),
                          })
                 {
                     Notify(name);
@@ -224,6 +304,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string ScoreDisplay => Report?.Verdict.ScoreDisplay ?? string.Empty;
 
     public string BandLabel => Report?.Verdict.BandLabel ?? string.Empty;
+
+    /// <summary>
+    /// Which question the score answered. Shown under the number without exception: the same
+    /// artifact scores differently for the two readers, and a number that changes with a
+    /// setting and does not say so is worse than either number alone.
+    /// </summary>
+    public string ScoreCaption => Report?.Verdict.ScoreCaption ?? Audience.ScoreCaption();
 
     public ScoreBand Band => Report?.Verdict.Band ?? ScoreBand.InsufficientCoverage;
 
@@ -312,6 +399,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             Isolate = Isolate,
             WriteBundle = !Isolate,
+            Audience = Audience,
 
             // Only when the reader both stored a key and switched the pass on for this scan.
             // Isolate mode ignores it regardless, since that mode promises no network at all.
@@ -370,7 +458,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         foreach (var finding in Report.FindingsBySeverity)
         {
-            Findings.Add(new FindingCard(finding));
+            Findings.Add(new FindingCard(finding, Audience));
         }
 
         foreach (var (category, score) in Report.CategoryScores
@@ -451,7 +539,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
 }
 
 /// <summary>One finding, prepared for display.</summary>
-public sealed class FindingCard(Finding finding) : INotifyPropertyChanged
+/// <summary>
+/// One finding as shown to a particular reader.
+/// </summary>
+/// <remarks>
+/// The audience is resolved here rather than in the view, so no binding can accidentally
+/// reach past it to the developer's copy. Every member below that differs between the two
+/// readers goes through the finding's own accessor.
+/// </remarks>
+public sealed class FindingCard(Finding finding, Audience audience) : INotifyPropertyChanged
 {
     private bool _expanded;
 
@@ -459,21 +555,42 @@ public sealed class FindingCard(Finding finding) : INotifyPropertyChanged
 
     public string Title => Finding.Title;
 
-    public Severity Severity => Finding.Severity;
+    public Severity Severity => Finding.SeverityFor(audience);
 
-    public string SeverityLabel => Finding.Severity.ToString().ToUpperInvariant();
+    /// <summary>
+    /// "INFO" is accurate and unhelpful. For the reader a finding does not reach, the useful
+    /// label is the reason it is sitting at the bottom of their list.
+    /// </summary>
+    public string SeverityLabel =>
+        Severity == Severity.Info && audience == Audience.EndUser
+            ? "NOT YOURS"
+            : Severity.ToString().ToUpperInvariant();
 
     public string Location => Finding.Location;
 
     public string RuleId => Finding.RuleId;
 
-    public string Description => Finding.Description;
+    /// <summary>
+    /// The rule identifier is a support handle for someone who can act on it. Hidden from the
+    /// reader who cannot, where it is a serial number attached to their own anxiety.
+    /// </summary>
+    public bool ShowRuleId => audience == Audience.Developer;
+
+    public string Description => Finding.DescriptionFor(audience);
 
     public string? Evidence => Finding.Evidence;
 
-    public string? Remediation => Finding.Remediation;
+    public string? Remediation => Finding.RemediationFor(audience);
 
-    public string? Reference => Finding.Reference;
+    /// <summary>"How to fix" is wrong for somebody who cannot fix it.</summary>
+    public string RemediationLabel =>
+        audience == Audience.EndUser ? "What you can do" : "How to fix";
+
+    /// <summary>
+    /// A CVE link is the most useful thing in the developer's copy and a dead end in the
+    /// other: it opens an advisory about a component the reader cannot upgrade.
+    /// </summary>
+    public string? Reference => audience == Audience.Developer ? Finding.Reference : null;
 
     /// <summary>Shown on inferred findings so they are never mistaken for a certain match.</summary>
     public bool IsAssisted => Finding.Source == FindingSource.Assisted;
