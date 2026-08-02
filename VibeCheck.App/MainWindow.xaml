@@ -397,9 +397,18 @@
                             <ItemsControl ItemsSource="{Binding Findings}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
+                                        <!-- The row is outlined in its own severity rather than
+                                             in the neutral edge, so the colour reaches the
+                                             whole finding instead of only the bar and the word
+                                             inside it. Same converter and the same brush, so a
+                                             theme that restates the ramp restates this too and
+                                             the outline can never disagree with the label it
+                                             surrounds. -->
                                         <Border Margin="0,0,0,8" CornerRadius="4"
                                                 Background="{StaticResource PanelRaised}"
-                                                BorderBrush="{StaticResource Edge}" BorderThickness="1">
+                                                BorderThickness="1"
+                                                BorderBrush="{Binding Severity,
+                                                              Converter={StaticResource SeverityBrush}}">
                                             <StackPanel>
                                                 <!-- Header row toggles the detail open. -->
                                                 <ToggleButton IsChecked="{Binding Expanded}" Cursor="Hand"

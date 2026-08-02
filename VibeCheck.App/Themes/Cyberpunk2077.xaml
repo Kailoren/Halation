@@ -82,18 +82,23 @@
          one place this theme spends part of the ramp's safety margin. Orange sat too close to
          the yellow this whole theme is built on and stopped reading as a warning at all.
 
-         The cost is that Critical and High are now both red and separated by hue rather than
-         by lightness: the source's #FF003C carries a blue cast and reads as crimson, this one
-         does not and reads as a plain red. On a near-black background there is no third
-         option, because darkening one of them far enough to separate by lightness drops it
-         under the contrast a ten pixel label needs.
+         It is a scarlet rather than a pure red, and the warmth is doing work beyond taste.
+         Critical sits at hue 346, a crimson with a blue cast. A pure red at hue 4 left only
+         eighteen degrees between them; pulling this one out to hue 14 nearly doubles that
+         while staying clearly on the red side of the orange it replaced. More orange here is
+         more separation, not less.
+
+         What remains is that Critical and High are separated by hue rather than by lightness.
+         On a near-black background there is no third option, because darkening either far
+         enough to separate them by lightness as well drops it under the contrast a ten pixel
+         label needs.
 
          That is affordable here only because colour is not carrying the ordering on its own.
          Every finding row prints its severity as a word beside the bar, so a reader who cannot
          separate two reds still reads CRITICAL and HIGH. If that label ever goes away, this
          ramp has to be reconsidered on the same day. -->
     <SolidColorBrush x:Key="Critical" Color="#FF003C"/>
-    <SolidColorBrush x:Key="High"     Color="#FF2E22"/>
+    <SolidColorBrush x:Key="High"     Color="#FF5A28"/>
     <SolidColorBrush x:Key="Medium"   Color="#F9F002"/>
 
     <!-- The source's blue is #0c5f74, which on a near-black background is close to unreadable at

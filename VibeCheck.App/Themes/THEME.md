@@ -79,6 +79,11 @@ lightness as well as hue, or a colour-blind reader loses the ordering.
 > that passed. Keeping those two visually distinct is the entire reason the band exists, and a
 > theme that blurs them makes the tool dishonest on the tool's behalf.
 
+These reach further than the severity bar. A finding row is outlined in its own severity too,
+through the same converter and the same brush, so the outline can never disagree with the label
+it surrounds. Changing one of these colours changes how loud a whole screen of findings is, not
+just how a twelve pixel tag looks.
+
 There is one margin here worth understanding before spending it. Colour is not the only carrier
 of severity: every finding row prints the word beside the bar, and the score band prints its
 label beside the number. So a theme that puts two neighbouring severities in the same family is
@@ -216,6 +221,16 @@ Restyling rather than recolouring means overriding these whole. Copy the one you
 | `ChoiceBtn` | The two audience choices, which are buttons the size of paragraphs |
 | `CaptionBtn` | Minimise and maximise |
 | `CloseBtn` | Close, inherits `CaptionBtn` |
+| *(implicit)* `ScrollBar` | Every scroll bar in every window |
+| `ScrollThumb` | The draggable part, used by the above |
+| `ScrollPage` | The click-to-page halves of the track, used by the above |
+
+The scroll bar is templated in full for the same reason the audience choices are: WPF's stock
+one takes its colours from the framework's own theme dictionary, so no palette here could reach
+it and a native light grey bar sat down the side of a dark window. It is implicit, so it applies
+everywhere without being asked for, and it names no colours of its own beyond `Muted` and
+`Accent` at graded opacities. A theme that never mentions scroll bars still gets one that
+matches it.
 
 > **Every clickable control needs a style here, including the ones that look fine without one.**
 > The audience choices had none for a while, so they fell through to WPF's stock `Button`
