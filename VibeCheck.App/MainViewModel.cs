@@ -297,8 +297,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// of dead controls for somebody to click at and get nothing from.
     /// </summary>
     public string DeepPassUnavailableHere =>
-        "Only available when reporting for whoever ships this, on an application you built "
-        + "yourself. Checking something you downloaded runs entirely on this machine.";
+        "Only available in developer mode, for an app you made. Checking something you "
+        + "downloaded runs entirely on this machine.";
 
     /// <summary>
     /// Whether the local agent route is offerable.
