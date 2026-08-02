@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
 using VibeCheck.Core;
+using VibeCheck.Core.DeepPass;
 using VibeCheck.Core.Dependencies;
 using VibeCheck.Core.Model;
 using VibeCheck.Core.Reporting;
@@ -55,6 +56,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ChooseAudienceCommand = new RelayCommand(a => ChooseAudience(a as string));
         SwitchAudienceCommand = new RelayCommand(_ => Audience =
             Audience == Audience.EndUser ? Audience.Developer : Audience.EndUser);
+
+        // Started, not awaited. The answer only decides whether one option is offerable, and
+        // the audience question is on screen first regardless; the status line says it is
+        // still looking until it knows.
+        _ = DetectLocalCliAsync();
     }
 
     // ---- Who is reading ----------------------------------------------------
@@ -81,6 +87,25 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Notify(nameof(AudienceLabel));
             Notify(nameof(LastWasDeveloper));
             Notify(nameof(LastWasEndUser));
+
+            // Switching to the end user view withdraws the local agent option, because that
+            // view means the reader did not write what they are about to scan. Selecting it
+            // and then changing audience must not leave the choice standing.
+            Notify(nameof(LocalCliReady));
+            Notify(nameof(LocalCliStatus));
+            Notify(nameof(CanRunDeepPass));
+
+            if (DeepPassUsesLocalCli && !LocalCliReady)
+            {
+                DeepPassUsesLocalCli = false;
+            }
+
+            if (_deepPassEnabled && !DeepPassSourceReady)
+            {
+                _deepPassEnabled = false;
+                Notify(nameof(DeepPassEnabled));
+                Notify(nameof(PrivacyLine));
+            }
 
             // The score is a different number for the other reader, not the same number
             // relabelled, so everything downstream of it has to be rebuilt.
@@ -142,18 +167,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
     // ---- Deep pass ---------------------------------------------------------
 
     private bool _deepPassEnabled;
+    private bool _deepPassUsesLocalCli;
+    private ClaudeCodeCli? _localCli;
+    private bool _localCliSignedIn;
+    private bool _localCliSearched;
 
     /// <summary>
     /// Whether this scan runs the optional deep pass. Off by default and not remembered
-    /// between runs: it spends the reader's own money, so it should be a decision each time
-    /// rather than a setting that quietly stays on.
+    /// between runs: it spends something of the reader's either way, so it should be a
+    /// decision each time rather than a setting that quietly stays on.
     /// </summary>
     public bool DeepPassEnabled
     {
         get => _deepPassEnabled;
         set
         {
-            if (Set(ref _deepPassEnabled, value) && value && !HasApiKey)
+            if (Set(ref _deepPassEnabled, value) && value && !DeepPassSourceReady)
             {
                 // Nothing to run with. Turn it back off rather than letting the checkbox
                 // claim a pass that will not happen.
@@ -165,17 +194,110 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// Whether the pass runs through a Claude Code installation on this machine rather than a
+    /// key the reader bought.
+    /// </summary>
+    /// <remarks>
+    /// Two radio buttons bind to this and its inverse. Changing it can invalidate the pass
+    /// itself, because each source has its own reasons for being unavailable.
+    /// </remarks>
+    public bool DeepPassUsesLocalCli
+    {
+        get => _deepPassUsesLocalCli;
+        set
+        {
+            if (!Set(ref _deepPassUsesLocalCli, value))
+            {
+                return;
+            }
+
+            Notify(nameof(DeepPassUsesApiKey));
+            Notify(nameof(PrivacyLine));
+            Notify(nameof(DeepPassCostLine));
+
+            if (_deepPassEnabled && !DeepPassSourceReady)
+            {
+                _deepPassEnabled = false;
+                Notify(nameof(DeepPassEnabled));
+                Notify(nameof(PrivacyLine));
+            }
+        }
+    }
+
+    public bool DeepPassUsesApiKey
+    {
+        get => !_deepPassUsesLocalCli;
+        set
+        {
+            if (value)
+            {
+                DeepPassUsesLocalCli = false;
+            }
+        }
+    }
+
     public bool HasApiKey => ApiKeyStore.Load() is not null;
+
+    /// <summary>Whether the source currently chosen can actually answer.</summary>
+    public bool DeepPassSourceReady => DeepPassUsesLocalCli ? LocalCliReady : HasApiKey;
+
+    /// <summary>Whether anything at all could answer, which is what gates the checkbox.</summary>
+    public bool CanRunDeepPass => HasApiKey || LocalCliReady;
+
+    /// <summary>
+    /// Whether the local agent route is offerable.
+    /// </summary>
+    /// <remarks>
+    /// The audience is part of the test, not a presentational detail. Claude Code can act on
+    /// this machine and the Anthropic API cannot, so feeding it source recovered from software
+    /// the reader did not write is the attack this tool exists to warn about. The core refuses
+    /// regardless; this only decides whether the option is offered rather than explained.
+    /// </remarks>
+    public bool LocalCliReady =>
+        _localCli is not null && _localCliSignedIn && Audience == Audience.Developer;
+
+    /// <summary>Why the local route is or is not available, in something the reader can act on.</summary>
+    public string LocalCliStatus => (_localCliSearched, _localCli, _localCliSignedIn) switch
+    {
+        (false, _, _) => "Looking for Claude Code on this machine...",
+
+        (_, null, _) => "Not found on this machine. Install Claude Code to use this option.",
+
+        (_, _, false) => "Found, but not signed in. Run \"claude auth login\" in a terminal, "
+                         + "then reopen VibeCheck.",
+
+        _ when Audience != Audience.Developer =>
+            "Only offered when reporting for whoever ships this. Claude Code can act on this "
+            + "computer, so it is not pointed at software you did not write.",
+
+        _ => _localCli!.Description,
+    };
+
+    /// <summary>What the chosen source spends, said plainly next to the choice.</summary>
+    public string DeepPassCostLine => DeepPassUsesLocalCli
+        ? "Spends your Claude subscription's quota. Nothing is charged to you."
+        : "Billed to your Anthropic API key, per file read.";
 
     /// <summary>
     /// The standing promise on the drop screen, which stops being true the moment the deep
     /// pass is switched on. Leaving "nothing is uploaded" showing while source is about to be
     /// sent to an API would be the plainest possible lie this interface could tell.
     /// </summary>
-    public string PrivacyLine => DeepPassEnabled
-        ? "Deep pass is on: the files it selects will be sent to Anthropic on your key. "
-          + "Everything else runs on this machine."
-        : "Nothing is uploaded. Analysis runs on this machine.";
+    /// <remarks>
+    /// Both routes send code to Anthropic. Only the billing differs, so the local option must
+    /// not be allowed to read as the private one.
+    /// </remarks>
+    public string PrivacyLine => (DeepPassEnabled, DeepPassUsesLocalCli) switch
+    {
+        (false, _) => "Nothing is uploaded. Analysis runs on this machine.",
+
+        (true, true) => "Deep pass is on: the files it selects will be sent to Anthropic through "
+                        + "Claude Code, on your subscription. Everything else runs on this machine.",
+
+        (true, false) => "Deep pass is on: the files it selects will be sent to Anthropic on your "
+                         + "key. Everything else runs on this machine.",
+    };
 
     public string ApiKeyStatus => ApiKeyStore.Describe(ApiKeyStore.Load());
 
@@ -184,14 +306,75 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         ApiKeyStore.Save(key);
 
-        if (!HasApiKey)
+        if (!DeepPassSourceReady)
         {
             _deepPassEnabled = false;
         }
 
         Notify(nameof(HasApiKey));
         Notify(nameof(ApiKeyStatus));
+        Notify(nameof(CanRunDeepPass));
         Notify(nameof(DeepPassEnabled));
+        Notify(nameof(PrivacyLine));
+    }
+
+    /// <summary>
+    /// Looks for a usable Claude Code installation, off the UI thread.
+    /// </summary>
+    /// <remarks>
+    /// Installed and signed in are separate facts, and the second costs a process launch to
+    /// establish, so it is done once at startup rather than when the scan button is pressed.
+    /// Finding nothing is a normal outcome and is reported in the status line, never as an
+    /// error: most readers will not have Claude Code, and that is not a problem with their
+    /// machine.
+    /// </remarks>
+    private async Task DetectLocalCliAsync()
+    {
+        try
+        {
+            var cli = await Task.Run(() => ClaudeCodeCliLocator.Locate()).ConfigureAwait(true);
+
+            if (cli is not null)
+            {
+                var auth = await Task.Run(() => ClaudeCodeCliBackend.CheckAuthenticationAsync(cli))
+                    .ConfigureAwait(true);
+
+                _localCliSignedIn = auth.SignedIn;
+            }
+
+            _localCli = cli;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException
+                                      or UnauthorizedAccessException)
+        {
+            _localCli = null;
+        }
+        finally
+        {
+            _localCliSearched = true;
+
+            // Marshalled explicitly rather than relying on the await resuming on the UI thread.
+            // It usually does, because a dispatcher synchronisation context is installed once
+            // Application.Run is pumping, but this starts from a constructor that can run
+            // before that is true, and then the continuation resumes on the thread pool.
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+
+            if (dispatcher is not null && !dispatcher.CheckAccess())
+            {
+                dispatcher.Invoke(NotifyLocalCliState);
+            }
+            else
+            {
+                NotifyLocalCliState();
+            }
+        }
+    }
+
+    private void NotifyLocalCliState()
+    {
+        Notify(nameof(LocalCliReady));
+        Notify(nameof(LocalCliStatus));
+        Notify(nameof(CanRunDeepPass));
     }
 
     /// <summary>The build's own version, shown in the title bar and stamped into reports.</summary>
@@ -433,9 +616,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
             WriteBundle = !Isolate,
             Audience = Audience,
 
-            // Only when the reader both stored a key and switched the pass on for this scan.
-            // Isolate mode ignores it regardless, since that mode promises no network at all.
-            DeepPassApiKey = DeepPassEnabled ? ApiKeyStore.Load() : null,
+            // Only when the reader switched the pass on for this scan and chose a source that
+            // can answer. Isolate mode ignores both, since it promises no network at all.
+            DeepPassApiKey = DeepPassEnabled && !DeepPassUsesLocalCli ? ApiKeyStore.Load() : null,
+            DeepPassUseLocalCli = DeepPassEnabled && DeepPassUsesLocalCli,
         };
 
         try
