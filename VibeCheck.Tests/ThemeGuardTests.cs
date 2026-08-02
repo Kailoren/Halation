@@ -23,22 +23,33 @@ public class ThemeGuardTests
     // ---- What a theme is allowed to be ----------------------------------------
 
     /// <summary>
-    /// The two themes that ship. If this fails the allowlist is too tight and the product is
-    /// broken, which is the failure nothing else in the build would catch: the default theme is
-    /// compiled into the assembly and never goes through the guard, so only the loose copy
-    /// would break, and only on the machine that installed it.
+    /// Every theme that ships, whatever they happen to be called. If this fails the allowlist
+    /// is too tight and the product is broken, which is the failure nothing else in the build
+    /// would catch: the shipped theme is compiled into the assembly and never goes through the
+    /// guard, so only a copy of it installed loosely would break, and only on the machine that
+    /// installed it.
     /// </summary>
-    [Theory]
-    [InlineData("Theme.xaml")]
-    [InlineData("Cyberpunk2077.xaml")]
-    public void ShippedThemes_AreAccepted(string file)
+    /// <remarks>
+    /// Enumerated rather than listed by name. The list was two entries and went stale the day
+    /// one of them was removed, failing against a file that no longer existed in the project
+    /// but was still sitting in the previous build's output.
+    /// </remarks>
+    [Fact]
+    public void ShippedThemes_AreAccepted()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "Themes", file);
+        var directory = Path.Combine(AppContext.BaseDirectory, "Themes");
 
-        Assert.True(File.Exists(path), $"{path} was not copied to the test output.");
+        Assert.True(Directory.Exists(directory), $"{directory} was not copied to the test output.");
 
-        using var stream = File.OpenRead(path);
-        Assert.Null(ThemeGuard.Check(stream));
+        var themes = Directory.GetFiles(directory, "*.xaml");
+
+        Assert.NotEmpty(themes);
+
+        foreach (var theme in themes)
+        {
+            using var stream = File.OpenRead(theme);
+            Assert.Null(ThemeGuard.Check(stream));
+        }
     }
 
     [Fact]

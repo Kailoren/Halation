@@ -6,6 +6,7 @@
         xmlns:app="clr-namespace:VibeCheck.App"
         mc:Ignorable="d"
         Title="VibeCheck"
+        Icon="/VibeCheck;component/VibeCheck.ico"
         Height="820" Width="1120" MinHeight="560" MinWidth="820"
         Background="{StaticResource Bg}"
         FontFamily="{DynamicResource UiFont}" FontSize="{DynamicResource BodySize}"
@@ -46,8 +47,19 @@
                 BorderBrush="{StaticResource Edge}" BorderThickness="0,0,0,1">
             <Grid>
                 <StackPanel Orientation="Horizontal" Margin="14,0" VerticalAlignment="Center">
+                    <!-- The .ico rather than a single bitmap, so WPF picks the frame nearest
+                         the rendered size. At 20 pixels that is the cropped shield, which is
+                         the whole reason the icon carries more than one image.
+
+                         Assembly-qualified rather than "/VibeCheck.ico": a bare relative pack
+                         URI resolves against the entry assembly, so this threw the moment
+                         anything other than VibeCheck.exe hosted the window. -->
+                    <Image Source="/VibeCheck;component/VibeCheck.ico" Width="20" Height="20"
+                           VerticalAlignment="Center" Margin="0,0,9,0"
+                           RenderOptions.BitmapScalingMode="HighQuality"/>
                     <TextBlock Text="VibeCheck" FontWeight="SemiBold"
-                               FontFamily="{DynamicResource DisplayFont}"/>
+                               FontFamily="{DynamicResource DisplayFont}"
+                               VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding Version, StringFormat=v{0}}"
                                Style="{StaticResource Caption}" Margin="7,0,0,0"
                                VerticalAlignment="Center"/>

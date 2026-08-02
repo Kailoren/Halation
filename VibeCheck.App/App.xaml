@@ -12,6 +12,9 @@
                  purpose: an override should not have to redeclare a converter in order to
                  change a colour. See ThemeLoader. -->
             <ResourceDictionary.MergedDictionaries>
+                <!-- The one shipped theme. A loose copy at %LOCALAPPDATA%\VibeCheck\theme.xaml
+                     is merged over this at startup by ThemeLoader if one exists, so a reader
+                     can still restyle the application without a rebuild. -->
                 <ResourceDictionary Source="Themes/Theme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 

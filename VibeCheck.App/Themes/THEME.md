@@ -112,10 +112,9 @@ Two panels belong to a severity rather than merely being coloured by one:
 | `CriticalFill` | `#2A1618` | The do-not-install banner |
 | `MediumFill` | `#2A2418` | The note marking a finding as inferred by the deep pass |
 
-Opaque in the default theme, unlike `AccentWash`: these are the surface rather than a tint laid
-over one, and both values were chosen against the default background. A theme is free to make
-them translucent, and `Cyberpunk2077.xaml` does, holding them to the same opacity as its panels
-so its animated backdrop reads through them.
+Translucent in the shipped theme, unlike most fills: they are held to the same opacity as its
+panels so the animated backdrop reads through them. A theme is free to make them opaque instead,
+which is the right call on a static background where a tint has nothing to tint.
 
 These reach further than the severity bar. A finding row is outlined in its own severity too,
 through the same converter and the same brush, so the outline can never disagree with the label
@@ -127,8 +126,8 @@ of severity: every finding row prints the word beside the bar, and the score ban
 label beside the number. So a theme that puts two neighbouring severities in the same family is
 degrading a redundant signal rather than removing the only one.
 
-`Cyberpunk2077.xaml` does exactly that, and says so where it happens. Its `High` is red rather
-than the conventional orange, because orange sat too close to the yellow that theme is built on
+The shipped theme does exactly that, and says so where it happens. Its `High` is red rather
+than the conventional orange, because orange sat too close to the yellow the theme is built on
 and stopped reading as a warning. `Critical` and `High` are then separated by hue alone, the
 first carrying a blue cast and the second not. On a near-black background there is no third
 option, since darkening one far enough to also separate it by lightness drops it below the
@@ -326,16 +325,16 @@ theme that never mentions any of these still gets versions that match it.
 their colour. A `Border` has exactly one child and no template, so the only thing a style could
 ever say about one was what colour it was.
 
-## A worked example
+## The shipped theme as a worked example
 
-`Cyberpunk2077.xaml` beside this file is a complete theme built from
+`Theme.xaml` beside this file is built from
 [gwannon/Cyberpunk-2077-theme-css](https://github.com/gwannon/Cyberpunk-2077-theme-css). It is
 worth reading as a model of the two things a theme has to get right: it says where it departed
 from its source and why, and it leaves `Unknown` alone.
 
 It is also the worked example for everything above. It fills all three decoration slots, sets
-all three glows, replaces the `Card`, `Btn` and `DropZone` templates outright, and animates a
-backdrop, and none of it required a change to a window.
+all three glows, templates `Card`, `Btn` and `DropZone` outright, and animates a backdrop, and
+none of it required a change to a window.
 
 Its card is worth reading for one technique in particular. **To make a shape that resizes
 without distorting, put the part that must not scale in a fixed-size `Grid` cell.** A notched
