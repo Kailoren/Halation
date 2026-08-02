@@ -63,6 +63,12 @@
     <FontFamily x:Key="UiFont">Segoe UI</FontFamily>
     <FontFamily x:Key="MonoFont">Consolas</FontFamily>
 
+    <!-- Headings, the app name and the score. Separate from UiFont because display faces are
+         usually wide and unreadable at body size, so a theme wanting one needs somewhere to
+         put it that is not the paragraph text. Defaults to UiFont's face, meaning a theme that
+         ignores this key looks exactly as it did. -->
+    <FontFamily x:Key="DisplayFont">Segoe UI</FontFamily>
+
     <!-- Segoe MDL2 Assets supplies the title bar glyphs. Replacing it means replacing the
          glyph codes in the window markup too. -->
     <FontFamily x:Key="IconFont">Segoe MDL2 Assets</FontFamily>
@@ -87,6 +93,7 @@
     </Style>
 
     <Style x:Key="Heading" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource DisplayFont}"/>
         <Setter Property="FontSize" Value="{DynamicResource HeadingSize}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
         <Setter Property="Foreground" Value="{DynamicResource Text}"/>

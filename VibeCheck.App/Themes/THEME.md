@@ -71,7 +71,8 @@ lightness as well as hue, or a colour-blind reader loses the ordering.
 
 | Key | Default | Notes |
 |---|---|---|
-| `UiFont` | `Segoe UI` | Everything except code and glyphs |
+| `UiFont` | `Segoe UI` | Body text, buttons, captions |
+| `DisplayFont` | `Segoe UI` | The app name, card headings, the big screen titles, and the score. Separate from `UiFont` because display faces are usually wide and unreadable at paragraph size |
 | `MonoFont` | `Consolas` | Evidence snippets, file paths, hashes |
 | `IconFont` | `Segoe MDL2 Assets` | Title bar glyphs. Changing this means changing the glyph codes in the window markup too |
 | `BodySize` | `13` | |
@@ -103,6 +104,17 @@ Restyling rather than recolouring means overriding these whole. Copy the one you
 | `Btn` | Ordinary buttons |
 | `CaptionBtn` | Minimise and maximise |
 | `CloseBtn` | Close, inherits `CaptionBtn` |
+
+## A worked example
+
+`Cyberpunk2077.xaml` beside this file is a complete theme built from
+[gwannon/Cyberpunk-2077-theme-css](https://github.com/gwannon/Cyberpunk-2077-theme-css). It is
+worth reading as a model of the two things a theme has to get right: it says where it departed
+from its source and why, and it leaves `Unknown` alone.
+
+Fonts named in a `FontFamily` fall back left to right, so listing faces that are not installed
+is safe and is how that theme picks up Oxanium or Michroma if they are present and Bahnschrift
+if they are not.
 
 ## What a theme cannot change
 

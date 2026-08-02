@@ -83,4 +83,8 @@
     <FontFamily x:Key="UiFont">Oxanium, Tomorrow, Barlow, Bahnschrift, Segoe UI</FontFamily>
     <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
 
+    <!-- Michroma on the headings only. It is a wide display face and a paragraph set in it is
+         unreadable, but it is the closest thing to the game's own lettering. -->
+    <FontFamily x:Key="DisplayFont">Michroma, Oxanium, Bahnschrift, Segoe UI</FontFamily>
+
 </ResourceDictionary>
