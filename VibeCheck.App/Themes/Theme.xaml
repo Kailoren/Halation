@@ -5,6 +5,12 @@
     should be hardcoded in a window: if a value cannot be changed from this file, that is a
     bug in the theme rather than a preference of the window.
 
+    That principle used to stop at colour. A theme could recolour the interface but not
+    restyle it, because the shape of a card and the way a button responds to a pointer lived
+    inside the window's markup where nothing could reach them. Both now live here, as
+    templates, and the window holds only arrangement. A theme that wants notched corners, a
+    glow, or a slower hover overrides a template rather than asking for a code change.
+
     To experiment without rebuilding, copy this file to
 
         %LOCALAPPDATA%\VibeCheck\theme.xaml
@@ -85,6 +91,68 @@
     <sys:Double x:Key="CaptionHeight">36</sys:Double>
 
     <!-- ====================================================================
+         Motion
+
+         Durations rather than storyboards, because a storyboard cannot usefully be swapped by
+         key: the animations below live inside control templates and name the elements they
+         move, so a replacement would have to know those names anyway. A theme that only wants
+         the interface to feel faster or calmer changes these two numbers; a theme that wants
+         different motion overrides the template, which is where motion belongs.
+
+         The templates below reach these with StaticResource on purpose. Timelines are
+         Freezables rather than framework elements, and DynamicResource has no element tree to
+         walk from inside one, so it silently resolves to nothing. StaticResource within this
+         same dictionary is resolved at load and works. The consequence is the same one that
+         BasedOn has further down: overriding SwiftDuration alone does not reach these
+         templates, and a theme that wants different timing overrides the template too.
+
+         Everything here animates Opacity or RenderTransform, and nothing else. Those are
+         plain dependency properties on framework elements, so they compose, they do not
+         invalidate layout, and they cannot hit the "cannot animate on an immutable object"
+         wall that catches anyone trying to animate a brush or an effect directly. A theme
+         adding motion should stay inside that rule: fade a dedicated layer in and out rather
+         than animating the thing it decorates.
+         ==================================================================== -->
+
+    <Duration x:Key="SwiftDuration">0:0:0.13</Duration>
+    <Duration x:Key="CalmDuration">0:0:0.30</Duration>
+
+    <!-- ====================================================================
+         Decoration slots
+
+         Empty here, and that is the point. Each is a template the window mounts but the
+         default theme declines to fill, so the neutral look costs nothing and a theme can add
+         atmosphere without the window growing a single element on its behalf. All of them are
+         mounted behind IsHitTestVisible="False", so whatever a theme puts in one can never
+         swallow a click.
+
+         The glow slots are x:Null rather than absent so that the key exists to be found and
+         to be documented. Effect="{DynamicResource CardGlow}" against a missing key is legal
+         and does nothing, which is the same result by accident instead of on purpose.
+         ==================================================================== -->
+
+    <!-- Behind everything, above the window background. For gradients, grain, scanlines,
+         anything that should sit under the entire interface. -->
+    <ControlTemplate x:Key="WindowBackdrop" TargetType="ContentControl"/>
+
+    <!-- In front of everything. For vignettes, CRT curvature, glass. Keep it faint: this
+         layer covers the findings, and the findings are the product. -->
+    <ControlTemplate x:Key="WindowOverlay" TargetType="ContentControl"/>
+
+    <!-- Inside every card, between its border and its content. For corner cuts and ticks. -->
+    <ControlTemplate x:Key="CardChrome" TargetType="ContentControl"/>
+
+    <!-- Effects, applied to the border elements alone rather than to whole controls. An Effect
+         rasterises the subtree it is set on, so putting one on a card would push every
+         paragraph inside it through the same intermediate surface and cost the text its
+         subpixel antialiasing. The templates below keep each border as an empty sibling of the
+         content for exactly this reason: the glow is free to be expensive because nothing
+         readable is inside it. -->
+    <x:Null x:Key="CardGlow"/>
+    <x:Null x:Key="ButtonGlow"/>
+    <x:Null x:Key="DropZoneGlow"/>
+
+    <!-- ====================================================================
          Control styles
          ==================================================================== -->
 
@@ -105,12 +173,113 @@
         <Setter Property="FontSize" Value="{DynamicResource CaptionSize}"/>
     </Style>
 
-    <Style x:Key="Card" TargetType="Border">
+    <!-- Cards.
+
+         A ContentControl rather than a Border, which is the change that makes a card a shape a
+         theme owns instead of a rectangle the window draws. A Border has exactly one child and
+         no template, so the only thing a style could say about it was what colour it was; a
+         templated control can be given corner cuts, a glow, an overlay and a different
+         arrangement entirely without any of the twelve call sites knowing.
+
+         The border is an empty sibling of the content rather than its parent. That is what
+         lets CardGlow be a real effect without dragging every paragraph in the card through
+         the rasteriser with it. -->
+    <Style x:Key="Card" TargetType="ContentControl">
         <Setter Property="Background" Value="{DynamicResource Panel}"/>
         <Setter Property="BorderBrush" Value="{DynamicResource Edge}"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="{DynamicResource CardRadius}"/>
         <Setter Property="Padding" Value="{DynamicResource CardPadding}"/>
+
+        <!-- Set rather than left to the default, because a Border stretched its child and a
+             ContentControl does not have to. Without these the twelve cards this replaced
+             would all shrink to their content's width. -->
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid>
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource CardRadius}"
+                                Effect="{DynamicResource CardGlow}"/>
+
+                        <ContentControl Template="{DynamicResource CardChrome}"
+                                        IsHitTestVisible="False"/>
+
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The drop zone, which is the first thing anyone sees and the only element in the
+         application worth decorating on its own. Templated for the same reason cards are, and
+         separately from them because it is the one card-like thing that reacts: the drag state
+         is a real state and a theme should be able to make it feel like one. -->
+    <Style x:Key="DropZone" TargetType="ContentControl">
+        <Setter Property="Background" Value="{DynamicResource Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Edge}"/>
+        <Setter Property="BorderThickness" Value="2"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid>
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"/>
+
+                        <!-- The drag state as its own layer, faded rather than switched. A
+                             Setter swapping BorderBrush snaps, and a brush cannot be animated
+                             in place once WPF has frozen it, so the accent border is a second
+                             element sitting exactly on the first with its opacity animated. -->
+                        <Border x:Name="Active" Opacity="0" CornerRadius="10"
+                                Background="{DynamicResource Hover}"
+                                BorderBrush="{DynamicResource Accent}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Effect="{DynamicResource DropZoneGlow}"/>
+
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsDragging}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Active"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="{StaticResource SwiftDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Active"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="{StaticResource CalmDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <Style x:Key="Btn" TargetType="Button">
@@ -124,19 +293,49 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{DynamicResource ButtonRadius}">
+                    <Grid>
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource ButtonRadius}"/>
+
+                        <!-- Hover as a layer to cross-fade to, for the same reason the drop
+                             zone has one: this used to be two Setters and it snapped. -->
+                        <Border x:Name="Hot" Opacity="0"
+                                Background="{DynamicResource Hover}"
+                                BorderBrush="{DynamicResource Accent}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{DynamicResource ButtonRadius}"
+                                Effect="{DynamicResource ButtonGlow}"/>
+
                         <ContentPresenter HorizontalAlignment="Center"
                                           VerticalAlignment="Center"
                                           Margin="{TemplateBinding Padding}"/>
-                    </Border>
+                    </Grid>
+
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Hover}"/>
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="{StaticResource SwiftDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="{StaticResource CalmDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.4"/>
@@ -159,13 +358,33 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="Transparent">
+                    <Grid>
+                        <Border x:Name="Hot" Opacity="0" Background="{DynamicResource Hover}"/>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Hover}"/>
                             <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="{StaticResource SwiftDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="{StaticResource CalmDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -181,13 +400,33 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Bd" Background="Transparent">
+                    <Grid>
+                        <Border x:Name="Hot" Opacity="0" Background="{DynamicResource CloseHover}"/>
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Border>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CloseHover}"/>
                             <Setter Property="Foreground" Value="{DynamicResource OnDanger}"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="{StaticResource SwiftDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="{StaticResource CalmDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

@@ -17,6 +17,12 @@ executable, so it cannot be lost, and there is nothing to reinstall.
 A theme that fails to parse is reported in a message box once and then ignored, so a bad edit
 gives you the application back with an explanation rather than a window that will not open.
 
+> **Install themes you trust.** A theme is XAML, and XAML is not a data format: it constructs
+> whatever objects it names, and there are well-known constructions that start processes. Write
+> your own or read one before you install it, and treat a theme downloaded from a stranger the
+> way you would treat any other executable from a stranger, which is the thing this application
+> exists to talk you out of.
+
 A minimal override is legitimate and is the recommended shape:
 
 ```xml
@@ -90,6 +96,88 @@ lightness as well as hue, or a colour-blind reader loses the ordering.
 | `ButtonPadding` | `14,7` | Inside buttons |
 | `CaptionHeight` | `36` | Title bar height. Must match the `CaptionHeight` on each window's `WindowChrome`, or the drag region and the visible bar disagree |
 
+## Motion
+
+| Key | Default | Notes |
+|---|---|---|
+| `SwiftDuration` | `0:0:0.13` | Hover and press, the states that should feel immediate |
+| `CalmDuration` | `0:0:0.30` | Release, which is allowed to linger |
+
+These reach the templates in `Theme.xaml` through `StaticResource`, not `DynamicResource`, and
+that is deliberate. Animations are `Freezable`s rather than framework elements, so they have no
+element tree for a `DynamicResource` to walk and it silently resolves to nothing. The practical
+consequence is the same as `BasedOn` further down: **overriding these two keys alone does not
+change the built-in templates.** A theme that wants different timing overrides the template as
+well, which is where motion belongs anyway.
+
+### Writing motion that works
+
+Animate `Opacity` and `RenderTransform`, and nothing else.
+
+Those are plain dependency properties on framework elements. They compose, they never invalidate
+layout, and they cannot hit the wall that catches everyone the first time:
+
+```
+Cannot animate '...' on an immutable object instance.
+```
+
+That error means you tried to animate a brush or an effect directly, and WPF had frozen it.
+The way round it is not to unfreeze anything, it is to stop animating the decoration and start
+animating a *layer* that carries it. Every hover in this application is a second element sitting
+exactly on the first with its opacity taken from 0 to 1. That is why `Btn` and `DropZone` each
+have an otherwise pointless-looking extra `Border` in their templates.
+
+Two more traps worth knowing:
+
+- **`x:Shared="False"` does not work in a loose theme.** It is only honoured in compiled XAML
+  and throws when `XamlReader` meets it. Declare per-instance objects inside a template instead,
+  where each templated control gets its own copy for free.
+- **A forever-repeating storyboard and a trigger storyboard must not share a target element.**
+  Whichever started last owns the property and the other stops working with no error. Give them
+  separate layers.
+
+## Decoration slots
+
+Empty in the default theme. Each is a template the windows already mount and the default theme
+declines to fill, so a theme can add whole visual layers without a change to any window. All of
+them are mounted with `IsHitTestVisible="False"`, so nothing a theme draws can swallow a click
+or block a drop however large it is.
+
+| Key | Where it sits |
+|---|---|
+| `WindowBackdrop` | Behind the entire interface, above the window background. Gradients, grain, scanlines |
+| `WindowOverlay` | In front of the entire interface. Vignettes and glass. Keep it faint; the findings are underneath |
+| `CardChrome` | Inside every card, between its border and its content. Corner cuts and ticks |
+
+Each is a `ControlTemplate` with `TargetType="ContentControl"`:
+
+```xml
+<ControlTemplate x:Key="WindowOverlay" TargetType="ContentControl">
+    <Rectangle Fill="#22000000"/>
+</ControlTemplate>
+```
+
+## Effects
+
+| Key | Applied to |
+|---|---|
+| `CardGlow` | The card's border element |
+| `ButtonGlow` | The button's hover layer |
+| `DropZoneGlow` | The drop zone's drag layer |
+
+All three are `x:Null` by default and expect a `DropShadowEffect` with `ShadowDepth="0"`, which
+is the only way WPF draws light rather than shade:
+
+```xml
+<DropShadowEffect x:Key="CardGlow" Color="#F9F002" ShadowDepth="0" BlurRadius="18" Opacity="0.45"/>
+```
+
+They attach to border elements and never to whole controls, and the templates are built to keep
+that possible: each border is an empty **sibling** of the content rather than its parent. An
+`Effect` rasterises the subtree it is set on, so a glow set on a card would push every paragraph
+inside it through the same intermediate surface and cost the text its subpixel antialiasing. Set
+one on something with words in it and you will see the text soften.
+
 ## Styles
 
 Restyling rather than recolouring means overriding these whole. Copy the one you want from
@@ -100,10 +188,15 @@ Restyling rather than recolouring means overriding these whole. Copy the one you
 | *(implicit)* `TextBlock` | Default text colour for every `TextBlock` |
 | `Heading` | Card headings |
 | `Caption` | Small muted explanatory text |
-| `Card` | The bordered panels |
+| `Card` | The panels. A templated `ContentControl`, not a `Border` |
+| `DropZone` | The drop target, including its drag state |
 | `Btn` | Ordinary buttons |
 | `CaptionBtn` | Minimise and maximise |
 | `CloseBtn` | Close, inherits `CaptionBtn` |
+
+`Card` and `DropZone` are `ContentControl`s so that a theme can own their shape and not merely
+their colour. A `Border` has exactly one child and no template, so the only thing a style could
+ever say about one was what colour it was.
 
 ## A worked example
 
@@ -111,6 +204,18 @@ Restyling rather than recolouring means overriding these whole. Copy the one you
 [gwannon/Cyberpunk-2077-theme-css](https://github.com/gwannon/Cyberpunk-2077-theme-css). It is
 worth reading as a model of the two things a theme has to get right: it says where it departed
 from its source and why, and it leaves `Unknown` alone.
+
+It is also the worked example for everything above. It fills all three decoration slots, sets
+all three glows, replaces the `Card`, `Btn` and `DropZone` templates outright, and animates a
+backdrop, and none of it required a change to a window.
+
+Its card is worth reading for one technique in particular. **To make a shape that resizes
+without distorting, put the part that must not scale in a fixed-size `Grid` cell.** A notched
+corner has no good alternative: painting the corner out with a background-coloured triangle
+leaves a flat patch wherever the backdrop is textured, and stretching one notched `Path` to fill
+the card turns the notch into a long shallow diagonal on a wide card. A two by two grid with an
+18 pixel top row and an 18 pixel right column holds the cut at exactly 18 by 18 at every size,
+and the fills and hairlines around it all stop at shared grid lines so they meet exactly.
 
 Fonts named in a `FontFamily` fall back left to right, so listing faces that are not installed
 is safe and is how that theme picks up Oxanium or Michroma if they are present and Bahnschrift

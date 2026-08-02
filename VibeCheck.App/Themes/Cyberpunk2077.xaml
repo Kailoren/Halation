@@ -20,11 +20,21 @@
     rather than the page background, the palette blue is lightened, and the "could not
     analyse" grey is left alone.
 
+    This theme is also the worked example for what a theme can do beyond recolouring. It fills
+    the three decoration slots the default theme leaves empty, replaces two control templates
+    outright, and adds motion. Read alongside Theme.xaml: everything here is reachable from a
+    loose file, and none of it required a change to a window.
+
     To use it, copy this file to %LOCALAPPDATA%\VibeCheck\theme.xaml. To stop using it, delete
     that file. See THEME.md.
 -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ====================================================================
+         Palette
+         ==================================================================== -->
 
     <!-- The source theme puts black on yellow. That is the right call for a landing page and
          the wrong one for this: a scan report is several thousand words of body text, and a
@@ -32,8 +42,13 @@
          colours that are supposed to be the only loud thing on screen. So the relationship is
          inverted, yellow becomes the accent, and the black stays. -->
     <SolidColorBrush x:Key="Bg"          Color="#050505"/>
-    <SolidColorBrush x:Key="Panel"       Color="#0D0D0B"/>
-    <SolidColorBrush x:Key="PanelRaised" Color="#16160A"/>
+
+    <!-- Not quite opaque. The backdrop below is doing work, and holding the panels back to
+         about nine tenths lets the grid and the sweep read faintly through them, which is what
+         makes the interface look lit rather than painted. Any further and the scanlines start
+         showing through body text, which is where atmosphere starts costing legibility. -->
+    <SolidColorBrush x:Key="Panel"       Color="#E80D0D0B"/>
+    <SolidColorBrush x:Key="PanelRaised" Color="#F016160A"/>
 
     <!-- The source's border-color, used for borders, which is what the source calls it. -->
     <SolidColorBrush x:Key="Edge"        Color="#5C8AE66E"/>
@@ -76,6 +91,10 @@
          truth about how little it saw. -->
     <SolidColorBrush x:Key="Unknown"  Color="#6B7280"/>
 
+    <!-- ====================================================================
+         Typography and metrics
+         ==================================================================== -->
+
     <!-- The source recommends Advent Pro, Barlow, Tomorrow and Oxanium, none of which ship
          with Windows. Listed first anyway so they are picked up if ever installed, with
          Bahnschrift behind them: it is present on every Windows 10 and 11 machine and is the
@@ -86,5 +105,459 @@
     <!-- Michroma on the headings only. It is a wide display face and a paragraph set in it is
          unreadable, but it is the closest thing to the game's own lettering. -->
     <FontFamily x:Key="DisplayFont">Michroma, Oxanium, Bahnschrift, Segoe UI</FontFamily>
+
+    <!-- Square corners everywhere. Nothing in this game's interface is rounded, and the corner
+         cut added by CardChrome below only reads as a cut against a right angle. -->
+    <CornerRadius x:Key="CardRadius">0</CornerRadius>
+    <CornerRadius x:Key="ButtonRadius">0</CornerRadius>
+
+    <!-- ====================================================================
+         Motion
+
+         Faster than the default. This look is meant to feel switched rather than eased, so the
+         hover is close to instant and only the release is allowed to linger.
+
+         Declared here as well as in Theme.xaml because the base templates resolve these with
+         StaticResource and therefore keep their own timing whatever a theme says. These two
+         reach the templates further down this file, which are the ones that matter for the
+         controls this theme actually replaces.
+         ==================================================================== -->
+
+    <Duration x:Key="SwiftDuration">0:0:0.07</Duration>
+    <Duration x:Key="CalmDuration">0:0:0.22</Duration>
+
+    <!-- ====================================================================
+         Glow
+
+         Every glow in this theme is a DropShadowEffect with no offset, which is the only way
+         WPF draws light rather than shade. They are attached exclusively to border elements
+         that hold no text, because an Effect rasterises whatever it is set on and text pushed
+         through that intermediate surface loses its subpixel antialiasing. The default theme's
+         card and button templates are built with their borders as empty siblings of the
+         content for this reason, so these can be as expensive as they like.
+         ==================================================================== -->
+
+    <DropShadowEffect x:Key="CardGlow"     Color="#F9F002" ShadowDepth="0" BlurRadius="18" Opacity="0.45"/>
+    <DropShadowEffect x:Key="ButtonGlow"   Color="#F9F002" ShadowDepth="0" BlurRadius="14" Opacity="0.85"/>
+    <DropShadowEffect x:Key="DropZoneGlow" Color="#F9F002" ShadowDepth="0" BlurRadius="34" Opacity="0.9"/>
+
+    <!-- ====================================================================
+         Window backdrop
+
+         Four layers, one of them moving. The window itself knows about none of it: the default
+         theme mounts an empty ContentControl behind everything and this fills its template.
+
+         Only the sweep animates, and it animates a RenderTransform on a named Rectangle, which
+         is a plain dependency property on a framework element. That matters. The obvious way
+         to write a moving scanline field is to animate the tile brush's transform, and that is
+         the way that throws, because a brush is a Freezable and WPF will have frozen it. The
+         static tiles and one translating rectangle get the same effect and cannot fail.
+
+         It repeats forever, which means the render thread never idles while VibeCheck is open.
+         That is a real cost on a laptop and it is the price of this look. A nine second cycle
+         keeps it near the floor.
+         ==================================================================== -->
+
+    <ControlTemplate x:Key="WindowBackdrop" TargetType="ContentControl">
+        <Grid ClipToBounds="True">
+
+            <Grid.Triggers>
+                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                    <BeginStoryboard>
+                        <Storyboard RepeatBehavior="Forever">
+                            <DoubleAnimation Storyboard.TargetName="Sweep"
+                                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                             From="-280" To="1600"
+                                             Duration="0:0:9"/>
+                        </Storyboard>
+                    </BeginStoryboard>
+                </EventTrigger>
+            </Grid.Triggers>
+
+            <!-- 1. Wash. Warm at the top where the title bar is, falling to the flat near
+                 black the palette calls Bg by the bottom of the window. -->
+            <Rectangle>
+                <Rectangle.Fill>
+                    <RadialGradientBrush Center="0.5,0" GradientOrigin="0.5,0"
+                                         RadiusX="1.2" RadiusY="1.0">
+                        <GradientStop Color="#171406" Offset="0"/>
+                        <GradientStop Color="#0A0A06" Offset="0.55"/>
+                        <GradientStop Color="#050505" Offset="1"/>
+                    </RadialGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <!-- 2. Survey grid. Two hairlines per 64px tile, at about four percent alpha, so
+                 it is felt rather than seen. -->
+            <Rectangle>
+                <Rectangle.Fill>
+                    <DrawingBrush TileMode="Tile" Stretch="None"
+                                  Viewport="0,0,64,64" ViewportUnits="Absolute">
+                        <DrawingBrush.Drawing>
+                            <GeometryDrawing Brush="#0BF9F002">
+                                <GeometryDrawing.Geometry>
+                                    <GeometryGroup>
+                                        <RectangleGeometry Rect="0,0,64,1"/>
+                                        <RectangleGeometry Rect="0,0,1,64"/>
+                                    </GeometryGroup>
+                                </GeometryDrawing.Geometry>
+                            </GeometryDrawing>
+                        </DrawingBrush.Drawing>
+                    </DrawingBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <!-- 3. Scanlines. Black rather than yellow, so this darkens alternate rows the way
+                 a CRT does instead of tinting the whole window. -->
+            <Rectangle>
+                <Rectangle.Fill>
+                    <DrawingBrush TileMode="Tile" Stretch="None"
+                                  Viewport="0,0,3,3" ViewportUnits="Absolute">
+                        <DrawingBrush.Drawing>
+                            <GeometryDrawing Brush="#1C000000">
+                                <GeometryDrawing.Geometry>
+                                    <RectangleGeometry Rect="0,0,3,1"/>
+                                </GeometryDrawing.Geometry>
+                            </GeometryDrawing>
+                        </DrawingBrush.Drawing>
+                    </DrawingBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <!-- 4. The sweep. A soft band of the accent yellow falling down the window on a
+                 nine second loop. Its travel is in fixed pixels rather than proportional
+                 because a RenderTransform has no idea how tall its parent is; 1600 clears any
+                 window anyone will open this on, and overshooting simply means it has already
+                 left the bottom edge when the loop restarts. -->
+            <Rectangle x:Name="Sweep" Height="280" VerticalAlignment="Top" IsHitTestVisible="False">
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#00F9F002" Offset="0"/>
+                        <GradientStop Color="#0FF9F002" Offset="0.5"/>
+                        <GradientStop Color="#00F9F002" Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+                <Rectangle.RenderTransform>
+                    <TranslateTransform Y="-280"/>
+                </Rectangle.RenderTransform>
+            </Rectangle>
+
+        </Grid>
+    </ControlTemplate>
+
+    <!-- ====================================================================
+         Window overlay
+
+         In front of everything, so it is kept to a vignette and kept faint. The findings are
+         the product and this layer sits on top of them; anything heavier here would be the
+         theme deciding that atmosphere matters more than the report, which it does not.
+         ==================================================================== -->
+
+    <ControlTemplate x:Key="WindowOverlay" TargetType="ContentControl">
+        <Rectangle>
+            <Rectangle.Fill>
+                <RadialGradientBrush Center="0.5,0.5" GradientOrigin="0.5,0.5"
+                                     RadiusX="0.85" RadiusY="0.85">
+                    <GradientStop Color="#00000000" Offset="0.5"/>
+                    <GradientStop Color="#2E000000" Offset="1"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+    </ControlTemplate>
+
+    <!-- ====================================================================
+         Cards
+
+         The notched corner, which is the shape this whole look is built around, plus corner
+         ticks and the glow. Twelve cards get this and not one of them mentions it.
+
+         How the notch is built is the interesting part, because the obvious two ways are both
+         wrong. Painting a triangle of the window background over the corner leaves a flat
+         patch that does not match a textured backdrop, and it was visibly wrong here at four
+         times magnification before this replaced it. Stretching one notched Path to fill the
+         card is worse: Stretch="Fill" scales the corner cut along with everything else, so the
+         notch turns into a long shallow diagonal on a wide card and a steep one on a narrow
+         card.
+
+         What works is letting the layout system hold the corner at a fixed size. The shape is
+         a two by two Grid whose top row and right column are pinned to 18 pixels and whose
+         other row and column absorb the rest, so the notch cell is always exactly 18 by 18
+         however the card is sized. Three fills cover every cell except the top right, one
+         stretched triangle fills the half of that cell below the diagonal, and five hairlines
+         trace the outline around it. Nothing is erased and nothing distorts.
+
+         That is the general answer for any non-rectangular resizable shape in WPF, and it is
+         worth knowing: put the part that must not scale in a fixed-size Grid cell.
+
+         The glow is a single effect on the shape rather than one per piece, so it follows the
+         notched silhouette instead of outlining each rectangle. It can afford to: the shape
+         holds no text, and the content presenter is its sibling rather than its child.
+         ==================================================================== -->
+
+    <Style x:Key="Card" TargetType="ContentControl">
+        <Setter Property="Background" Value="{DynamicResource Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="{DynamicResource CardPadding}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid>
+
+                        <Grid x:Name="Shape" Effect="{DynamicResource CardGlow}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="18"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="18"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Fill: everything but the top right cell, plus the half of that
+                                 cell that falls below the diagonal. -->
+                            <Rectangle Grid.Row="0" Grid.Column="0"
+                                       Fill="{TemplateBinding Background}"/>
+                            <Path Grid.Row="0" Grid.Column="1" Stretch="Fill"
+                                  Data="M 0,0 L 1,1 L 0,1 Z"
+                                  Fill="{TemplateBinding Background}"/>
+                            <Rectangle Grid.Row="1" Grid.ColumnSpan="2"
+                                       Fill="{TemplateBinding Background}"/>
+
+                            <!-- Outline: top, diagonal, left, right below the cut, bottom.
+                                 Each meets the next exactly because they all stop at a shared
+                                 grid line. -->
+                            <Rectangle Grid.Row="0" Grid.Column="0" Height="1"
+                                       VerticalAlignment="Top"
+                                       Fill="{TemplateBinding BorderBrush}"/>
+                            <Path Grid.Row="0" Grid.Column="1" Stretch="Fill"
+                                  Data="M 0,0 L 1,1"
+                                  Stroke="{TemplateBinding BorderBrush}" StrokeThickness="1"/>
+                            <Rectangle Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Width="1"
+                                       HorizontalAlignment="Left"
+                                       Fill="{TemplateBinding BorderBrush}"/>
+                            <Rectangle Grid.Row="1" Grid.Column="1" Width="1"
+                                       HorizontalAlignment="Right"
+                                       Fill="{TemplateBinding BorderBrush}"/>
+                            <Rectangle Grid.Row="1" Grid.ColumnSpan="2" Height="1"
+                                       VerticalAlignment="Bottom"
+                                       Fill="{TemplateBinding BorderBrush}"/>
+                        </Grid>
+
+                        <!-- Corner ticks. Brackets need no geometry tricks, which is why there
+                             are two of these and only one notch. -->
+                        <Path HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                              Stroke="{DynamicResource Accent}" StrokeThickness="2"
+                              Data="M 1,1 L 1,13 L 13,13"/>
+                        <Path HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                              Stroke="{DynamicResource Accent}" StrokeThickness="2"
+                              Data="M 13,1 L 13,13 L 1,13"/>
+
+                        <!-- Kept mounted even though this theme leaves it empty, so a theme
+                             layered over this one can still decorate a card without having to
+                             copy all of the above. -->
+                        <ContentControl Template="{DynamicResource CardChrome}"
+                                        IsHitTestVisible="False"/>
+
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ====================================================================
+         Buttons
+
+         Replaced outright rather than recoloured, which is the other half of what this file is
+         demonstrating. The default template is a fill, a hover layer and a content presenter;
+         this one adds an accent bar down the left edge and lights the whole outline on hover.
+
+         The hover fill is dark and the border is what brightens. The obvious reading of the
+         source theme is black text on a yellow button, and it was tried: with the fill fading
+         in over 70ms and the text colour snapping the instant the pointer arrives, there is a
+         frame or two of near-black text on a near-black button. Lighting the edge instead
+         keeps every state readable and still reads as neon.
+         ==================================================================== -->
+
+    <Style x:Key="Btn" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource PanelRaised}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Edge}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="{DynamicResource ButtonPadding}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="FontFamily" Value="{DynamicResource UiFont}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"/>
+
+                        <!-- Lit state. Opacity animated rather than the brushes swapped, for
+                             the reason set out in Theme.xaml's motion section. -->
+                        <Border x:Name="Hot" Opacity="0"
+                                Background="{DynamicResource Hover}"
+                                BorderBrush="{DynamicResource Accent}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Effect="{DynamicResource ButtonGlow}"/>
+
+                        <!-- The tab down the left edge, always lit. -->
+                        <Rectangle Width="2" HorizontalAlignment="Left"
+                                   Fill="{DynamicResource Accent}" Opacity="0.8"/>
+
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}"/>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="{StaticResource SwiftDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="{StaticResource CalmDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ====================================================================
+         Drop zone
+
+         The first thing anyone sees, and the only element here decorated on its own terms. A
+         bracket frame instead of a box, a glow that breathes while it waits, and a flood of
+         neon when something is dragged over it.
+
+         Two glow layers rather than one, because they answer to different things. Pulse runs
+         on a loop from the moment it loads; Active is driven by the drag state. Sharing one
+         element between a forever storyboard and a trigger storyboard means whichever started
+         last owns the property and the other silently stops working.
+
+         Pulse rests at 0.45 in markup and animates around it, so a still capture of this
+         window looks like the middle of the breath rather than the bottom of it.
+         ==================================================================== -->
+
+    <Style x:Key="DropZone" TargetType="ContentControl">
+        <Setter Property="Background" Value="{DynamicResource Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Edge}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContentControl">
+                    <Grid>
+
+                        <Grid.Triggers>
+                            <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                        <DoubleAnimation Storyboard.TargetName="Pulse"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         From="0.25" To="0.7"
+                                                         Duration="0:0:1.9"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Grid.Triggers>
+
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"/>
+
+                        <!-- The breathing edge. -->
+                        <Border x:Name="Pulse" Opacity="0.45"
+                                BorderBrush="{DynamicResource Accent}" BorderThickness="1">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#F9F002" ShadowDepth="0"
+                                                  BlurRadius="20" Opacity="0.75"/>
+                            </Border.Effect>
+                        </Border>
+
+                        <!-- Bracket frame. Four corners, each an L, drawn over the border so
+                             the zone reads as a targeting reticle rather than a box. -->
+                        <Path HorizontalAlignment="Left" VerticalAlignment="Top"
+                              Stroke="{DynamicResource Accent}" StrokeThickness="3"
+                              Data="M 1.5,26 L 1.5,1.5 L 26,1.5"/>
+                        <Path HorizontalAlignment="Right" VerticalAlignment="Top"
+                              Stroke="{DynamicResource Accent}" StrokeThickness="3"
+                              Data="M 1.5,1.5 L 26,1.5 L 26,26"/>
+                        <Path HorizontalAlignment="Left" VerticalAlignment="Bottom"
+                              Stroke="{DynamicResource Accent}" StrokeThickness="3"
+                              Data="M 1.5,1.5 L 1.5,26 L 26,26"/>
+                        <Path HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                              Stroke="{DynamicResource Accent}" StrokeThickness="3"
+                              Data="M 26,1.5 L 26,26 L 1.5,26"/>
+
+                        <!-- Drag state. Flood of the accent at low alpha plus the heavy glow,
+                             faded in over the swift duration. -->
+                        <Border x:Name="Active" Opacity="0"
+                                Background="#1FF9F002"
+                                BorderBrush="{DynamicResource Accent}" BorderThickness="2"
+                                Effect="{DynamicResource DropZoneGlow}"/>
+
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsDragging}" Value="True">
+                            <DataTrigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Active"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="{StaticResource SwiftDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.EnterActions>
+                            <DataTrigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Active"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="{StaticResource CalmDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </DataTrigger.ExitActions>
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
 </ResourceDictionary>

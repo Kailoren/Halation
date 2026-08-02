@@ -28,6 +28,19 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <!-- ============ Theme decoration ============
+             Two empty layers the theme owns: one behind the interface and one in front of it.
+             The default theme leaves both blank, so this costs a pair of contentless controls
+             and nothing else. They exist so that a theme wanting atmosphere has somewhere to
+             put it other than in here: this file should describe what the window says, and a
+             gradient sweep is not something the window has an opinion about.
+
+             Neither is hit-testable, so nothing a theme adds can intercept a drop or swallow a
+             click no matter how large it draws itself. -->
+        <ContentControl Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="-1"
+                        Template="{DynamicResource WindowBackdrop}"
+                        IsHitTestVisible="False" Focusable="False"/>
+
         <!-- ============ Title bar ============ -->
         <Border Grid.Row="0" Background="{StaticResource Panel}"
                 BorderBrush="{StaticResource Edge}" BorderThickness="0,0,0,1">
@@ -67,7 +80,7 @@
                            TextAlignment="Center"
                            Text="The same application is a different risk depending on whether you wrote it or downloaded it, so VibeCheck answers a different question for each. Asked every time, because the answer belongs to what you are about to check rather than to you. You can change it during a scan too."/>
 
-                <Border Style="{StaticResource Card}" Margin="0,22,0,0">
+                <ContentControl Style="{StaticResource Card}" Margin="0,22,0,0">
                     <StackPanel>
                         <Button Command="{Binding ChooseAudienceCommand}"
                                 CommandParameter="Developer"
@@ -107,7 +120,7 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
-                </Border>
+                </ContentControl>
             </StackPanel>
         </Grid>
 
@@ -115,20 +128,11 @@
         <Grid Grid.Row="1" Visibility="{Binding IsWaiting, Converter={StaticResource BoolToVisibility}}">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="640">
 
-                <Border x:Name="DropTarget" Height="230" CornerRadius="10"
-                        BorderThickness="2" Background="{StaticResource Panel}">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="BorderBrush" Value="{StaticResource Edge}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsDragging}" Value="True">
-                                    <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
-                                    <Setter Property="Background" Value="#1D2531"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-
+                <!-- The drag state lives in the DropZone template rather than here. It used to
+                     be an inline Style with a DataTrigger swapping two brushes, which meant the
+                     one moment in the application with any drama in it snapped between two
+                     flat colours and no theme could say otherwise. -->
+                <ContentControl x:Name="DropTarget" Style="{StaticResource DropZone}" Height="230">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="40"
                                    Foreground="{StaticResource Muted}" HorizontalAlignment="Center"/>
@@ -141,9 +145,9 @@
                         <Button Content="Choose a file or folder" Style="{StaticResource Btn}"
                                 Margin="0,20,0,0" HorizontalAlignment="Center" Click="OnBrowse"/>
                     </StackPanel>
-                </Border>
+                </ContentControl>
 
-                <Border Style="{StaticResource Card}" Margin="0,18,0,0">
+                <ContentControl Style="{StaticResource Card}" Margin="0,18,0,0">
                     <StackPanel>
                         <CheckBox Content="Isolate mode (make no network requests)"
                                   IsChecked="{Binding Isolate}"
@@ -151,11 +155,11 @@
                         <TextBlock Text="{Binding IsolateExplanation}" Style="{StaticResource Caption}"
                                    TextWrapping="Wrap" Margin="24,6,0,0"/>
                     </StackPanel>
-                </Border>
+                </ContentControl>
 
                 <!-- Changing the reader here rather than only at the prompt, so a wrong answer
                      at launch costs a click instead of a restart. -->
-                <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <ContentControl Style="{StaticResource Card}" Margin="0,12,0,0">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="{Binding AudienceLabel}" VerticalAlignment="Center"/>
                         <Button Command="{Binding SwitchAudienceCommand}"
@@ -164,11 +168,11 @@
                                 Margin="12,0,0,0" Cursor="Hand" VerticalAlignment="Center"
                                 Foreground="{StaticResource Accent}" FontSize="12"/>
                     </StackPanel>
-                </Border>
+                </ContentControl>
 
                 <!-- Optional deep pass. Off by default and not remembered between runs: it
                      spends the reader's own money, so it should be a decision each time. -->
-                <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <ContentControl Style="{StaticResource Card}" Margin="0,12,0,0">
                     <StackPanel>
                         <CheckBox Content="Deep pass (uses your Anthropic API key, and costs you money)"
                                   IsChecked="{Binding DeepPassEnabled}"
@@ -190,14 +194,14 @@
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,8,0,0"
                                    Text="Your key is encrypted to your Windows account and stored outside the application folder. Only the files that handle untrusted input are sent, never the whole application, and never on an isolated scan. The report lists which files were read and what it cost."/>
                     </StackPanel>
-                </Border>
+                </ContentControl>
 
-                <Border Style="{StaticResource Card}" Margin="0,12,0,0"
-                        BorderBrush="{StaticResource Critical}"
-                        Visibility="{Binding Error, Converter={StaticResource NullToVisibility}}">
+                <ContentControl Style="{StaticResource Card}" Margin="0,12,0,0"
+                                BorderBrush="{StaticResource Critical}"
+                                Visibility="{Binding Error, Converter={StaticResource NullToVisibility}}">
                     <TextBlock Text="{Binding Error}" TextWrapping="Wrap"
                                Foreground="{StaticResource Critical}"/>
-                </Border>
+                </ContentControl>
 
                 <!-- Bound rather than fixed: this promise stops being true the moment the
                      deep pass is switched on, and must say so. -->
@@ -275,7 +279,7 @@
                     </Border>
 
                     <!-- Verdict -->
-                    <Border Style="{StaticResource Card}">
+                    <ContentControl Style="{StaticResource Card}">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding ScoreDisplay}" FontWeight="Light"
@@ -325,10 +329,10 @@
                             <TextBlock Margin="0,12,0,0" TextWrapping="Wrap" Style="{StaticResource Caption}"
                                        Text="A clean result is not proof that an application is safe. Static analysis can show that problems are present; it cannot show that none are."/>
                         </StackPanel>
-                    </Border>
+                    </ContentControl>
 
                     <!-- Coverage -->
-                    <Border Style="{StaticResource Card}" Margin="0,14,0,0">
+                    <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0">
                         <StackPanel>
                             <TextBlock Text="Coverage" Style="{StaticResource Heading}"/>
 
@@ -351,11 +355,11 @@
                                            Text="Coverage is low, so treat the findings below as a floor rather than a complete picture. Most of this application could not be inspected."/>
                             </Border>
                         </StackPanel>
-                    </Border>
+                    </ContentControl>
 
                     <!-- Category scores -->
-                    <Border Style="{StaticResource Card}" Margin="0,14,0,0"
-                            Visibility="{Binding CategoryScores.Count,
+                    <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0"
+                                    Visibility="{Binding CategoryScores.Count,
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <TextBlock Text="Scores by category" Style="{StaticResource Heading}"/>
@@ -386,11 +390,11 @@
                             <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Style="{StaticResource Caption}"
                                        Text="Categories not listed had no findings. That means nothing was found there, which is not the same as nothing being there."/>
                         </StackPanel>
-                    </Border>
+                    </ContentControl>
 
                     <!-- Findings -->
-                    <Border Style="{StaticResource Card}" Margin="0,14,0,0"
-                            Visibility="{Binding Findings.Count,
+                    <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0"
+                                    Visibility="{Binding Findings.Count,
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <TextBlock Text="Findings" Style="{StaticResource Heading}"/>
@@ -500,14 +504,14 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                    </Border>
+                    </ContentControl>
 
                     <!-- What this scan did. The counterpart to the limitations card below: a
                          result that lands in under two seconds reads as skipped unless the work
                          behind it is stated, and the honest way to answer that is to show the
                          receipt rather than to slow the scan down. -->
-                    <Border Style="{StaticResource Card}" Margin="0,14,0,0"
-                            Visibility="{Binding Effort.Count,
+                    <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0"
+                                    Visibility="{Binding Effort.Count,
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <TextBlock Text="What this scan did" Style="{StaticResource Heading}"/>
@@ -522,11 +526,11 @@
                                 <Run Text="All of it in"/><Run Text=" "/><Run Text="{Binding DurationLabel, Mode=OneWay}"/><Run Text=". Static analysis is fast; a quick result is not a shallow one, and the figures above are what it covered."/>
                             </TextBlock>
                         </StackPanel>
-                    </Border>
+                    </ContentControl>
 
                     <!-- What could not be checked -->
-                    <Border Style="{StaticResource Card}" Margin="0,14,0,0"
-                            Visibility="{Binding Limitations.Count,
+                    <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0"
+                                    Visibility="{Binding Limitations.Count,
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <TextBlock Text="What could not be checked" Style="{StaticResource Heading}"/>
@@ -541,10 +545,10 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                    </Border>
+                    </ContentControl>
 
                     <!-- Provenance -->
-                    <Border Style="{StaticResource Card}" Margin="0,14,0,24">
+                    <ContentControl Style="{StaticResource Card}" Margin="0,14,0,24">
                         <StackPanel>
                             <TextBlock Text="Vulnerability data" Style="{StaticResource Heading}"/>
                             <TextBlock Text="{Binding VulnerabilitySummary}" TextWrapping="Wrap"/>
@@ -566,10 +570,16 @@
                                        FontFamily="Consolas" FontSize="11"
                                        Text="{Binding Sha256, StringFormat=SHA-256 {0}}"/>
                         </StackPanel>
-                    </Border>
+                    </ContentControl>
 
                 </StackPanel>
             </ScrollViewer>
         </Grid>
+
+        <!-- Last child, so it is the topmost thing in the window. Empty in the default
+             theme. -->
+        <ContentControl Grid.Row="0" Grid.RowSpan="2"
+                        Template="{DynamicResource WindowOverlay}"
+                        IsHitTestVisible="False" Focusable="False"/>
     </Grid>
 </Window>
