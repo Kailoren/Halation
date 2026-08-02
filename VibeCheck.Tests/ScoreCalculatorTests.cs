@@ -64,8 +64,91 @@ public class ScoreCalculatorTests
     {
         var verdict = ScoreCalculator.Calculate([Make(Severity.Low)]);
 
-        Assert.Equal(97, verdict.Score);
+        Assert.InRange(verdict.Score, 90, 99);
         Assert.Equal(ScoreBand.NoKnownIssues, verdict.Band);
+    }
+
+    // ---- The floor -----------------------------------------------------------
+
+    /// <summary>
+    /// The correction to the old model. Deductions used to subtract from 100 and clamp at
+    /// zero, so three critical findings and forty produced the same number, and that number
+    /// told the reader nothing measured about the application was acceptable. No static scan
+    /// can know that, and an author whose app scores zero has been told something untrue.
+    /// </summary>
+    [Fact]
+    public void ManyCriticals_DoNotBottomOutAtZero()
+    {
+        var verdict = ScoreCalculator.Calculate(
+            [.. Enumerable.Repeat(Make(Severity.Critical), 40)]);
+
+        Assert.True(verdict.Score >= 10, $"expected a floor of 10, got {verdict.Score}");
+        Assert.Equal(ScoreBand.CriticalIssues, verdict.Band);
+    }
+
+    /// <summary>
+    /// The number has to keep meaning something at the bad end. Saturating means an
+    /// application with three critical findings and one with forty read identically, which is
+    /// where the difference matters most.
+    /// </summary>
+    [Fact]
+    public void MoreCriticals_AlwaysScoreBelowFewer()
+    {
+        var three = ScoreCalculator.Calculate(
+            [.. Enumerable.Repeat(Make(Severity.Critical), 3)]).Score;
+
+        var twenty = ScoreCalculator.Calculate(
+            [.. Enumerable.Repeat(Make(Severity.Critical), 20)]).Score;
+
+        Assert.True(twenty < three, $"20 criticals scored {twenty}, 3 scored {three}");
+    }
+
+    /// <summary>
+    /// The band label must never name a severity the scan did not find. Under the old model
+    /// five high findings scored zero and were reported as "critical issues", which invented
+    /// a severity that was not there.
+    /// </summary>
+    [Theory]
+    [InlineData(Severity.High, ScoreBand.SeriousIssues)]
+    [InlineData(Severity.Medium, ScoreBand.NeedsWork)]
+    public void ManyFindings_NeverEscalateTheBandBeyondTheWorstFinding(
+        Severity worst,
+        ScoreBand expected)
+    {
+        var verdict = ScoreCalculator.Calculate([.. Enumerable.Repeat(Make(worst), 25)]);
+
+        Assert.Equal(expected, verdict.Band);
+    }
+
+    /// <summary>
+    /// Informational findings are listed but weightless, and the report says so. If they moved
+    /// the number, "no score impact" would be a false statement in the report.
+    /// </summary>
+    [Fact]
+    public void InformationalFindings_DoNotMoveTheScore()
+    {
+        var verdict = ScoreCalculator.Calculate([.. Enumerable.Repeat(Make(Severity.Info), 30)]);
+
+        Assert.Equal(100, verdict.Score);
+        Assert.Equal(30, verdict.Explanation?.Informational);
+        Assert.Equal(0, verdict.Explanation?.Counted);
+    }
+
+    /// <summary>A number nobody can account for is a number nobody trusts.</summary>
+    [Fact]
+    public void TheScore_ExplainsItself()
+    {
+        var verdict = ScoreCalculator.Calculate(
+            [Make(Severity.Critical), Make(Severity.Low), Make(Severity.Info)]);
+
+        var explanation = Assert.IsType<ScoreExplanation>(verdict.Explanation);
+
+        Assert.Equal(Severity.Critical, explanation.Worst);
+        Assert.Equal(10, explanation.Floor);
+        Assert.Equal(39, explanation.Ceiling);
+        Assert.Equal(2, explanation.Counted);
+        Assert.Equal(1, explanation.Informational);
+        Assert.NotEmpty(explanation.Describe());
     }
 
     [Fact]

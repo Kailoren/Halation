@@ -20,8 +20,11 @@ namespace VibeCheck.Core.Scoring;
 /// </remarks>
 public static class ScoreCalculator
 {
-    /// <summary>Points removed per finding, by severity. Multiple issues compound.</summary>
-    private static int DeductionFor(Severity severity) => severity switch
+    /// <summary>
+    /// What one finding contributes to the weight that positions the score. Not a subtraction
+    /// from 100: see <see cref="ScoreFor"/> for why these accumulate with diminishing effect.
+    /// </summary>
+    public static int WeightFor(Severity severity) => severity switch
     {
         Severity.Critical => 40,
         Severity.High => 20,
@@ -31,16 +34,45 @@ public static class ScoreCalculator
     };
 
     /// <summary>
-    /// The hard ceiling implied by the worst finding present. These align with the band
-    /// thresholds so the number and the label can never disagree.
+    /// The range the worst finding present confines the score to.
     /// </summary>
-    private static int CapFor(Severity worst) => worst switch
+    /// <remarks>
+    /// <para>
+    /// The ceiling is the original design point and stays: one critical finding caps at 39 no
+    /// matter how much else passed, so breadth of passing trivia cannot lift an application
+    /// that ships a live key.
+    /// </para>
+    /// <para>
+    /// The floor is the correction. Deductions used to subtract from 100 and clamp at zero,
+    /// which meant three critical findings and forty produced the same number, and that number
+    /// asserted something no static scan can know: that nothing measured about the application
+    /// was acceptable. Zero is now reserved for the one case that earns it, which is a scan
+    /// that could not read enough to say anything, and that is handled by the coverage gate
+    /// rather than here.
+    /// </para>
+    /// <para>
+    /// The bands line up with <see cref="BandFor"/> exactly and in both directions, so the
+    /// number and the label can never disagree. That was previously true only downwards: five
+    /// high findings and no critical ones scored zero and were labelled "critical issues",
+    /// which named a severity the scan had not found.
+    /// </para>
+    /// </remarks>
+    private static (int Floor, int Ceiling) RangeFor(Severity worst) => worst switch
     {
-        Severity.Critical => 39,
-        Severity.High => 69,
-        Severity.Medium => 89,
-        _ => 100,
+        Severity.Critical => (10, 39),
+        Severity.High => (40, 69),
+        Severity.Medium => (70, 89),
+        Severity.Low => (90, 99),
+        _ => (100, 100),
     };
+
+    /// <summary>
+    /// How quickly accumulated weight drives the score down its band. Chosen so that a single
+    /// critical finding sits near the top of the critical band and a badly broken application
+    /// approaches the bottom without ever reaching it, which keeps the number discriminating
+    /// across the whole range instead of saturating a few findings in.
+    /// </summary>
+    private const double WeightScale = 100.0;
 
     /// <summary>
     /// Coverage at or below this percentage means no score is reported.
@@ -112,10 +144,30 @@ public static class ScoreCalculator
             Band = BandFor(score),
             AdviseAgainstInstall = blocking.Count > 0,
             Audience = audience,
+            Explanation = Explain(findings, audience),
             BlockingReasons = blocking
                 .Select(f => f.Title)
                 .Distinct(StringComparer.Ordinal)
                 .ToList(),
+        };
+    }
+
+    /// <summary>Records what drove the number, so the report can account for it.</summary>
+    private static ScoreExplanation Explain(IReadOnlyList<Finding> findings, Audience audience)
+    {
+        var worst = findings.Count == 0
+            ? Severity.Info
+            : findings.Max(f => f.SeverityFor(audience));
+
+        var (floor, ceiling) = RangeFor(worst);
+
+        return new ScoreExplanation
+        {
+            Worst = worst,
+            Floor = floor,
+            Ceiling = ceiling,
+            Counted = findings.Count(f => WeightFor(f.SeverityFor(audience)) > 0),
+            Informational = findings.Count(f => WeightFor(f.SeverityFor(audience)) == 0),
         };
     }
 
@@ -137,7 +189,16 @@ public static class ScoreCalculator
                     findings.Where(f => f.Category == category).ToList(), audience));
     }
 
-    /// <summary>Applies accumulated deductions, then the worst-finding cap.</summary>
+    /// <summary>
+    /// Places the score inside the band its worst finding allows.
+    /// </summary>
+    /// <remarks>
+    /// The weight of everything found decides where in that band it lands, with each further
+    /// finding moving it less than the one before. That is deliberate rather than a softening:
+    /// the fifth critical finding tells a reader far less than the second did, and a model that
+    /// weights them equally stops distinguishing between a bad application and a catastrophic
+    /// one exactly where the distinction starts to matter.
+    /// </remarks>
     private static int ScoreFor(IReadOnlyList<Finding> findings, Audience audience)
     {
         if (findings.Count == 0)
@@ -145,15 +206,26 @@ public static class ScoreCalculator
             return 100;
         }
 
-        var score = 100 - findings.Sum(f => DeductionFor(f.SeverityFor(audience)));
-        var cap = CapFor(findings.Max(f => f.SeverityFor(audience)));
+        var (floor, ceiling) = RangeFor(findings.Max(f => f.SeverityFor(audience)));
 
-        return Math.Clamp(Math.Min(score, cap), 0, 100);
+        if (floor == ceiling)
+        {
+            return ceiling;
+        }
+
+        var weight = findings.Sum(f => WeightFor(f.SeverityFor(audience)));
+
+        // Approaches the floor without reaching it, so more findings always score lower than
+        // fewer and the number never bottoms out into meaninglessness.
+        var saturation = 1 - Math.Exp(-weight / WeightScale);
+
+        return (int)Math.Round(ceiling - ((ceiling - floor) * saturation));
     }
 
     /// <summary>
-    /// Maps a score to its band. Thresholds mirror <see cref="CapFor"/> exactly, so a
-    /// capped score always lands in the band its worst finding implies.
+    /// Maps a score to its band. Thresholds mirror <see cref="RangeFor"/> exactly, so the
+    /// score always lands in the band its worst finding implies, and no band can be reported
+    /// for a severity the scan did not find.
     /// </summary>
     private static ScoreBand BandFor(int score) => score switch
     {

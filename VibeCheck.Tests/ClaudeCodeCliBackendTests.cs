@@ -344,6 +344,91 @@ public class ClaudeCodeCliBackendTests
         Assert.NotNull(review.Limitation);
     }
 
+    // ---- Confidence --------------------------------------------------------
+
+    private static string Finding(string title, string confidence) =>
+        $$"""
+        {
+          "title": "{{title}}", "severity": "high", "user_severity": "medium",
+          "user_impact": "x", "file": "handler.js", "evidence": "exec(q.cmd)",
+          "reachability": "x", "why_rules_miss_it": "x", "remediation": "x",
+          "confidence": "{{confidence}}"
+        }
+        """;
+
+    /// <summary>
+    /// A finding the model did not believe is worth less than the trust it costs to print it
+    /// with a warning attached, so it is dropped rather than hedged.
+    /// </summary>
+    [Fact]
+    public void Drops_findings_the_model_marked_low_confidence()
+    {
+        using var backend = new ClaudeCodeCliBackend(Cli);
+
+        var review = backend.ReadResult(
+            Envelope(structuredOutput: $$"""
+                {"findings": [{{Finding("kept", "high")}}, {{Finding("dropped", "low")}}]}
+                """),
+            Triaged());
+
+        var kept = Assert.Single(review.Findings);
+        Assert.Equal("kept", kept.Title);
+        Assert.Equal(1, review.LowConfidenceDiscarded);
+    }
+
+    [Fact]
+    public void Keeps_medium_confidence_findings()
+    {
+        using var backend = new ClaudeCodeCliBackend(Cli);
+
+        var review = backend.ReadResult(
+            Envelope(structuredOutput: $$"""{"findings": [{{Finding("kept", "medium")}}]}"""),
+            Triaged());
+
+        Assert.Single(review.Findings);
+        Assert.Equal(0, review.LowConfidenceDiscarded);
+    }
+
+    /// <summary>
+    /// Absence of a confidence claim is not a confession of doubt. Dropping on a field the
+    /// model failed to fill would shrink coverage for a formatting reason.
+    /// </summary>
+    [Fact]
+    public void Keeps_a_finding_that_states_no_confidence_at_all()
+    {
+        using var backend = new ClaudeCodeCliBackend(Cli);
+
+        var review = backend.ReadResult(
+            Envelope(structuredOutput: """
+                {"findings": [{"title": "no confidence field", "severity": "high",
+                 "user_severity": "low", "user_impact": "x", "file": "handler.js",
+                 "evidence": "x", "reachability": "x", "why_rules_miss_it": "x",
+                 "remediation": "x"}]}
+                """),
+            Triaged());
+
+        Assert.Single(review.Findings);
+        Assert.Equal(0, review.LowConfidenceDiscarded);
+    }
+
+    /// <summary>
+    /// A file whose findings were all dropped must not look like a file with nothing to say.
+    /// </summary>
+    [Fact]
+    public void Counts_what_it_dropped_rather_than_discarding_it_silently()
+    {
+        using var backend = new ClaudeCodeCliBackend(Cli);
+
+        var review = backend.ReadResult(
+            Envelope(structuredOutput: $$"""
+                {"findings": [{{Finding("a", "low")}}, {{Finding("b", "low")}}]}
+                """),
+            Triaged());
+
+        Assert.Empty(review.Findings);
+        Assert.Equal(2, review.LowConfidenceDiscarded);
+    }
+
     // ---- Which model answered ----------------------------------------------
 
     /// <summary>

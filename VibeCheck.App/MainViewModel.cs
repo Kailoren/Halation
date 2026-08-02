@@ -688,17 +688,67 @@ public sealed class MainViewModel : INotifyPropertyChanged
         State = AppState.Waiting;
     }
 
+    /// <summary>
+    /// Whether the list contains anything the deep pass inferred, which decides whether the
+    /// note above it is shown. Stated once there rather than on every card.
+    /// </summary>
+    public bool HasAssistedFindings => Findings.Any(f => f.IsAssisted);
+
+    /// <summary>
+    /// Every check and what became of it, in the order a reader wants them: what fired, then
+    /// what passed, then what never ran.
+    /// </summary>
+    public ObservableCollection<CheckCard> Checks { get; } = [];
+
+    /// <summary>The three counts in one line, since any two without the third mislead.</summary>
+    public string ChecksSummary => Report?.Checks.Describe() ?? string.Empty;
+
+    /// <summary>
+    /// How the score was arrived at, shown under it. A low number with no account of itself
+    /// reads as a judgement rather than a measurement.
+    /// </summary>
+    public ObservableCollection<string> ScoreExplanation { get; } = [];
+
     private void RebuildCollections()
     {
         Findings.Clear();
         CategoryScores.Clear();
         Limitations.Clear();
         Effort.Clear();
+        Checks.Clear();
+        ScoreExplanation.Clear();
 
         if (Report is null)
         {
+            Notify(nameof(HasAssistedFindings));
+            Notify(nameof(ChecksSummary));
             return;
         }
+
+        if (Report.Verdict.HasMeaningfulScore && Report.Verdict.Explanation is { } explanation)
+        {
+            foreach (var line in explanation.Describe())
+            {
+                ScoreExplanation.Add(line);
+            }
+        }
+
+        // Fired first, then passed, then never ran. A reader opening this wants the problems,
+        // but the passes are the reason the section exists: a list of failures alone says
+        // nothing about how much was examined and found sound.
+        foreach (var check in Report.Checks.Checks
+                     .OrderBy(c => c.State switch
+                     {
+                         CheckState.FoundIssues => 0,
+                         CheckState.Passed => 1,
+                         _ => 2,
+                     })
+                     .ThenBy(c => c.Id, StringComparer.Ordinal))
+        {
+            Checks.Add(new CheckCard(check, Audience));
+        }
+
+        Notify(nameof(ChecksSummary));
 
         foreach (var line in Report.Effort.Describe(Report.ScannedAt))
         {
@@ -709,6 +759,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             Findings.Add(new FindingCard(finding, Audience));
         }
+
+        Notify(nameof(HasAssistedFindings));
 
         foreach (var (category, score) in Report.CategoryScores
                      .Where(kv => kv.Value < 100)
@@ -823,7 +875,17 @@ public sealed class FindingCard(Finding finding, Audience audience) : INotifyPro
     /// The rule identifier is a support handle for someone who can act on it. Hidden from the
     /// reader who cannot, where it is a serial number attached to their own anxiety.
     /// </summary>
-    public bool ShowRuleId => audience == Audience.Developer;
+    public bool ShowRuleId => audience == Audience.Developer || IsAssisted;
+
+    /// <summary>
+    /// What produced this, in the slot the rule identifier occupies.
+    /// </summary>
+    /// <remarks>
+    /// A two-letter tag rather than a sentence. Where a finding came from is worth knowing at
+    /// a glance, and the banner it replaces said the same thing at forty times the length on
+    /// every card until it read as the tool disowning its own output.
+    /// </remarks>
+    public string SourceTag => IsAssisted ? "AI" : Finding.RuleId;
 
     public string Description => Finding.DescriptionFor(audience);
 
@@ -863,6 +925,39 @@ public sealed class FindingCard(Finding finding, Audience audience) : INotifyPro
 }
 
 public sealed record CategoryScore(string Name, int Score);
+
+/// <summary>
+/// One check as the results screen shows it.
+/// </summary>
+/// <remarks>
+/// The three states are rendered distinctly on purpose. A tick and a dash have to be legible
+/// as different things at a glance, because a check that passed and a check that had nothing
+/// to run against are opposite results, and a reader who reads them as the same has been
+/// told a scan covered ground it never reached.
+/// </remarks>
+public sealed class CheckCard(CheckOutcome check, Audience audience)
+{
+    public string Title => check.Title;
+
+    /// <summary>Hidden from the reader who cannot act on it, as in the findings list.</summary>
+    public string Id => audience == Audience.Developer ? check.Id : string.Empty;
+
+    public bool ShowId => audience == Audience.Developer;
+
+    public bool Passed => check.State == CheckState.Passed;
+
+    public bool FoundIssues => check.State == CheckState.FoundIssues;
+
+    public bool NotChecked => check.State == CheckState.NotChecked;
+
+    /// <summary>
+    /// What the outcome is worth. A pass over four hundred files and a pass over one are not
+    /// the same reassurance, so the count travels with the tick rather than being implied.
+    /// </summary>
+    public string Detail => check.State == CheckState.NotChecked
+        ? "nothing it applies to was found"
+        : $"{check.FilesExamined:N0} file{(check.FilesExamined == 1 ? "" : "s")} examined";
+}
 
 /// <summary>Minimal command implementation; the app has a handful of actions.</summary>
 public sealed class RelayCommand(Action<object?> execute, Predicate<object?>? canExecute = null) : ICommand

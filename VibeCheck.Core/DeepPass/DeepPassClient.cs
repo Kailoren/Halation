@@ -56,6 +56,9 @@ public sealed record FileReview
 {
     public IReadOnlyList<Finding> Findings { get; init; } = [];
 
+    /// <summary>Findings dropped for being low confidence, counted rather than hidden.</summary>
+    public int LowConfidenceDiscarded { get; init; }
+
     /// <summary>Set when the file was not fully examined, and why.</summary>
     public string? Limitation { get; init; }
 
@@ -250,12 +253,7 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
                     Usage = usage,
                     ServedByFallback = servedByFallback,
                 }
-                : new FileReview
-                {
-                    Findings = DeepPassPrompt.Parse(text, triaged),
-                    Usage = usage,
-                    ServedByFallback = servedByFallback,
-                };
+                : Read(DeepPassPrompt.Parse(text, triaged), usage, servedByFallback);
         }
         catch (Anthropic.Exceptions.AnthropicRateLimitException)
         {
@@ -270,6 +268,16 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
             return new FileReview { Limitation = $"The deep pass failed: {ex.Message}" };
         }
     }
+
+    /// <summary>Carries the discard count out with the findings rather than losing it here.</summary>
+    private static FileReview Read(DeepPassAnswer answer, TokenUsage usage, bool servedByFallback) =>
+        new()
+        {
+            Findings = answer.Findings,
+            LowConfidenceDiscarded = answer.LowConfidenceDiscarded,
+            Usage = usage,
+            ServedByFallback = servedByFallback,
+        };
 
     private static TokenUsage Read(BetaUsage? usage) => usage is null
         ? new TokenUsage()

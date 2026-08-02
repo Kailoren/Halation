@@ -36,6 +36,18 @@ public sealed record TriagedFile
 /// was remotely reachable via an HTTP response handled one file away.
 /// </para>
 /// </remarks>
+/// <summary>Which files were chosen, and how many were in the running.</summary>
+public sealed record TriageResult
+{
+    public IReadOnlyList<TriagedFile> Selected { get; init; } = [];
+
+    /// <summary>How many files qualified, before the ceiling on how many are sent.</summary>
+    public int Qualified { get; init; }
+
+    /// <summary>True when the ceiling, rather than the code, decided where to stop.</summary>
+    public bool HitCeiling => Qualified > Selected.Count;
+}
+
 public static class DeepPassTriage
 {
     /// <summary>Ceiling on files sent, so a large application cannot run away with the key holder's money.</summary>
@@ -68,6 +80,21 @@ public static class DeepPassTriage
     /// Selects the files to send, most relevant first.
     /// </summary>
     public static IReadOnlyList<TriagedFile> Select(
+        IReadOnlyList<RecoveredFile> files,
+        IReadOnlyList<Finding> findings,
+        int maxFiles = DefaultMaxFiles) => Triage(files, findings, maxFiles).Selected;
+
+    /// <summary>
+    /// Selects the files to send, and says how many qualified before the ceiling was applied.
+    /// </summary>
+    /// <remarks>
+    /// The two numbers matter separately. Reading 17 of 285 files because 17 was everything
+    /// worth reading is a complete pass; reading 17 because a ceiling stopped it at 17 leaves
+    /// candidates unexamined. Those are opposite facts about the same scan and the report has
+    /// to be able to tell them apart, rather than printing one sentence that fits both and
+    /// reads like a shortfall either way.
+    /// </remarks>
+    public static TriageResult Triage(
         IReadOnlyList<RecoveredFile> files,
         IReadOnlyList<Finding> findings,
         int maxFiles = DefaultMaxFiles)
@@ -125,13 +152,16 @@ public static class DeepPassTriage
 
         // Flagged files first, then their callers, then the wider surface: if the budget runs
         // out, it should run out on the least likely candidates.
-        return
-        [
-            .. selected.Values
-                .OrderBy(t => t.KnownFindings.Count > 0 ? 0 : t.Reason.StartsWith("calls", StringComparison.Ordinal) ? 1 : 2)
-                .ThenByDescending(t => t.KnownFindings.Count)
-                .Take(maxFiles),
-        ];
+        var ranked = selected.Values
+            .OrderBy(t => t.KnownFindings.Count > 0 ? 0 : t.Reason.StartsWith("calls", StringComparison.Ordinal) ? 1 : 2)
+            .ThenByDescending(t => t.KnownFindings.Count)
+            .ToList();
+
+        return new TriageResult
+        {
+            Selected = [.. ranked.Take(maxFiles)],
+            Qualified = ranked.Count,
+        };
     }
 
     /// <summary>

@@ -72,7 +72,8 @@ public static class DeepPassRunner
         IProgress<ScanProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var triaged = DeepPassTriage.Select(files, deterministicFindings, options.DeepPassMaxFiles);
+        var triage = DeepPassTriage.Triage(files, deterministicFindings, options.DeepPassMaxFiles);
+        var triaged = triage.Selected;
 
         if (triaged.Count == 0)
         {
@@ -93,6 +94,7 @@ public static class DeepPassRunner
         var usage = new TokenUsage();
         var examined = 0;
         var fellBack = 0;
+        var discarded = 0;
 
         foreach (var file in triaged)
         {
@@ -107,6 +109,7 @@ public static class DeepPassRunner
 
             findings.AddRange(review.Findings);
             usage += review.Usage;
+            discarded += review.LowConfidenceDiscarded;
             examined++;
 
             if (review.ServedByFallback)
@@ -125,17 +128,43 @@ public static class DeepPassRunner
         // wondering why the findings differ.
         limitations.Add($"The deep pass was answered by {client.Description}.");
 
-        // Said whether or not anything was found. A deep pass that read 12 of an
-        // application's files has not cleared the other 300, and the report has to say which
-        // it did rather than leaving the reader to assume.
+        // Said whether or not anything was found, and said in a way that distinguishes a
+        // complete pass from a truncated one. The old wording covered both cases in one
+        // sentence and read as a shortfall in both, which understated a scan that had in fact
+        // read everything worth reading. It also implied the remaining files went unexamined,
+        // which was untrue: every recovered file goes through the rule pass, and this is a
+        // second read of the subset that handles untrusted input.
         limitations.Add(
-            $"The deep pass read {examined} of {files.Count:N0} recovered files, chosen for "
-            + "handling untrusted input or for calling code a rule flagged. Files it did not "
-            + "read were not examined by it.");
+            triage.HitCeiling
+                ? $"The deep pass read {examined} files, but {triage.Qualified:N0} of the "
+                  + $"{files.Count:N0} recovered files qualified for it. The ceiling on how many "
+                  + "are sent stopped it early, so "
+                  + $"{triage.Qualified - triaged.Count:N0} files that handle untrusted input "
+                  + "were not read by it. Raise the limit to cover them."
+                : $"The deep pass read {examined} of {files.Count:N0} recovered files: every "
+                  + "file that handles input the application does not control, or that calls "
+                  + "into code a rule flagged. The rest were not skipped, they were read by the "
+                  + "rule pass like everything else and had no untrusted input for the deep "
+                  + "pass to reason about.");
 
+        // Stated once, here, rather than repeated on every finding. A hedge attached to each
+        // item stops being read and starts reading as a tool that does not trust its own
+        // output.
         limitations.Add(
             "Deep pass findings are inferred by a language model rather than matched by a "
-            + "rule. They can be wrong, and none of them can trigger a do-not-install verdict.");
+            + "rule. Each one quotes the code it is based on so it can be checked, and none of "
+            + "them can trigger a do-not-install verdict.");
+
+        // What was withheld. Without this line a file whose findings were all dropped looks
+        // identical to a file the model had nothing to say about.
+        if (discarded > 0)
+        {
+            limitations.Add(
+                $"{discarded} further observation{(discarded == 1 ? " was" : "s were")} not "
+                + "shown, because the model marked "
+                + (discarded == 1 ? "it" : "them")
+                + " low confidence: the code it read did not demonstrate the problem.");
+        }
 
         // Not hidden. Two scans of the same application can now disagree because different
         // models answered, and a reader comparing them should be told that rather than left

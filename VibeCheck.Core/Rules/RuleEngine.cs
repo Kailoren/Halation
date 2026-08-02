@@ -16,6 +16,9 @@ public sealed record RuleEngineResult
     /// </summary>
     public IReadOnlyList<string> Limitations { get; init; } = [];
 
+    /// <summary>Every check in the catalog and how it ended, passes included.</summary>
+    public IReadOnlyList<CheckOutcome> Checks { get; init; } = [];
+
     public int FilesAnalysed { get; init; }
 }
 
@@ -59,6 +62,11 @@ public sealed class RuleEngine
         var limitations = new ConcurrentDictionary<string, byte>();
         var completed = 0;
 
+        // Counted per rule so a pass can say how much it was worth. A check that examined one
+        // file and a check that examined four hundred are not the same reassurance.
+        var examined = new ConcurrentDictionary<string, int>(StringComparer.Ordinal);
+        var fired = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
+
         var options = new ParallelOptions
         {
             CancellationToken = cancellationToken,
@@ -78,11 +86,14 @@ public sealed class RuleEngine
                     continue;
                 }
 
+                examined.AddOrUpdate(rule.Id, 1, (_, count) => count + 1);
+
                 try
                 {
                     foreach (var finding in rule.Examine(context))
                     {
                         findings.Add(Adjust(finding, file));
+                        fired.TryAdd(rule.Id, 0);
                     }
                 }
                 catch (RuleTimeoutException)
@@ -91,6 +102,11 @@ public sealed class RuleEngine
                     limitations.TryAdd(
                         $"Check {rule.Id} did not complete on {file.RelativePath} and was skipped.",
                         0);
+
+                    // And it does not get to be counted as a pass either. Backing the file out
+                    // of the tally is what stops a rule that timed out everywhere from
+                    // reporting itself clean.
+                    examined.AddOrUpdate(rule.Id, 0, (_, count) => count - 1);
                 }
             }
 
@@ -102,6 +118,28 @@ public sealed class RuleEngine
             Findings = Deduplicate(findings),
             Limitations = [.. limitations.Keys.Order(StringComparer.Ordinal)],
             FilesAnalysed = files.Count,
+            Checks =
+            [
+                .. _rules.Select(rule =>
+                {
+                    var looked = examined.GetValueOrDefault(rule.Id);
+
+                    return new CheckOutcome
+                    {
+                        Id = rule.Id,
+                        Title = rule.Title,
+                        Category = rule.Category,
+                        FilesExamined = looked,
+
+                        // Order matters. A rule that fired is reported as having found
+                        // something even if other files timed out under it, and a rule that
+                        // looked at nothing is never a pass however clean the run appeared.
+                        State = fired.ContainsKey(rule.Id) ? CheckState.FoundIssues
+                            : looked > 0 ? CheckState.Passed
+                            : CheckState.NotChecked,
+                    };
+                }),
+            ],
         };
     }
 

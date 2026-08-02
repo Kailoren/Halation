@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 
 using VibeCheck.Core.Model;
+using VibeCheck.Core.Scoring;
 
 namespace VibeCheck.Core.Reporting;
 
@@ -27,6 +28,7 @@ public static class MarkdownReportWriter
         WriteVerdict(output, report);
         WriteCoverage(output, report);
         WriteCategoryScores(output, report);
+        WriteChecks(output, report);
         WriteFindings(output, report);
         WriteEffort(output, report);
         WriteLimitations(output, report);
@@ -99,6 +101,21 @@ public static class MarkdownReportWriter
                               + "be read for a score to mean anything. This is not a pass and not "
                               + "a failure: the application was not examined. See Coverage below "
                               + "for what was in the way.");
+            output.AppendLine();
+        }
+
+        // How the number was reached, immediately under it. A low score with no account of
+        // itself reads as a judgement rather than a measurement, and gives an author no way to
+        // tell one serious problem from forty.
+        if (verdict.HasMeaningfulScore && verdict.Explanation is { } explanation)
+        {
+            foreach (var line in explanation.Describe())
+            {
+                output.AppendLine(line);
+            }
+
+            output.AppendLine();
+            output.AppendLine(report.Checks.Describe());
             output.AppendLine();
         }
 
@@ -189,6 +206,74 @@ public static class MarkdownReportWriter
         output.AppendLine();
     }
 
+    /// <summary>
+    /// Every check and what became of it, passes included.
+    /// </summary>
+    /// <remarks>
+    /// A report listing only failures tells an author what is wrong and nothing about how much
+    /// was examined and found sound, which reads as an accusation rather than an assessment.
+    /// The three states stay distinct here: a check that passed and a check that had nothing to
+    /// run against are not the same result, and merging them is how a scan that read almost
+    /// nothing comes out looking clean.
+    /// </remarks>
+    private static void WriteChecks(StringBuilder output, ScanReport report)
+    {
+        if (report.Checks.Checks.Count == 0)
+        {
+            return;
+        }
+
+        // Named precisely. This is the rule catalog that runs over recovered source; packaging,
+        // dependency and binary checks are separate passes. A section headed "Checks" would
+        // imply it accounted for all of them.
+        output.AppendLine("## Source code checks");
+        output.AppendLine();
+        output.AppendLine(report.Checks.Describe());
+        output.AppendLine();
+        output.AppendLine("*Packaging, dependency and binary checks run separately and are not "
+                          + "counted here.*");
+        output.AppendLine();
+
+        foreach (var (state, heading) in new[]
+                 {
+                     (CheckState.FoundIssues, "Found something"),
+                     (CheckState.Passed, "Passed"),
+                     (CheckState.NotChecked, "Could not run"),
+                 })
+        {
+            var group = report.Checks.Checks
+                .Where(c => c.State == state)
+                .OrderBy(c => c.Id, StringComparer.Ordinal)
+                .ToList();
+
+            if (group.Count == 0)
+            {
+                continue;
+            }
+
+            output.AppendLine($"### {heading} ({group.Count})");
+            output.AppendLine();
+
+            foreach (var check in group)
+            {
+                // The identifier is a support handle for whoever can act on it, and a serial
+                // number attached to somebody else's anxiety for whoever cannot. Same rule as
+                // the findings list, which this section would otherwise quietly undo.
+                var id = report.Audience == Audience.Developer ? $"`{check.Id}` " : string.Empty;
+
+                // The file count is what a pass is worth. A check that examined one file is a
+                // far weaker statement than one that examined four hundred, and printing a
+                // bare tick would flatten the two.
+                output.AppendLine(state == CheckState.NotChecked
+                    ? $"- {id}{check.Title} — nothing it applies to was recovered"
+                    : $"- {id}{check.Title} — {check.FilesExamined:N0} file"
+                      + $"{(check.FilesExamined == 1 ? "" : "s")} examined");
+            }
+
+            output.AppendLine();
+        }
+    }
+
     private static void WriteFindings(StringBuilder output, ScanReport report)
     {
         if (report.Findings.Count == 0)
@@ -200,6 +285,18 @@ public static class MarkdownReportWriter
 
         output.AppendLine("## Findings");
         output.AppendLine();
+
+        // Said once for the whole section instead of on each item. Every finding below quotes
+        // the code it rests on, so the reader checks the claim against the source rather than
+        // against a repeated warning that they stop reading after the second one.
+        if (report.Findings.Any(f => f.Source == FindingSource.Assisted))
+        {
+            output.AppendLine($"Findings marked `{AssistedMarker}` came from the optional AI "
+                              + "deep pass. They are reasoned from the code quoted with each "
+                              + "one rather than matched by a rule, and none of them can "
+                              + "trigger a do-not-install verdict on their own.");
+            output.AppendLine();
+        }
 
         foreach (var severity in new[]
                  {
@@ -267,29 +364,43 @@ public static class MarkdownReportWriter
         output.AppendLine();
     }
 
+    /// <summary>
+    /// Marks an inferred finding in the metadata line, where the rule identifier goes for a
+    /// deterministic one. Short on purpose: it is a label, not a warning.
+    /// </summary>
+    private const string AssistedMarker = "AI";
+
     private static void WriteFinding(StringBuilder output, Finding finding, Audience audience)
     {
         output.AppendLine($"#### {finding.Title}");
         output.AppendLine();
 
         // The rule identifier is a support handle for whoever can act on it, and noise to
-        // anyone who cannot.
-        output.AppendLine(audience == Audience.EndUser
+        // anyone who cannot. An inferred finding carries the marker in the same position, so
+        // where a finding came from is legible at a glance without a paragraph about it.
+        var source = finding.Source == FindingSource.Assisted
+            ? $"`{AssistedMarker}`"
+            : $"`{finding.RuleId}`";
+
+        // Weightless findings say so. Without it every entry in the list looks like it counted
+        // against the score, and an author reading twelve items has no way to tell which of
+        // them actually moved the number.
+        var impact = ScoreCalculator.WeightFor(finding.SeverityFor(audience)) == 0
+            ? " · no score impact"
+            : string.Empty;
+
+        output.AppendLine((audience == Audience.EndUser && finding.Source != FindingSource.Assisted
             ? $"{Humanise(finding.Category)} · `{finding.Location}`"
-            : $"`{finding.RuleId}` · {Humanise(finding.Category)} · `{finding.Location}`");
-
-        if (finding.Source == FindingSource.Assisted)
-        {
-            // Never presented as equivalent to a deterministic match.
-            output.AppendLine();
-            output.AppendLine("> Identified by the optional AI deep pass. This is an inferred "
-                              + "finding and may be wrong; confirm it before acting.");
-        }
+            : $"{source} · {Humanise(finding.Category)} · `{finding.Location}`") + impact);
 
         output.AppendLine();
-        output.AppendLine(finding.DescriptionFor(audience));
-        output.AppendLine();
 
+        // Evidence before the claim. The quoted line is the part a reader can check for
+        // themselves, and putting it first turns the description into a reading of something
+        // in front of them rather than an assertion they have to take on trust. That is worth
+        // more on an inferred finding than any wording of a disclaimer, which is why the
+        // per-finding hedge that used to sit here is gone: it is said once, in the section
+        // heading, instead of on every item until it stops being read.
         if (!string.IsNullOrWhiteSpace(finding.Evidence))
         {
             output.AppendLine("```");
@@ -297,6 +408,9 @@ public static class MarkdownReportWriter
             output.AppendLine("```");
             output.AppendLine();
         }
+
+        output.AppendLine(finding.DescriptionFor(audience));
+        output.AppendLine();
 
         if (finding.RemediationFor(audience) is { Length: > 0 } remediation)
         {

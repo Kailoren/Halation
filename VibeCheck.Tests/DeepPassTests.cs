@@ -137,6 +137,43 @@ public class DeepPassTests
         Assert.Equal(5, DeepPassTriage.Select(files, [], maxFiles: 5).Count);
     }
 
+    /// <summary>
+    /// Reading every file that qualified and being stopped by the ceiling are opposite facts
+    /// about a scan. They used to produce the same sentence, which read as a shortfall in the
+    /// case where nothing was missed.
+    /// </summary>
+    [Fact]
+    public void Reports_reading_everything_that_qualified_as_not_hitting_the_ceiling()
+    {
+        var files = Enumerable.Range(0, 100)
+            .Select(i => File($"File{i}.cs", i < 3 ? "await Http.GetStringAsync(url);" : "int x;"))
+            .ToList();
+
+        var triage = DeepPassTriage.Triage(files, [], maxFiles: 40);
+
+        Assert.Equal(3, triage.Selected.Count);
+        Assert.Equal(3, triage.Qualified);
+        Assert.False(triage.HitCeiling);
+    }
+
+    /// <summary>
+    /// When the ceiling does bite, the files it dropped were ones worth reading, so the count
+    /// has to survive rather than being inferred from the selection.
+    /// </summary>
+    [Fact]
+    public void Reports_the_ceiling_cutting_a_pass_short()
+    {
+        var files = Enumerable.Range(0, 100)
+            .Select(i => File($"File{i}.cs", "await Http.GetStringAsync(url);"))
+            .ToList();
+
+        var triage = DeepPassTriage.Triage(files, [], maxFiles: 5);
+
+        Assert.Equal(5, triage.Selected.Count);
+        Assert.Equal(100, triage.Qualified);
+        Assert.True(triage.HitCeiling);
+    }
+
     [Fact]
     public void Truncates_a_file_too_large_to_send_rather_than_dropping_it()
     {

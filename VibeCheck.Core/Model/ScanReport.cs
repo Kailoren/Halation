@@ -45,6 +45,17 @@ public sealed record ScanReport
     /// <summary>True when the scan made no network calls of any kind.</summary>
     public bool RanIsolated { get; init; }
 
+    /// <summary>
+    /// Every check and how it ended, passes included.
+    /// </summary>
+    /// <remarks>
+    /// A report of failures alone tells the reader what is wrong and nothing about how much was
+    /// looked at, which reads as an accusation rather than an assessment and gives an author no
+    /// credit for the parts that were sound. The three states are kept distinct all the way to
+    /// the display so a pass is never confused with a check that had nothing to run against.
+    /// </remarks>
+    public CheckSummary Checks { get; init; } = new();
+
     /// <summary>Whether the optional BYOK deep pass contributed to this report.</summary>
     public bool DeepPassRan { get; init; }
 

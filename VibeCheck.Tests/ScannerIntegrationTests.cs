@@ -288,8 +288,11 @@ public class ScannerIntegrationTests : IDisposable
         });
 
         Assert.DoesNotContain("US$", markdown, StringComparison.Ordinal);
-        Assert.DoesNotContain("API key", markdown, StringComparison.Ordinal);
         Assert.Contains("quota rather than money", markdown, StringComparison.Ordinal);
+
+        // Specifically the billing sentence. A bare "API key" search also matches the name of
+        // any rule that looks for one, which says nothing about what the scan charged.
+        Assert.DoesNotContain("on your API key", markdown, StringComparison.Ordinal);
     }
 
     /// <summary>

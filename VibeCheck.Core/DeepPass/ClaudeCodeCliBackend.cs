@@ -285,16 +285,17 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
                 };
             }
 
-            var findings = ReadFindings(root, triaged);
+            var answer = ReadFindings(root, triaged);
 
-            if (findings is null)
+            if (answer is null)
             {
                 return Failed(triaged, "returned no structured answer", usage);
             }
 
             return new FileReview
             {
-                Findings = findings,
+                Findings = answer.Findings,
+                LowConfidenceDiscarded = answer.LowConfidenceDiscarded,
                 Usage = usage,
                 ServedByFallback = SubstituteModelAnswered(root),
                 Limitation = ToolUseAttempted(root)
@@ -311,7 +312,7 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
     /// The findings, preferring the pre-parsed object the CLI supplies over re-parsing the text.
     /// Null when neither is present, which is a failure rather than an empty result.
     /// </summary>
-    private static IReadOnlyList<Model.Finding>? ReadFindings(JsonElement root, TriagedFile triaged)
+    private static DeepPassAnswer? ReadFindings(JsonElement root, TriagedFile triaged)
     {
         if (root.TryGetProperty("structured_output", out var structured)
             && structured.ValueKind == JsonValueKind.Object)

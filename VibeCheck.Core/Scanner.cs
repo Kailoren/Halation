@@ -168,6 +168,7 @@ public sealed class Scanner
             },
             BundlePath = bundlePath,
             RanIsolated = options.Isolate,
+            Checks = new CheckSummary { Checks = analysis.Checks },
             DeepPassRan = options.DeepPassEnabled,
 
             // BilledCost, not EstimatedCost. A subscription-backed pass has a real token cost

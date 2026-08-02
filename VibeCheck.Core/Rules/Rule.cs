@@ -69,6 +69,19 @@ public interface IRule
 {
     string Id { get; }
 
+    /// <summary>
+    /// What this check looks for, in the words used when reporting that it passed.
+    /// </summary>
+    /// <remarks>
+    /// On the interface rather than only on the concrete rule, because the report now lists
+    /// every check and its outcome, not only the ones that fired. A check with no name cannot
+    /// appear in that list, and a check missing from that list is indistinguishable from one
+    /// that was never written.
+    /// </remarks>
+    string Title { get; }
+
+    FindingCategory Category { get; }
+
     bool AppliesTo(RecoveredFile file);
 
     IEnumerable<Finding> Examine(RuleContext context);

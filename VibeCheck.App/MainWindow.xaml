@@ -370,6 +370,19 @@
                                        Style="{StaticResource Caption}" Margin="0,6,0,0"
                                        TextWrapping="Wrap"/>
 
+                            <!-- How the number was reached, directly under it. A low score with
+                                 no account of itself reads as a verdict rather than a
+                                 measurement, and gives an author no way to tell a scan that
+                                 found one serious problem from one that found forty. -->
+                            <ItemsControl ItemsSource="{Binding ScoreExplanation}" Margin="0,8,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" Style="{StaticResource Caption}"
+                                                   TextWrapping="Wrap" Margin="0,0,0,3"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
                             <TextBlock Text="{Binding SummaryLine}" Margin="0,10,0,0" TextWrapping="Wrap"/>
 
                             <!-- Shown when nothing meaningful could be read. Stated plainly so
@@ -415,6 +428,73 @@
                         </StackPanel>
                     </ContentControl>
 
+                    <!-- Every check and what became of it. A report of failures alone tells an
+                         author what is wrong and nothing about how much was examined and found
+                         sound, which reads as an accusation rather than an assessment. -->
+                    <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0"
+                                    Visibility="{Binding Checks.Count,
+                                                 Converter={StaticResource CountToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="Source code checks" Style="{StaticResource Heading}"/>
+                            <TextBlock Text="{Binding ChecksSummary}" Style="{StaticResource Caption}"
+                                       TextWrapping="Wrap" Margin="0,2,0,0"/>
+                            <!-- Named precisely. This is the rule catalog that runs over
+                                 recovered source; packaging, dependency and binary checks are
+                                 separate passes and are not counted here. A list headed
+                                 "Checks" would imply it covered all of them. -->
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                       Margin="0,2,0,8"
+                                       Text="Packaging, dependency and binary checks run separately and are not counted here."/>
+
+                            <ItemsControl ItemsSource="{Binding Checks}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="20"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Three glyphs, three colours. A pass and a check
+                                                 that never ran must not read alike. -->
+                                            <TextBlock Grid.Column="0" FontFamily="{DynamicResource IconFont}"
+                                                       FontSize="12" VerticalAlignment="Center"
+                                                       Text="&#xE73E;" Foreground="{StaticResource Good}"
+                                                       Visibility="{Binding Passed,
+                                                                    Converter={StaticResource BoolToVisibility}}"/>
+                                            <TextBlock Grid.Column="0" FontFamily="{DynamicResource IconFont}"
+                                                       FontSize="12" VerticalAlignment="Center"
+                                                       Text="&#xE7BA;" Foreground="{StaticResource High}"
+                                                       Visibility="{Binding FoundIssues,
+                                                                    Converter={StaticResource BoolToVisibility}}"/>
+                                            <TextBlock Grid.Column="0" FontFamily="{DynamicResource IconFont}"
+                                                       FontSize="12" VerticalAlignment="Center"
+                                                       Text="&#xE738;" Foreground="{StaticResource Muted}"
+                                                       Visibility="{Binding NotChecked,
+                                                                    Converter={StaticResource BoolToVisibility}}"/>
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                <TextBlock Text="{Binding Id}" Style="{StaticResource Caption}"
+                                                           FontFamily="{DynamicResource MonoFont}"
+                                                           VerticalAlignment="Center" Margin="0,0,8,0"
+                                                           Visibility="{Binding ShowId,
+                                                                        Converter={StaticResource BoolToVisibility}}"/>
+                                                <TextBlock Text="{Binding Title}" FontSize="13"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center"/>
+                                            </StackPanel>
+
+                                            <TextBlock Grid.Column="2" Text="{Binding Detail}"
+                                                       Style="{StaticResource Caption}"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ContentControl>
+
                     <!-- Category scores -->
                     <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0"
                                     Visibility="{Binding CategoryScores.Count,
@@ -456,6 +536,17 @@
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <TextBlock Text="Findings" Style="{StaticResource Heading}"/>
+
+                            <!-- Said once for the list rather than on every card. Each inferred
+                                 finding quotes the code it rests on, so the reader checks the
+                                 claim against the source instead of against a warning they
+                                 stopped reading after the second one. -->
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                       Margin="0,4,0,0"
+                                       Text="Findings tagged AI came from the deep pass. They are reasoned from the code quoted with each one rather than matched by a rule, and none of them alone can advise against installing."
+                                       Visibility="{Binding HasAssistedFindings,
+                                                    Converter={StaticResource BoolToVisibility}}"/>
+
                             <ItemsControl ItemsSource="{Binding Findings}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -505,7 +596,7 @@
                                                         <StackPanel Grid.Column="2">
                                                             <TextBlock Text="{Binding Title}" TextWrapping="Wrap"/>
                                                             <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                                                <TextBlock Text="{Binding RuleId}"
+                                                                <TextBlock Text="{Binding SourceTag}"
                                                                            Style="{StaticResource Caption}"
                                                                            FontFamily="{DynamicResource MonoFont}"
                                                                            Visibility="{Binding ShowRuleId,
@@ -527,20 +618,18 @@
                                                             Visibility="{Binding Expanded,
                                                                          Converter={StaticResource BoolToVisibility}}">
 
-                                                    <Border Padding="10" Margin="0,0,0,10"
-                                                            CornerRadius="{DynamicResource ButtonRadius}"
-                                                            Background="{DynamicResource MediumFill}"
-                                                            BorderThickness="1"
-                                                            BorderBrush="{StaticResource Medium}"
-                                                            Visibility="{Binding IsAssisted,
-                                                                         Converter={StaticResource BoolToVisibility}}">
-                                                        <TextBlock TextWrapping="Wrap" FontSize="12"
-                                                                   Text="Identified by the optional AI deep pass. This is an inferred finding and may be wrong; confirm it before acting."/>
-                                                    </Border>
-
-                                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
-
-                                                    <Border Margin="0,10,0,0" Padding="10"
+                                                    <!-- Evidence first, claim second. The quoted
+                                                         line is the part a reader can check,
+                                                         and leading with it makes the text
+                                                         below a reading of something in front
+                                                         of them rather than an assertion to be
+                                                         taken on trust. The per-finding "this
+                                                         may be wrong" banner that used to sit
+                                                         here is gone: repeated on every card it
+                                                         stopped being read and started looking
+                                                         like a tool hedging its own output. It
+                                                         is said once above the list instead. -->
+                                                    <Border Margin="0,0,0,10" Padding="10"
                                                             CornerRadius="{DynamicResource ButtonRadius}"
                                                             Background="{StaticResource Bg}"
                                                             Visibility="{Binding Evidence,
@@ -549,6 +638,8 @@
                                                                    FontSize="12" TextWrapping="Wrap"
                                                                    Foreground="{StaticResource Muted}"/>
                                                     </Border>
+
+                                                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
 
                                                     <StackPanel Margin="0,10,0,0"
                                                                 Visibility="{Binding Remediation,

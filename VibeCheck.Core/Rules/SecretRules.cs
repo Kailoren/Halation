@@ -332,6 +332,10 @@ public sealed class SupabaseServiceKeyRule : IRule
 
     public string Id => "VC-SEC-011";
 
+    public string Title => "Supabase service key";
+
+    public FindingCategory Category => FindingCategory.Secrets;
+
     public bool AppliesTo(RecoveredFile file) => true;
 
     public IEnumerable<Finding> Examine(RuleContext context)

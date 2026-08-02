@@ -22,6 +22,18 @@ namespace VibeCheck.Core.DeepPass;
 /// scan. It never invents a finding to fill a gap.
 /// </para>
 /// </remarks>
+/// <summary>What one reply contained, including what was thrown away reading it.</summary>
+public sealed record DeepPassAnswer
+{
+    public IReadOnlyList<Finding> Findings { get; init; } = [];
+
+    /// <summary>
+    /// Findings the model marked low confidence, which are not shown. Counted so the report
+    /// can say they existed rather than leaving their absence to look like a clean file.
+    /// </summary>
+    public int LowConfidenceDiscarded { get; init; }
+}
+
 public static class DeepPassPrompt
 {
     /// <summary>
@@ -139,15 +151,24 @@ public static class DeepPassPrompt
     /// Reads the findings out of a reply. Returns none rather than throwing: a backend that
     /// answered badly costs one file's coverage, not the scan.
     /// </summary>
-    public static IReadOnlyList<Finding> Parse(string json, TriagedFile triaged)
+    /// <remarks>
+    /// Findings the model marked low confidence are discarded here rather than printed with a
+    /// warning attached. A hedge repeated on every item stops being read, and a report full of
+    /// things that might not be true is worth less than a shorter one where each entry is
+    /// backed by the code it quotes. The count of what was dropped is carried out rather than
+    /// swallowed, because "we found nothing else" and "we found things we did not trust enough
+    /// to show you" are different statements and the reader is owed the right one.
+    /// </remarks>
+    public static DeepPassAnswer Parse(string json, TriagedFile triaged)
     {
         ArgumentNullException.ThrowIfNull(triaged);
 
         var findings = new List<Finding>();
+        var discarded = 0;
 
         if (string.IsNullOrWhiteSpace(json))
         {
-            return findings;
+            return new DeepPassAnswer();
         }
 
         try
@@ -157,11 +178,17 @@ public static class DeepPassPrompt
             if (!document.RootElement.TryGetProperty("findings", out var array)
                 || array.ValueKind != JsonValueKind.Array)
             {
-                return findings;
+                return new DeepPassAnswer();
             }
 
             foreach (var element in array.EnumerateArray())
             {
+                if (IsLowConfidence(element))
+                {
+                    discarded++;
+                    continue;
+                }
+
                 if (ReadFinding(element, triaged) is { } finding)
                 {
                     findings.Add(finding);
@@ -175,8 +202,21 @@ public static class DeepPassPrompt
             // answer must not take the scan down.
         }
 
-        return findings;
+        return new DeepPassAnswer { Findings = findings, LowConfidenceDiscarded = discarded };
     }
+
+    /// <summary>
+    /// Whether the model said outright that the code did not convince it.
+    /// </summary>
+    /// <remarks>
+    /// Only an explicit "low" is dropped. A missing or unrecognised value is kept, because the
+    /// absence of a confidence claim is not a confession of doubt, and silently discarding on
+    /// a field the model failed to fill would quietly shrink coverage for a formatting reason.
+    /// </remarks>
+    private static bool IsLowConfidence(JsonElement element) =>
+        element.TryGetProperty("confidence", out var confidence)
+        && confidence.ValueKind == JsonValueKind.String
+        && string.Equals(confidence.GetString(), "low", StringComparison.OrdinalIgnoreCase);
 
     private static Finding? ReadFinding(JsonElement element, TriagedFile triaged)
     {

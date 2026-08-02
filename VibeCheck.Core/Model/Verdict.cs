@@ -10,6 +10,55 @@ namespace VibeCheck.Core.Model;
 /// and a deliberately malicious app will read cleaner than a sloppy honest one. The band
 /// names are worded accordingly, topping out at "no known issues found".
 /// </remarks>
+/// <summary>
+/// Why the score is the number it is, in terms a reader can check against the finding list.
+/// </summary>
+public sealed record ScoreExplanation
+{
+    /// <summary>The worst severity found, which is what selects the band.</summary>
+    public required Severity Worst { get; init; }
+
+    public required int Floor { get; init; }
+
+    public required int Ceiling { get; init; }
+
+    /// <summary>Findings that carried weight.</summary>
+    public required int Counted { get; init; }
+
+    /// <summary>Findings recorded but deliberately weightless, so the reader is not left
+    /// assuming everything in the list dragged the number down.</summary>
+    public required int Informational { get; init; }
+
+    /// <summary>Phrased once here so the exported report and the window cannot disagree.</summary>
+    public IReadOnlyList<string> Describe()
+    {
+        var lines = new List<string>();
+
+        if (Counted == 0)
+        {
+            lines.Add("Nothing found that affects the score.");
+        }
+        else
+        {
+            lines.Add(Floor == Ceiling
+                ? $"The worst finding is {Worst}, which does not move the score."
+                : $"The worst finding is {Worst}, which places this between {Floor} and "
+                  + $"{Ceiling}. Where it sits in that range is decided by all "
+                  + $"{Counted} finding{(Counted == 1 ? "" : "s")} that count, with each "
+                  + "further one moving it less than the last.");
+        }
+
+        if (Informational > 0)
+        {
+            lines.Add($"{Informational} informational finding"
+                      + $"{(Informational == 1 ? " is" : "s are")} listed but "
+                      + "did not affect the score.");
+        }
+
+        return lines;
+    }
+}
+
 public sealed record Verdict
 {
     /// <summary>0-100, capped by the worst finding present.</summary>
@@ -31,6 +80,17 @@ public sealed record Verdict
     /// <see cref="Score"/> answers.
     /// </summary>
     public required Audience Audience { get; init; }
+
+    /// <summary>
+    /// How the number was arrived at. Null when no score was produced.
+    /// </summary>
+    /// <remarks>
+    /// A score nobody can account for is a score nobody trusts, and this one is not a simple
+    /// subtraction: the worst finding decides which band applies, and everything else decides
+    /// where in that band it lands. Left unexplained, a reader seeing a low number has no way
+    /// to tell a scan that found one serious problem from one that found forty.
+    /// </remarks>
+    public ScoreExplanation? Explanation { get; init; }
 
     /// <summary>
     /// The question the number answers, for display immediately beneath it.
