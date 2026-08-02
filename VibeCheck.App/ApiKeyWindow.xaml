@@ -1,37 +1,77 @@
 <Window x:Class="VibeCheck.App.ApiKeyWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Deep pass API key"
-        Height="300" Width="560"
+        Width="560"
         WindowStartupLocation="CenterOwner"
+
         ResizeMode="NoResize"
         Background="{StaticResource Bg}"
-        FontFamily="Segoe UI" FontSize="13">
+        FontFamily="Segoe UI" FontSize="13"
+        WindowStyle="None" AllowsTransparency="False">
 
-    <StackPanel Margin="20">
-        <TextBlock Text="Anthropic API key" Style="{StaticResource Heading}"/>
+    <!-- Sizes to whatever the explanatory text wraps to. It was a fixed 300 and the buttons
+         fell off the bottom: the paragraphs above them wrap to a different number of lines
+         depending on the font and DPI, so any fixed height is a guess that is wrong on
+         somebody's machine. -->
+    <Window.SizeToContent>Height</Window.SizeToContent>
 
-        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,12"
-                   Text="The deep pass runs on your own account. Create a key at console.anthropic.com and paste it below. It is encrypted to your Windows account and stored outside this application's folder."/>
+    <!-- Same chrome arrangement as MainWindow, so the dialog does not arrive wearing the
+         default Windows title bar in the middle of a dark themed application. Resize border
+         is zero because this window is not resizable. -->
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="36" ResizeBorderThickness="0"
+                            GlassFrameThickness="0" CornerRadius="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
 
-        <!-- PasswordBox, not TextBox: the key should not be readable over a shoulder or in a
-             screenshot, and it is never displayed again once stored. -->
-        <PasswordBox x:Name="KeyBox" Height="30" Padding="8,0" VerticalContentAlignment="Center"
-                     Background="{StaticResource PanelRaised}"
-                     Foreground="{StaticResource Text}"
-                     BorderBrush="{StaticResource Edge}" BorderThickness="1"
-                     FontFamily="Consolas"/>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,12,0,0"
-                   Text="Only the files selected by triage are sent, and only on scans where you tick the deep pass box. Nothing is sent on an isolated scan. Leave the box empty and save to remove a stored key."/>
+        <Border Grid.Row="0" Background="{StaticResource Panel}"
+                BorderBrush="{StaticResource Edge}" BorderThickness="0,0,0,1">
+            <Grid>
+                <TextBlock Text="Deep pass API key" FontWeight="SemiBold"
+                           Margin="14,0" VerticalAlignment="Center"/>
 
-        <TextBlock x:Name="CostNote" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,10,0,0"
-                   Text="Typical cost is a few cents per scan, billed to you by Anthropic. The report states what was spent."/>
+                <Button Style="{StaticResource CloseBtn}" Content="&#xE8BB;"
+                        HorizontalAlignment="Right" Click="OnCancel"/>
+            </Grid>
+        </Border>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
-            <Button Content="Remove key" Style="{StaticResource Btn}" Click="OnRemove"/>
-            <Button Content="Cancel" Style="{StaticResource Btn}" Margin="8,0,0,0" Click="OnCancel"/>
-            <Button Content="Save" Style="{StaticResource Btn}" Margin="8,0,0,0" Click="OnSave" IsDefault="True"/>
+        <StackPanel Grid.Row="1" Margin="20">
+            <TextBlock Text="Anthropic API key" Style="{StaticResource Heading}"/>
+
+            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,12"
+                       Text="The deep pass runs on your own account. Create a key at console.anthropic.com and paste it below. It is encrypted to your Windows account and stored outside this application's folder."/>
+
+            <!-- PasswordBox, not TextBox: the key should not be readable over a shoulder or in a
+                 screenshot, and it is never displayed again once stored. -->
+            <PasswordBox x:Name="KeyBox" Height="30" Padding="8,0" VerticalContentAlignment="Center"
+                         Background="{StaticResource PanelRaised}"
+                         Foreground="{StaticResource Text}"
+                         BorderBrush="{StaticResource Edge}" BorderThickness="1"
+                         FontFamily="Consolas"/>
+
+            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,12,0,0"
+                       Text="Only the files selected by triage are sent, and only on scans where you tick the deep pass box. Nothing is sent on an isolated scan. Leave the box empty and save to remove a stored key."/>
+
+            <TextBlock x:Name="CostNote" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,10,0,0"
+                       Text="Typical cost is a few cents per scan, billed to you by Anthropic. The report states what was spent."/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                <Button Content="Remove key" Style="{StaticResource Btn}" Click="OnRemove"/>
+                <!-- IsCancel so Escape still closes it. Replacing the system title bar took
+                     away the usual way out of a dialog, and the custom close button is the
+                     only other one. -->
+                <Button Content="Cancel" Style="{StaticResource Btn}" Margin="8,0,0,0"
+                        IsCancel="True" Click="OnCancel"/>
+                <Button Content="Save" Style="{StaticResource Btn}" Margin="8,0,0,0" Click="OnSave" IsDefault="True"/>
+            </StackPanel>
         </StackPanel>
-    </StackPanel>
+    </Grid>
 </Window>
