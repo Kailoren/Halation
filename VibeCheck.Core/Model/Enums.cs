@@ -43,6 +43,39 @@ public enum FindingCategory
     /// being blended into the source-level ones.
     /// </summary>
     BinaryHygiene,
+
+    /// <summary>
+    /// Duplication, dead weight, and code left behind. Not a security category.
+    /// </summary>
+    /// <remarks>
+    /// Separate on purpose, and its findings are always informational. A duplicated block is a
+    /// maintenance cost, not a risk, and letting it move the score would quietly turn a number
+    /// that answers "how dangerous is this" into one that answers "how tidy is this". Those are
+    /// different questions and only one of them is what a reader opened the tool to ask.
+    /// </remarks>
+    Maintainability,
+}
+
+/// <summary>Display names for the categories.</summary>
+/// <remarks>
+/// Here rather than in each renderer. This existed twice, once in the report writer and once
+/// in the window, and the two drifted the moment a category was added: the redundancy check
+/// found the pair the same hour it was written, which is a better argument for the check than
+/// anything that could be said about it.
+/// </remarks>
+public static class FindingCategories
+{
+    public static string Humanise(this FindingCategory category) => category switch
+    {
+        FindingCategory.Secrets => "Credentials",
+        FindingCategory.Dependencies => "Dependencies",
+        FindingCategory.Network => "Network",
+        FindingCategory.Auth => "Access control",
+        FindingCategory.CodeSafety => "Code safety",
+        FindingCategory.BinaryHygiene => "Binary hygiene",
+        FindingCategory.Maintainability => "Maintainability",
+        _ => category.ToString(),
+    };
 }
 
 /// <summary>

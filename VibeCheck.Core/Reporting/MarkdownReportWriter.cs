@@ -533,16 +533,7 @@ public static class MarkdownReportWriter
         ? "under US$0.01"
         : $"US${dollars.ToString("F2", CultureInfo.InvariantCulture)}";
 
-    private static string Humanise(FindingCategory category) => category switch
-    {
-        FindingCategory.Secrets => "Credentials",
-        FindingCategory.Dependencies => "Dependencies",
-        FindingCategory.Network => "Network",
-        FindingCategory.Auth => "Access control",
-        FindingCategory.CodeSafety => "Code safety",
-        FindingCategory.BinaryHygiene => "Binary hygiene",
-        _ => category.ToString(),
-    };
+    private static string Humanise(FindingCategory category) => category.Humanise();
 
     private static string FormatBytes(long bytes) => bytes switch
     {

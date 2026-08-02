@@ -807,16 +807,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private static string Humanise(FindingCategory category) => category switch
-    {
-        FindingCategory.Secrets => "Credentials",
-        FindingCategory.Dependencies => "Dependencies",
-        FindingCategory.Network => "Network",
-        FindingCategory.Auth => "Access control",
-        FindingCategory.CodeSafety => "Code safety",
-        FindingCategory.BinaryHygiene => "Binary hygiene",
-        _ => category.ToString(),
-    };
+    private static string Humanise(FindingCategory category) => category.Humanise();
 
     // ---- INotifyPropertyChanged --------------------------------------------
 

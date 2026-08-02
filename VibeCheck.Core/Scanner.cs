@@ -115,14 +115,21 @@ public sealed class Scanner
 
         progress?.Report(new ScanProgress(ScanStage.Scoring, "Scoring results"));
 
-        // Four stages contribute findings and all are equally real, they were just observed
+        // Repetition and dead weight, over verbatim source only. Informational throughout: it
+        // is a maintenance cost rather than a risk, and it must not move a number that answers
+        // how dangerous something is.
+        var redundancy = Quality.RedundancyChecks.Run(recovery.Files);
+
+        // Five stages contribute findings and all are equally real, they were just observed
         // at different depths: packaging looks at which files ship, recovery at the binary,
-        // the rule pass at recovered source, and the dependency check at published advisories.
+        // the rule pass at recovered source, the dependency check at published advisories, and
+        // the redundancy pass at how much of the source repeats itself.
         var findings = PackagingChecks.Run(artifact)
             .Concat(recovery.Findings)
             .Concat(analysis.Findings)
             .Concat(VulnerabilityFindings.Build(lookup))
             .Concat(deepPass.Findings)
+            .Concat(redundancy.Findings)
 
             // Ordered by what matters to whoever is reading. Sorting an end user's report by
             // the developer's severity would open it with a leaked key they cannot act on and
@@ -132,7 +139,8 @@ public sealed class Scanner
             .ThenBy(f => f.RuleId, StringComparer.Ordinal)
             .ToList();
 
-        var coverage = MergeCoverage(recovery.Coverage, analysis, dependencies, lookup, deepPass);
+        var coverage = MergeCoverage(
+            recovery.Coverage, analysis, dependencies, lookup, deepPass, redundancy);
 
         var report = new ScanReport
         {
@@ -337,7 +345,8 @@ public sealed class Scanner
         RuleEngineResult analysis,
         DependencyInventoryResult dependencies,
         VulnerabilityLookupResult lookup,
-        DeepPass.DeepPassResult deepPass)
+        DeepPass.DeepPassResult deepPass,
+        Quality.RedundancyResult redundancy)
     {
         var limitations = new List<string>(coverage.ChecksNotPossible);
 
@@ -349,6 +358,11 @@ public sealed class Scanner
         // Which files the deep pass read, and that its findings are inferred. A pass that
         // examined twelve files has not cleared the rest.
         limitations.AddRange(deepPass.Limitations);
+
+        // Which files the duplication check compared, and which it refused to. Silence here
+        // would let a scan of a decompiled binary read as one that found no repetition, when
+        // in fact it declined to look.
+        limitations.AddRange(redundancy.Limitations);
 
         if (dependencies.Unresolved.Count > 0)
         {
