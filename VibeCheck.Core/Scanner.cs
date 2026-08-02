@@ -165,6 +165,7 @@ public sealed class Scanner
             BundlePath = bundlePath,
             RanIsolated = options.Isolate,
             DeepPassRan = options.DeepPassEnabled,
+            DeepPassCost = options.DeepPassEnabled ? deepPass.EstimatedCost : null,
             ScannerVersion = Version,
             Duration = stopwatch.Elapsed,
         };

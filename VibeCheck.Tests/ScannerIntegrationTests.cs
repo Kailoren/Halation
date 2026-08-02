@@ -233,6 +233,32 @@ public class ScannerIntegrationTests : IDisposable
         Assert.DoesNotContain("sk_live_4eC39HqLyjWDarjtT1zdp7dcabcd", markdown, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The deep pass spends the reader's own money. The report is the only place they learn
+    /// how much before their API console catches up a day later, so the figure has to reach it.
+    /// </summary>
+    [Fact]
+    public async Task MarkdownReport_StatesWhatTheDeepPassCost()
+    {
+        var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
+
+        var markdown = MarkdownReportWriter.Write(report with { DeepPassRan = true, DeepPassCost = 0.42m });
+
+        Assert.Contains("US$0.42", markdown, StringComparison.Ordinal);
+    }
+
+    /// <summary>A third of a cent is cheap, not free; "US$0.00" would say the wrong one.</summary>
+    [Fact]
+    public async Task MarkdownReport_DoesNotRoundASmallDeepPassBillDownToNothing()
+    {
+        var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
+
+        var markdown = MarkdownReportWriter.Write(report with { DeepPassRan = true, DeepPassCost = 0.003m });
+
+        Assert.Contains("under US$0.01", markdown, StringComparison.Ordinal);
+        Assert.DoesNotContain("US$0.00", markdown, StringComparison.Ordinal);
+    }
+
     private static string Jwt(string role)
     {
         static string Segment(object value) =>

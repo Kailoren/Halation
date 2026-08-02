@@ -146,12 +146,50 @@ public class DeepPassTests
 
     // ---- Cost --------------------------------------------------------------
 
-    /// <summary>Reported back to the reader, so the bill is never a surprise.</summary>
     [Fact]
     public void Estimates_cost_at_the_published_rates()
     {
-        var result = new DeepPassResult { InputTokens = 1_000_000, OutputTokens = 1_000_000 };
+        var result = new DeepPassResult
+        {
+            Usage = new TokenUsage { Input = 1_000_000, Output = 1_000_000 },
+        };
 
         Assert.Equal(30.00m, result.EstimatedCost);
+    }
+
+    /// <summary>
+    /// The system prompt is cached on every request, so cached tokens are most of what the
+    /// pass reads. Pricing them at zero reported a small fraction of the real bill.
+    /// </summary>
+    [Fact]
+    public void Prices_cached_tokens_rather_than_ignoring_them()
+    {
+        var usage = new TokenUsage { CacheWrite = 1_000_000, CacheRead = 1_000_000 };
+
+        Assert.Equal(6.75m, usage.EstimatedCost);
+    }
+
+    /// <summary>
+    /// <c>input_tokens</c> excludes anything the cache served, so it is not the size of the
+    /// prompt. Reporting it as one would understate what was sent.
+    /// </summary>
+    [Fact]
+    public void Counts_cached_tokens_as_input_that_was_sent()
+    {
+        var usage = new TokenUsage { Input = 100, CacheWrite = 20, CacheRead = 3_000 };
+
+        Assert.Equal(3_120, usage.TotalInput);
+    }
+
+    [Fact]
+    public void Adds_usage_across_the_files_it_reviewed()
+    {
+        var total = new TokenUsage { Input = 1, Output = 2, CacheWrite = 3, CacheRead = 4 }
+                    + new TokenUsage { Input = 10, Output = 20, CacheWrite = 30, CacheRead = 40 };
+
+        Assert.Equal(11, total.Input);
+        Assert.Equal(22, total.Output);
+        Assert.Equal(33, total.CacheWrite);
+        Assert.Equal(44, total.CacheRead);
     }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 using VibeCheck.Core.Model;
@@ -318,9 +319,19 @@ public static class MarkdownReportWriter
 
         if (report.DeepPassRan)
         {
-            output.AppendLine(" · Includes findings from the optional AI deep pass.");
+            output.AppendLine(" · Includes findings from the optional AI deep pass"
+                              + $", which cost {Money(report.DeepPassCost ?? 0m)} on your API key.");
         }
     }
+
+    /// <summary>
+    /// Rounds to cents, but never down to nothing: a pass that cost a third of a cent is cheap,
+    /// not free, and printing "$0.00" would say the wrong one. Invariant so an exported report
+    /// reads the same for whoever it is sent to.
+    /// </summary>
+    private static string Money(decimal dollars) => dollars > 0m && dollars < 0.01m
+        ? "under US$0.01"
+        : $"US${dollars.ToString("F2", CultureInfo.InvariantCulture)}";
 
     private static string Humanise(FindingCategory category) => category switch
     {

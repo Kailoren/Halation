@@ -48,6 +48,13 @@ public sealed record ScanReport
     /// <summary>Whether the optional BYOK deep pass contributed to this report.</summary>
     public bool DeepPassRan { get; init; }
 
+    /// <summary>
+    /// What the deep pass cost the key holder, in US dollars, or null when it did not run.
+    /// Stated because the reader is paying for it on their own account and has no other bill
+    /// until it appears on their console a day later.
+    /// </summary>
+    public decimal? DeepPassCost { get; init; }
+
     /// <summary>Version of the scanner that produced this report.</summary>
     public required string ScannerVersion { get; init; }
 
