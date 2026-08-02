@@ -104,6 +104,15 @@ public sealed class Scanner
 
         var bundlePath = WriteBundleIfRequested(options, artifact, sha256, dependencies, lookup);
 
+        // The optional reasoning pass, after the deterministic one so it can be told what has
+        // already been found and triage against it rather than duplicating it.
+        var deepPass = await DeepPass.DeepPassRunner.RunAsync(
+            recovery.Files,
+            [.. PackagingChecks.Run(artifact).Concat(recovery.Findings).Concat(analysis.Findings)],
+            options,
+            progress,
+            cancellationToken).ConfigureAwait(false);
+
         progress?.Report(new ScanProgress(ScanStage.Scoring, "Scoring results"));
 
         // Four stages contribute findings and all are equally real, they were just observed
@@ -113,12 +122,13 @@ public sealed class Scanner
             .Concat(recovery.Findings)
             .Concat(analysis.Findings)
             .Concat(VulnerabilityFindings.Build(lookup))
+            .Concat(deepPass.Findings)
             .OrderByDescending(f => f.Severity)
             .ThenBy(f => f.Category)
             .ThenBy(f => f.RuleId, StringComparer.Ordinal)
             .ToList();
 
-        var coverage = MergeCoverage(recovery.Coverage, analysis, dependencies, lookup);
+        var coverage = MergeCoverage(recovery.Coverage, analysis, dependencies, lookup, deepPass);
 
         var report = new ScanReport
         {
@@ -154,6 +164,7 @@ public sealed class Scanner
             },
             BundlePath = bundlePath,
             RanIsolated = options.Isolate,
+            DeepPassRan = options.DeepPassEnabled,
             ScannerVersion = Version,
             Duration = stopwatch.Elapsed,
         };
@@ -289,7 +300,8 @@ public sealed class Scanner
         CoverageReport coverage,
         RuleEngineResult analysis,
         DependencyInventoryResult dependencies,
-        VulnerabilityLookupResult lookup)
+        VulnerabilityLookupResult lookup,
+        DeepPass.DeepPassResult deepPass)
     {
         var limitations = new List<string>(coverage.ChecksNotPossible);
 
@@ -297,6 +309,10 @@ public sealed class Scanner
         limitations.AddRange(dependencies.Notes);
         limitations.AddRange(lookup.Notes);
         limitations.AddRange(lookup.NotChecked.Take(20));
+
+        // Which files the deep pass read, and that its findings are inferred. A pass that
+        // examined twelve files has not cleared the rest.
+        limitations.AddRange(deepPass.Limitations);
 
         if (dependencies.Unresolved.Count > 0)
         {

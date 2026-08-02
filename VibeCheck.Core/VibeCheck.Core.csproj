@@ -16,6 +16,12 @@
          this version - and we never extract to disk, so the class does not apply. Keep it
          that way: read entries as streams, never WriteToDirectory. -->
     <PackageReference Include="SharpCompress" Version="0.50.3" />
+
+    <!-- The optional deep pass. Official SDK rather than hand-rolled HTTP: the request
+         surface it covers (structured outputs, refusal handling, server-side fallbacks) is
+         exactly what this feature depends on, and getting any of it subtly wrong is a silent
+         wrong answer rather than a compile error. Clean against OSV at this version. -->
+    <PackageReference Include="Anthropic" Version="12.39.0" />
   </ItemGroup>
 
 </Project>

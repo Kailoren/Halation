@@ -90,17 +90,35 @@ you should not have to guess which you are reading.
 
 ## Optional deep pass (bring your own key)
 
-The scan above is free, offline, and needs no account. Optionally, you can supply your own
-Anthropic API key to add a second pass that catches logic flaws pattern rules cannot express.
+The scan above is free, needs no account, and sends nothing but package names. Optionally,
+you can supply your own Anthropic API key to add a second pass that reads the code and
+reasons about it, which is what catches the things a pattern cannot express: a guard that
+exists but is incomplete, whether untrusted input can actually reach a dangerous operation,
+two individually harmless pieces of code that are unsafe together.
 
-This is off by default and entirely optional. The key stays on your machine, only regions
-already flagged by the deterministic pass are sent, and findings from this pass are labelled
-as inferred and can never trigger a "do not install" verdict.
+**What is sent.** The files that handle input the application does not control, plus any file
+that calls into one a rule flagged. Not the whole application, and not only the lines a rule
+matched. Both of those bounds are deliberate:
+
+- Sending only flagged lines would mean the pass could deepen findings you already have and
+  never discover one in code no rule happened to hit. Tested against a real application, the
+  two issues the pattern rules missed were both in files with zero findings.
+- Reading one hop of callers is what makes reachability answerable. The same application had
+  an unbounded stack allocation recorded as a local-only crash risk; it was reachable from a
+  remote HTTP response, and the file that proved it was one call away.
+
+The report lists exactly which files were read and how much the pass cost.
+
+**Bounds on it.** Off unless you tick it, per scan, and never on an isolated scan. Your key
+is encrypted to your Windows account and stored outside the application folder. Findings from
+this pass are labelled as inferred, carry a confidence level, and **can never trigger a "do
+not install" verdict** — the strongest claim in a report must not depend on whether the reader
+happened to have an API key.
 
 ## Status
 
-Early development. The analysis core, the rule set and the desktop interface are implemented
-and tested. The optional deep pass described above is not built yet.
+Early development. The analysis core, the rule set, the desktop interface and the optional
+deep pass are implemented and tested. Releases are not yet code-signed.
 
 ## Building
 

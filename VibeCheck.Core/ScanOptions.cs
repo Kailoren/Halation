@@ -41,7 +41,27 @@ public sealed record ScanOptions
     /// </summary>
     public IVulnerabilitySource? VulnerabilitySource { get; init; }
 
-    /// <summary>Default behaviour: live lookup, bundle written beside the artifact.</summary>
+    /// <summary>
+    /// An Anthropic API key, which turns on the optional deep pass.
+    /// </summary>
+    /// <remarks>
+    /// Off unless a key is supplied, and never read from the environment: paying for a scan
+    /// has to be a decision someone made, not something that happens because a variable was
+    /// set on the machine. Ignored entirely in <see cref="Isolate"/> mode, which promises no
+    /// network access at all.
+    /// </remarks>
+    public string? DeepPassApiKey { get; init; }
+
+    /// <summary>Ceiling on files the deep pass sends, since the key holder pays per file.</summary>
+    public int DeepPassMaxFiles { get; init; } = DeepPass.DeepPassTriage.DefaultMaxFiles;
+
+    /// <summary>Overrides the deep pass model. Unset uses the current default.</summary>
+    public string? DeepPassModel { get; init; }
+
+    /// <summary>True when a deep pass should run: a key was supplied and the scan can reach the network.</summary>
+    public bool DeepPassEnabled => !Isolate && !string.IsNullOrWhiteSpace(DeepPassApiKey);
+
+    /// <summary>Default behaviour: live lookup, bundle written beside the artifact, no deep pass.</summary>
     public static ScanOptions Default { get; } = new();
 
     /// <summary>No network, bundle only.</summary>

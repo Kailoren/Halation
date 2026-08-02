@@ -91,6 +91,32 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Optional deep pass. Off by default and not remembered between runs: it
+                     spends the reader's own money, so it should be a decision each time. -->
+                <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                    <StackPanel>
+                        <CheckBox Content="Deep pass (uses your Anthropic API key, and costs you money)"
+                                  IsChecked="{Binding DeepPassEnabled}"
+                                  IsEnabled="{Binding HasApiKey}"
+                                  Foreground="{StaticResource Text}"/>
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,6,0,0"
+                                   Text="Reads the files that handle untrusted input and reasons about them, catching incomplete guards and reachability that pattern rules cannot express. Findings are labelled as inferred and never trigger a do-not-install verdict."/>
+
+                        <StackPanel Orientation="Horizontal" Margin="24,10,0,0">
+                            <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                       Text="API key:"/>
+                            <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                       Margin="6,0,0,0" FontFamily="Consolas"
+                                       Text="{Binding ApiKeyStatus}"/>
+                            <Button Content="Set key" Style="{StaticResource Btn}" Margin="12,0,0,0"
+                                    Click="OnSetApiKey"/>
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,8,0,0"
+                                   Text="The key is encrypted to your Windows account and stored outside the application folder. Only the files selected above are sent, and only when this box is ticked."/>
+                    </StackPanel>
+                </Border>
+
                 <Border Style="{StaticResource Card}" Margin="0,12,0,0"
                         BorderBrush="{StaticResource Critical}"
                         Visibility="{Binding Error, Converter={StaticResource NullToVisibility}}">

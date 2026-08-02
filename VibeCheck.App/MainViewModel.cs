@@ -41,6 +41,49 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ExportJsonCommand = new RelayCommand(_ => Export("json"), _ => Report is not null);
     }
 
+    // ---- Deep pass ---------------------------------------------------------
+
+    private bool _deepPassEnabled;
+
+    /// <summary>
+    /// Whether this scan runs the optional deep pass. Off by default and not remembered
+    /// between runs: it spends the reader's own money, so it should be a decision each time
+    /// rather than a setting that quietly stays on.
+    /// </summary>
+    public bool DeepPassEnabled
+    {
+        get => _deepPassEnabled;
+        set
+        {
+            if (Set(ref _deepPassEnabled, value) && value && !HasApiKey)
+            {
+                // Nothing to run with. Turn it back off rather than letting the checkbox
+                // claim a pass that will not happen.
+                Set(ref _deepPassEnabled, false);
+                Notify(nameof(DeepPassEnabled));
+            }
+        }
+    }
+
+    public bool HasApiKey => ApiKeyStore.Load() is not null;
+
+    public string ApiKeyStatus => ApiKeyStore.Describe(ApiKeyStore.Load());
+
+    /// <summary>Stores or clears the key, then refreshes everything that depends on it.</summary>
+    public void SetApiKey(string? key)
+    {
+        ApiKeyStore.Save(key);
+
+        if (!HasApiKey)
+        {
+            _deepPassEnabled = false;
+        }
+
+        Notify(nameof(HasApiKey));
+        Notify(nameof(ApiKeyStatus));
+        Notify(nameof(DeepPassEnabled));
+    }
+
     /// <summary>The build's own version, shown in the title bar and stamped into reports.</summary>
     /// <remarks>An instance property, not a static one: WPF resolves binding paths against
     /// the DataContext instance and would silently find nothing on a static.</remarks>
@@ -257,6 +300,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             Isolate = Isolate,
             WriteBundle = !Isolate,
+
+            // Only when the reader both stored a key and switched the pass on for this scan.
+            // Isolate mode ignores it regardless, since that mode promises no network at all.
+            DeepPassApiKey = DeepPassEnabled ? ApiKeyStore.Load() : null,
         };
 
         try

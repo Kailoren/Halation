@@ -98,6 +98,22 @@ public partial class MainWindow : Window
         }
     }
 
+    // ---- Deep pass key -----------------------------------------------------
+
+    /// <summary>
+    /// Collects the API key. A plain dialog rather than anything cleverer, and the entered
+    /// value is never echoed back into the interface afterwards.
+    /// </summary>
+    private void OnSetApiKey(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ApiKeyWindow { Owner = this };
+
+        if (dialog.ShowDialog() == true)
+        {
+            _model.SetApiKey(dialog.ApiKey);
+        }
+    }
+
     // ---- Links -------------------------------------------------------------
 
     /// <summary>
