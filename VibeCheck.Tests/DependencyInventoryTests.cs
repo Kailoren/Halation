@@ -13,6 +13,122 @@ public class DependencyInventoryTests
             Language = RecoveredFile.LanguageOf(f.Path),
         })]);
 
+    private static string Manifest(string name, string version) =>
+        $$"""{"name":"{{name}}","version":"{{version}}"}""";
+
+    [Fact]
+    public void Vendored_manifest_resolves_to_an_exact_package()
+    {
+        var result = Extract(
+            ("node_modules/lodash/package.json", Manifest("lodash", "4.17.21")));
+
+        var dependency = Assert.Single(result.Dependencies);
+        Assert.Equal("npm:lodash@4.17.21", dependency.Coordinate);
+    }
+
+    /// <summary>
+    /// The application's own manifest declares ranges and says nothing about what shipped,
+    /// so it must keep counting as unresolved rather than being read as a dependency.
+    /// </summary>
+    [Fact]
+    public void Root_manifest_is_still_unresolved_and_is_not_a_dependency()
+    {
+        var result = Extract(
+            ("package.json", """{"name":"app","version":"1.0.0","dependencies":{"lodash":"^4.17.0"}}"""));
+
+        Assert.Empty(result.Dependencies);
+        Assert.Equal(["package.json"], result.Unresolved);
+    }
+
+    /// <summary>
+    /// A vendored manifest's ranges are covered by the packages themselves, which are all
+    /// present with exact versions. Counting them resolved 149 packages in a real
+    /// application and then reported the same 149 as unchecked.
+    /// </summary>
+    [Fact]
+    public void Vendored_manifest_ranges_are_not_reported_as_unresolved()
+    {
+        var result = Extract(
+            ("node_modules/express/package.json",
+                """{"name":"express","version":"4.18.2","dependencies":{"accepts":"~1.3.8"}}"""));
+
+        Assert.Single(result.Dependencies);
+        Assert.Empty(result.Unresolved);
+    }
+
+    [Fact]
+    public void Scoped_package_keeps_its_scope()
+    {
+        var result = Extract(
+            ("node_modules/@babel/runtime/package.json", Manifest("@babel/runtime", "7.24.0")));
+
+        var dependency = Assert.Single(result.Dependencies);
+        Assert.Equal("npm:@babel/runtime@7.24.0", dependency.Coordinate);
+    }
+
+    [Fact]
+    public void Nested_dependency_resolves_under_its_own_name()
+    {
+        var result = Extract(
+            ("node_modules/a/node_modules/b/package.json", Manifest("b", "2.0.0")));
+
+        var dependency = Assert.Single(result.Dependencies);
+        Assert.Equal("npm:b@2.0.0", dependency.Coordinate);
+    }
+
+    /// <summary>
+    /// This is untrusted input, and a range reaching OSV would be matched as though it were
+    /// an exact version.
+    /// </summary>
+    [Theory]
+    [InlineData("^4.17.0")]
+    [InlineData("~1.2.3")]
+    [InlineData(">=1.0.0")]
+    [InlineData("*")]
+    [InlineData("1.0.0 || 2.0.0")]
+    [InlineData("latest")]
+    public void Range_valued_version_is_rejected(string version)
+    {
+        var result = Extract(("node_modules/x/package.json", Manifest("x", version)));
+
+        Assert.Empty(result.Dependencies);
+    }
+
+    /// <summary>
+    /// Packages ship internal manifests in subdirectories. One real application vendors
+    /// node_modules/fast-uri/benchmark/package.json, whose declared name is "benchmark", a
+    /// real npm package the application does not ship. Trusting the name alone would report
+    /// a vulnerability in something that is not there.
+    /// </summary>
+    [Fact]
+    public void Manifest_in_a_package_subdirectory_is_not_treated_as_an_installed_package()
+    {
+        var result = Extract(
+            ("node_modules/fast-uri/benchmark/package.json", Manifest("benchmark", "2.1.4")));
+
+        Assert.Empty(result.Dependencies);
+    }
+
+    /// <summary>Subdirectory marker manifests carry neither a name nor a version.</summary>
+    [Fact]
+    public void Manifest_without_a_name_or_version_is_skipped()
+    {
+        var result = Extract(
+            ("node_modules/pkg/dist/package.json", """{"type":"module"}"""));
+
+        Assert.Empty(result.Dependencies);
+    }
+
+    [Fact]
+    public void Bundled_packages_carry_a_note_about_what_the_list_means()
+    {
+        var result = Extract(
+            ("node_modules/lodash/package.json", Manifest("lodash", "4.17.21")));
+
+        Assert.Contains(result.Notes, n => n.Contains("ships rather than what it loads", StringComparison.Ordinal));
+        Assert.Contains(result.Notes, n => n.Contains("asarUnpack", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void DotNetDeps_CollectsPackagesButNotProjects()
     {

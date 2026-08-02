@@ -85,7 +85,12 @@ public static class DependencyInventory
                     found.TryAdd(dependency.Coordinate, dependency);
                 }
 
+                // A vendored manifest's ranges are not a gap. Every package it names is itself
+                // sitting in node_modules with its own exact manifest, so counting these
+                // resolved 149 packages and then reported the same 149 as unchecked.
                 if (name.Equals("package.json", StringComparison.OrdinalIgnoreCase)
+                    && !file.RelativePath.Replace('\\', '/')
+                            .Contains("node_modules/", StringComparison.Ordinal)
                     && DeclaresRanges(file.Content))
                 {
                     unresolved.Add(file.RelativePath);
@@ -104,6 +109,21 @@ public static class DependencyInventory
                 + "shipped, so no dependency could be checked.");
         }
 
+        // Both of these bound what the resolved list means, and neither is visible from the
+        // list itself, so they are stated rather than left for the reader to infer.
+        if (found.Values.Any(d => d.DeclaredIn.Replace('\\', '/')
+                .Contains("node_modules/", StringComparison.Ordinal)))
+        {
+            notes.Add(
+                "Package versions were read from the bundled node_modules tree, which shows "
+                + "what the application ships rather than what it loads. A package that is "
+                + "bundled but never required is still listed.");
+
+            notes.Add(
+                "Any dependency moved out of the archive at build time, by asarUnpack or "
+                + "similar, was not seen and is not included in this list.");
+        }
+
         return new DependencyInventoryResult
         {
             Dependencies = [.. found.Values.OrderBy(d => d.Coordinate, StringComparer.Ordinal)],
@@ -119,9 +139,80 @@ public static class DependencyInventory
                 ReadDotNetDeps(file),
             "packages.lock.json" => ReadNuGetLock(file),
             "package-lock.json" => ReadNpmLock(file),
+            "package.json" => ReadVendoredPackage(file),
             "requirements.txt" => ReadRequirements(file),
             _ => [],
         };
+
+    /// <summary>Reads an installed package's own manifest.</summary>
+    /// <remarks>
+    /// <para>
+    /// A package.json in a source tree declares ranges and says nothing about what shipped,
+    /// which is why it is otherwise treated as unresolved. One vendored under node_modules is
+    /// a different document: it is the published manifest of the package actually sitting in
+    /// the bundle, so its version is exact. For a shipped application that is stronger
+    /// evidence than a lock file, which records only what was meant to be installed. It is
+    /// also the only evidence there is, because electron-builder does not put a lock file
+    /// inside the asar.
+    /// </para>
+    /// <para>
+    /// The name is taken from the manifest rather than the directory so a scoped package
+    /// keeps its <c>@scope/</c> prefix, but it must still agree with where the file sits.
+    /// Packages ship internal manifests in subdirectories, and one real application vendors
+    /// <c>node_modules/fast-uri/benchmark/package.json</c>, which declares the name
+    /// "benchmark". Trusting the name alone would have reported a vulnerability in an npm
+    /// package the application does not ship.
+    /// </para>
+    /// </remarks>
+    private static IEnumerable<DependencyRef> ReadVendoredPackage(RecoveredFile file)
+    {
+        var normalised = file.RelativePath.Replace('\\', '/');
+        var marker = normalised.LastIndexOf("node_modules/", StringComparison.Ordinal);
+
+        // The application's own manifest is not one of its own dependencies.
+        if (marker < 0)
+        {
+            yield break;
+        }
+
+        var afterMarker = normalised[(marker + "node_modules/".Length)..];
+        var slash = afterMarker.LastIndexOf('/');
+
+        if (slash <= 0)
+        {
+            yield break;
+        }
+
+        var installedAs = afterMarker[..slash];
+
+        using var document = JsonDocument.Parse(file.Content);
+
+        if (!document.RootElement.TryGetProperty("name", out var nameElement)
+            || nameElement.GetString() is not { Length: > 0 } name
+            || !document.RootElement.TryGetProperty("version", out var versionElement)
+            || versionElement.GetString() is not { Length: > 0 } version
+            || !string.Equals(installedAs, name, StringComparison.Ordinal)
+            || !IsExactVersion(version))
+        {
+            yield break;
+        }
+
+        yield return new DependencyRef
+        {
+            Ecosystem = "npm",
+            Name = name,
+            Version = version,
+            DeclaredIn = file.RelativePath,
+        };
+    }
+
+    /// <summary>
+    /// A published manifest should always carry a single concrete version, but this is
+    /// untrusted input, and a range reaching OSV would be matched as though it were exact.
+    /// </summary>
+    private static bool IsExactVersion(string version) =>
+        char.IsAsciiDigit(version[0])
+        && !version.Any(c => c is '^' or '~' or '>' or '<' or '=' or '*' or '|' or ' ');
 
     /// <summary>
     /// Reads the .NET dependency manifest. Entries typed "package" came from NuGet at a
