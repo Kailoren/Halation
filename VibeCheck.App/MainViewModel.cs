@@ -91,9 +91,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Notify(nameof(IsEndUser));
             Notify(nameof(AudienceSummary));
             Notify(nameof(SwitchAudienceLabel));
-            Notify(nameof(AudienceLabel));
-            Notify(nameof(LastWasDeveloper));
-            Notify(nameof(LastWasEndUser));
 
             // Switching to the end user view withdraws the deep pass entirely, because that
             // view means the reader did not write what they are about to scan. Selecting a
@@ -136,19 +133,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         : "Switch to the end user view";
 
     public bool IsChoosingAudience => State == AppState.ChoosingAudience;
-
-    /// <summary>
-    /// What was chosen last time, marked on the prompt so the common case is confirming
-    /// rather than re-deciding. Null the very first time, when there is nothing to recall.
-    /// </summary>
-    public bool LastWasDeveloper => AudienceStore.Load() == Audience.Developer;
-
-    public bool LastWasEndUser => AudienceStore.Load() == Audience.EndUser;
-
-    /// <summary>Lets the reader change their mind without going back to the prompt.</summary>
-    public string AudienceLabel => Audience == Audience.EndUser
-        ? "Reporting for someone who downloaded this"
-        : "Reporting for whoever ships this";
 
     public bool IsEndUser => Audience == Audience.EndUser;
 

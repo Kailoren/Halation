@@ -86,13 +86,7 @@
                                 CommandParameter="Developer"
                                 Style="{StaticResource ChoiceBtn}">
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="I built this application" FontSize="15"/>
-                                    <TextBlock Text="  last time" Style="{StaticResource Caption}"
-                                               VerticalAlignment="Center"
-                                               Visibility="{Binding LastWasDeveloper,
-                                                            Converter={StaticResource BoolToVisibility}}"/>
-                                </StackPanel>
+                                <TextBlock Text="I built this application" FontSize="15"/>
                                 <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0"
                                            TextWrapping="Wrap"
                                            Text="Everything, including leaked keys and packaging mistakes, with rule identifiers, advisory links, and how to fix each one."/>
@@ -103,13 +97,7 @@
                                 CommandParameter="EndUser" Margin="0,10,0,0"
                                 Style="{StaticResource ChoiceBtn}">
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="I downloaded this application" FontSize="15"/>
-                                    <TextBlock Text="  last time" Style="{StaticResource Caption}"
-                                               VerticalAlignment="Center"
-                                               Visibility="{Binding LastWasEndUser,
-                                                            Converter={StaticResource BoolToVisibility}}"/>
-                                </StackPanel>
+                                <TextBlock Text="I downloaded this application" FontSize="15"/>
                                 <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0"
                                            TextWrapping="Wrap"
                                            Text="What it could do to you and your machine, in plain language. The developer's own mistakes are still listed, marked as not your problem."/>
@@ -165,18 +153,12 @@
                     </StackPanel>
                 </ContentControl>
 
-                <!-- Changing the reader here rather than only at the prompt, so a wrong answer
-                     at launch costs a click instead of a restart. -->
-                <ContentControl Style="{StaticResource Card}" Margin="0,12,0,0">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding AudienceLabel}" VerticalAlignment="Center"/>
-                        <Button Command="{Binding SwitchAudienceCommand}"
-                                Content="{Binding SwitchAudienceLabel}"
-                                Background="Transparent" BorderThickness="0" Padding="0"
-                                Margin="12,0,0,0" Cursor="Hand" VerticalAlignment="Center"
-                                Foreground="{StaticResource Accent}" FontSize="12"/>
-                    </StackPanel>
-                </ContentControl>
+                <!-- The audience card that used to sit here is gone. It offered a one-click
+                     toggle at a point where nothing had been scanned yet, so it changed a
+                     setting rather than a report, and the "return to selection" button below
+                     now covers the same ground by going back to the screen that explains the
+                     difference. The equivalent switch on the results screen stays: there it
+                     re-answers a report already in hand, which is a different thing. -->
 
                 <!-- Optional deep pass. Off by default and not remembered between runs: it
                      spends something of the reader's either way, so it should be a decision

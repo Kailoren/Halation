@@ -21,6 +21,16 @@ public partial class MainWindow : Window
         // exactly like a theme that chose not to animate. IsDragging already works this way and
         // this follows it.
         StateChanged += (_, _) => _model.IsMinimised = WindowState == WindowState.Minimized;
+
+        // Applied before the window is shown, so it opens where it was left rather than
+        // appearing centred and jumping. A remembered position that no longer lands on any
+        // screen is discarded inside Apply; see WindowPlacementStore for why that matters more
+        // than it sounds.
+        WindowPlacementStore.Apply(this);
+
+        // Closing rather than a state change, so a window dragged around during a session
+        // is only written once.
+        Closing += (_, _) => WindowPlacementStore.Save(this);
     }
 
     // ---- Window chrome -----------------------------------------------------
