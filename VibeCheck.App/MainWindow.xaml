@@ -113,7 +113,7 @@
                         </StackPanel>
 
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,8,0,0"
-                                   Text="The key is encrypted to your Windows account and stored outside the application folder. Only the files selected above are sent, and only when this box is ticked."/>
+                                   Text="Your key is encrypted to your Windows account and stored outside the application folder. Only the files that handle untrusted input are sent, never the whole application, and never on an isolated scan. The report lists which files were read and what it cost."/>
                     </StackPanel>
                 </Border>
 
@@ -124,9 +124,11 @@
                                Foreground="{StaticResource Critical}"/>
                 </Border>
 
+                <!-- Bound rather than fixed: this promise stops being true the moment the
+                     deep pass is switched on, and must say so. -->
                 <TextBlock Style="{StaticResource Caption}" Margin="0,18,0,0" TextWrapping="Wrap"
                            TextAlignment="Center"
-                           Text="Nothing is uploaded. Analysis runs on this machine."/>
+                           Text="{Binding PrivacyLine}"/>
             </StackPanel>
         </Grid>
 

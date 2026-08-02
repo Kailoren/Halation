@@ -62,10 +62,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 Set(ref _deepPassEnabled, false);
                 Notify(nameof(DeepPassEnabled));
             }
+
+            Notify(nameof(PrivacyLine));
         }
     }
 
     public bool HasApiKey => ApiKeyStore.Load() is not null;
+
+    /// <summary>
+    /// The standing promise on the drop screen, which stops being true the moment the deep
+    /// pass is switched on. Leaving "nothing is uploaded" showing while source is about to be
+    /// sent to an API would be the plainest possible lie this interface could tell.
+    /// </summary>
+    public string PrivacyLine => DeepPassEnabled
+        ? "Deep pass is on: the files it selects will be sent to Anthropic on your key. "
+          + "Everything else runs on this machine."
+        : "Nothing is uploaded. Analysis runs on this machine.";
 
     public string ApiKeyStatus => ApiKeyStore.Describe(ApiKeyStore.Load());
 
