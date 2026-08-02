@@ -1,0 +1,191 @@
+<!--
+    VibeCheck default theme.
+
+    Every colour, font and metric the interface uses is a named key in here. Nothing visual
+    should be hardcoded in a window: if a value cannot be changed from this file, that is a
+    bug in the theme rather than a preference of the window.
+
+    To experiment without rebuilding, copy this file to
+
+        %LOCALAPPDATA%\VibeCheck\theme.xaml
+
+    and edit it there. It is merged over this one at startup, so it only needs to contain the
+    keys being changed. Delete that file to go back to what is in here. A theme that fails to
+    parse is reported once and ignored, so a bad edit cannot stop the application starting.
+
+    See THEME.md beside this file for what each key controls.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- ====================================================================
+         Palette
+
+         Deliberately neutral: this is a security tool, and a result should read as evidence
+         rather than as branding. The severity colours are the only saturated ones in the
+         application, so they carry meaning by contrast rather than by decoration. Changing
+         the neutrals is safe; changing the severity ramp changes what a glance communicates.
+         ==================================================================== -->
+
+
+    <SolidColorBrush x:Key="Bg"          Color="#16181D"/>
+    <SolidColorBrush x:Key="Panel"       Color="#1E2128"/>
+    <SolidColorBrush x:Key="PanelRaised" Color="#252932"/>
+    <SolidColorBrush x:Key="Edge"        Color="#2E323B"/>
+    <SolidColorBrush x:Key="Text"        Color="#E4E7EC"/>
+    <SolidColorBrush x:Key="Muted"       Color="#8B93A1"/>
+    <SolidColorBrush x:Key="Accent"      Color="#4C8DFF"/>
+
+    <!-- Was hardcoded inside two control templates, which made hover the one thing a theme
+         could not touch. -->
+    <SolidColorBrush x:Key="Hover"       Color="#2F3540"/>
+    <SolidColorBrush x:Key="CloseHover"  Color="#C42B1C"/>
+    <SolidColorBrush x:Key="OnDanger"    Color="#FFFFFF"/>
+
+    <!-- Severity ramp. Read left to right as worsening; keep them distinguishable to a
+         colour-blind reader by lightness as well as by hue. -->
+    <SolidColorBrush x:Key="Critical" Color="#FF4D4F"/>
+    <SolidColorBrush x:Key="High"     Color="#FF8A3D"/>
+    <SolidColorBrush x:Key="Medium"   Color="#FFC53D"/>
+    <SolidColorBrush x:Key="Low"      Color="#58B2FF"/>
+    <SolidColorBrush x:Key="Good"     Color="#52C41A"/>
+
+    <!-- "Could not analyse" is grey, never green. An artifact that was never read must not
+         look like one that passed, and keeping those visually distinct is the entire point of
+         having the band. If a theme makes this green, the theme is lying for the tool. -->
+    <SolidColorBrush x:Key="Unknown" Color="#6B7280"/>
+
+    <!-- ====================================================================
+         Typography and metrics
+         ==================================================================== -->
+
+    <FontFamily x:Key="UiFont">Segoe UI</FontFamily>
+    <FontFamily x:Key="MonoFont">Consolas</FontFamily>
+
+    <!-- Segoe MDL2 Assets supplies the title bar glyphs. Replacing it means replacing the
+         glyph codes in the window markup too. -->
+    <FontFamily x:Key="IconFont">Segoe MDL2 Assets</FontFamily>
+
+    <sys:Double x:Key="BodySize">13</sys:Double>
+    <sys:Double x:Key="CaptionSize">12</sys:Double>
+    <sys:Double x:Key="HeadingSize">15</sys:Double>
+    <sys:Double x:Key="ScoreSize">42</sys:Double>
+
+    <CornerRadius x:Key="CardRadius">6</CornerRadius>
+    <CornerRadius x:Key="ButtonRadius">4</CornerRadius>
+    <Thickness x:Key="CardPadding">16</Thickness>
+    <Thickness x:Key="ButtonPadding">14,7</Thickness>
+    <sys:Double x:Key="CaptionHeight">36</sys:Double>
+
+    <!-- ====================================================================
+         Control styles
+         ==================================================================== -->
+
+    <Style TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+    </Style>
+
+    <Style x:Key="Heading" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource HeadingSize}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="Margin" Value="0,0,0,10"/>
+    </Style>
+
+    <Style x:Key="Caption" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
+        <Setter Property="FontSize" Value="{DynamicResource CaptionSize}"/>
+    </Style>
+
+    <Style x:Key="Card" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource Panel}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Edge}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{DynamicResource CardRadius}"/>
+        <Setter Property="Padding" Value="{DynamicResource CardPadding}"/>
+    </Style>
+
+    <Style x:Key="Btn" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource PanelRaised}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Edge}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="{DynamicResource ButtonPadding}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{DynamicResource ButtonRadius}">
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Margin="{TemplateBinding Padding}"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Hover}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Title-bar buttons. Flat and borderless, and hit-test-visible so WindowChrome hands
+         them clicks instead of treating them as drag surface. -->
+    <Style x:Key="CaptionBtn" TargetType="Button">
+        <Setter Property="Width" Value="44"/>
+        <Setter Property="Height" Value="{DynamicResource CaptionHeight}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Muted}"/>
+        <Setter Property="FontFamily" Value="{DynamicResource IconFont}"/>
+        <Setter Property="FontSize" Value="10"/>
+        <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="Transparent">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Hover}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- BasedOn is the one reference here that must stay static: WPF resolves style
+         inheritance when the dictionary loads and throws outright on a DynamicResource.
+         It means overriding CaptionBtn alone does not reach CloseBtn, so a theme that
+         restyles one should restyle both. -->
+    <Style x:Key="CloseBtn" TargetType="Button" BasedOn="{StaticResource CaptionBtn}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" Background="Transparent">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource CloseHover}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource OnDanger}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>
