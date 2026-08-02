@@ -44,7 +44,56 @@ public static class UntrustedInputRules
         UnboundedStackAllocation,
         ShellOpenOfDynamicUrl,
         UnguardedNumericParse,
+        UnboundedRemoteRead,
     ];
+
+    /// <summary>
+    /// Reading an entire remote response into memory with no size limit.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// These calls materialise the whole response before the caller sees any of it, so there
+    /// is no point at which a length can be checked. The size is decided by whoever answers
+    /// the request. That is fine against an endpoint the application controls and is a hole
+    /// against any third-party API, because the trust assumption is invisible at the call
+    /// site: the same line is correct or wrong depending only on what it points at.
+    /// </para>
+    /// <para>
+    /// Found by scanning a hand-audited application that had already been through a security
+    /// pass. It capped responses from its own service and read a third-party API with no cap
+    /// at all, which is the wrong way round, and the unbounded string then fed a stackalloc.
+    /// Neither half was noticed by review.
+    /// </para>
+    /// </remarks>
+    private static PatternRule UnboundedRemoteRead { get; } = new()
+    {
+        Id = "VC-INPUT-004",
+        Title = "Reads an entire remote response with no size limit",
+        Severity = Severity.Medium,
+        Category = FindingCategory.Network,
+        Description =
+            "The response body is read into a single string or array in one call, so its size is "
+            + "whatever the remote end chooses to send. A large or endless reply becomes memory "
+            + "the application cannot refuse, and anything derived from that value carries the "
+            + "same unbounded length onwards.",
+        Remediation =
+            "Read the body as a stream and copy it with a byte ceiling, failing once the ceiling "
+            + "is passed. Checking the Content-Length header instead is not equivalent: it is "
+            + "absent on chunked responses and is supplied by the sender either way, so the limit "
+            + "has to be enforced while reading rather than before it.",
+        Pattern = PatternRule.Compile(
+            """
+            \.(?:GetStringAsync
+            |GetByteArrayAsync
+            |ReadAsStringAsync
+            |ReadAsByteArrayAsync
+            |DownloadString(?:TaskAsync)?
+            |DownloadData(?:TaskAsync)?)\s*\(
+            """,
+            RegexOptions.IgnorePatternWhitespace),
+        Languages = [SourceLanguage.CSharp],
+        Ignore = (match, context) => Heuristics.IsInLineComment(context, match.Index),
+    };
 
     /// <summary>
     /// Stack allocation sized from a variable.

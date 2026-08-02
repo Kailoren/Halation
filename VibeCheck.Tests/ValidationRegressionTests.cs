@@ -217,6 +217,35 @@ public class ValidationRegressionTests : IDisposable
             RunRules("Process.Start(new ProcessStartInfo(downloadUrl) { UseShellExecute = true });", "Update.cs"),
             f => f.RuleId == "VC-INPUT-002");
 
+    /// <summary>
+    /// Every one of these materialises the whole body in a single call, so there is no point
+    /// at which the caller could impose a limit.
+    /// </summary>
+    [Theory]
+    [InlineData("var json = await Http.GetStringAsync(url, ct).ConfigureAwait(false);")]
+    [InlineData("var bytes = await client.GetByteArrayAsync(uri);")]
+    [InlineData("var body = await response.Content.ReadAsStringAsync(ct);")]
+    [InlineData("var raw = await response.Content.ReadAsByteArrayAsync();")]
+    [InlineData("var text = webClient.DownloadString(address);")]
+    public void UnboundedRemoteRead_IsFlagged(string line) =>
+        Assert.Contains(RunRules(line, "Client.cs"), f => f.RuleId == "VC-INPUT-004");
+
+    /// <summary>
+    /// The recommended fix is a bounded stream copy, so the streaming call it is written in
+    /// terms of must not itself be reported.
+    /// </summary>
+    [Theory]
+    [InlineData("await using var stream = await response.Content.ReadAsStreamAsync(ct);")]
+    [InlineData("var local = File.ReadAllText(path);")]
+    public void BoundedOrLocalRead_IsNotFlagged(string line) =>
+        Assert.DoesNotContain(RunRules(line, "Client.cs"), f => f.RuleId == "VC-INPUT-004");
+
+    [Fact]
+    public void RemoteReadInAComment_IsNotFlagged() =>
+        Assert.DoesNotContain(
+            RunRules("// was GetStringAsync(url) before the size cap went in", "Client.cs"),
+            f => f.RuleId == "VC-INPUT-004");
+
     // ---- Found by unpacking and scanning real single-file applications ----
 
     /// <summary>
