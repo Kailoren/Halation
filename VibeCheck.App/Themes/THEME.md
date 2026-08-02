@@ -79,6 +79,22 @@ lightness as well as hue, or a colour-blind reader loses the ordering.
 > that passed. Keeping those two visually distinct is the entire reason the band exists, and a
 > theme that blurs them makes the tool dishonest on the tool's behalf.
 
+There is one margin here worth understanding before spending it. Colour is not the only carrier
+of severity: every finding row prints the word beside the bar, and the score band prints its
+label beside the number. So a theme that puts two neighbouring severities in the same family is
+degrading a redundant signal rather than removing the only one.
+
+`Cyberpunk2077.xaml` does exactly that, and says so where it happens. Its `High` is red rather
+than the conventional orange, because orange sat too close to the yellow that theme is built on
+and stopped reading as a warning. `Critical` and `High` are then separated by hue alone, the
+first carrying a blue cast and the second not. On a near-black background there is no third
+option, since darkening one far enough to also separate it by lightness drops it below the
+contrast a ten pixel label needs.
+
+That is a defensible trade while the words are on screen. It stops being one the moment they are
+not, so if the severity label is ever dropped from a finding row, every ramp has to be revisited
+in the same change.
+
 ## Typography
 
 | Key | Default | Notes |
