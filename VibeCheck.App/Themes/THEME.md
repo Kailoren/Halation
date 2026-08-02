@@ -79,6 +79,18 @@ lightness as well as hue, or a colour-blind reader loses the ordering.
 > that passed. Keeping those two visually distinct is the entire reason the band exists, and a
 > theme that blurs them makes the tool dishonest on the tool's behalf.
 
+Two panels belong to a severity rather than merely being coloured by one:
+
+| Key | Default | What it fills |
+|---|---|---|
+| `CriticalFill` | `#2A1618` | The do-not-install banner |
+| `MediumFill` | `#2A2418` | The note marking a finding as inferred by the deep pass |
+
+Opaque in the default theme, unlike `AccentWash`: these are the surface rather than a tint laid
+over one, and both values were chosen against the default background. A theme is free to make
+them translucent, and `Cyberpunk2077.xaml` does, holding them to the same opacity as its panels
+so its animated backdrop reads through them.
+
 These reach further than the severity bar. A finding row is outlined in its own severity too,
 through the same converter and the same brush, so the outline can never disagree with the label
 it surrounds. Changing one of these colours changes how loud a whole screen of findings is, not
@@ -264,6 +276,18 @@ and the fills and hairlines around it all stop at shared grid lines so they meet
 Fonts named in a `FontFamily` fall back left to right, so listing faces that are not installed
 is safe and is how that theme picks up Oxanium or Michroma if they are present and Bahnschrift
 if they are not.
+
+## Nothing visual is left in a window
+
+Every colour, radius, font and metric the two windows draw now comes from a key in here. That is
+checkable rather than aspirational, and worth rechecking after any markup change:
+
+```
+rg 'CornerRadius="[0-9]|(Background|BorderBrush|Foreground|Fill)="#' *.xaml
+```
+
+The only survivors should be the `CornerRadius="0"` on each window's `WindowChrome`, which is
+native window geometry rather than appearance and has no business being themed.
 
 ## What a theme cannot change
 

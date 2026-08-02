@@ -115,6 +115,14 @@
          truth about how little it saw. -->
     <SolidColorBrush x:Key="Unknown"  Color="#6B7280"/>
 
+    <!-- The do-not-install banner and the inferred-finding note. Held to the same nine tenths
+         opacity the panels are, so the backdrop reads faintly through them and they sit in the
+         same plane as every card around them rather than looking pasted on top. The default
+         theme's versions are opaque, which is correct there because it has no backdrop for
+         anything to show through. -->
+    <SolidColorBrush x:Key="CriticalFill" Color="#E6330A16"/>
+    <SolidColorBrush x:Key="MediumFill"   Color="#E6231F05"/>
+
     <!-- ====================================================================
          Typography and metrics
          ==================================================================== -->

@@ -69,6 +69,19 @@
          having the band. If a theme makes this green, the theme is lying for the tool. -->
     <SolidColorBrush x:Key="Unknown" Color="#6B7280"/>
 
+    <!-- Filled panels that belong to a severity: the do-not-install banner and the note that
+         marks a finding as inferred by the deep pass. Both were hardcoded browns in the window
+         markup, which made the two loudest surfaces in the application the two a theme could
+         not touch.
+
+         Opaque rather than a wash, unlike AccentWash. These are not laid over something to
+         tint it, they are the surface, and they are dark enough that the severity they belong
+         to has to be readable against them. A theme is free to make them translucent; the
+         default does not, because these two values were chosen against the default background
+         and picking them apart into a tint would change how they look for no gain. -->
+    <SolidColorBrush x:Key="CriticalFill" Color="#2A1618"/>
+    <SolidColorBrush x:Key="MediumFill"   Color="#2A2418"/>
+
     <!-- ====================================================================
          Typography and metrics
          ==================================================================== -->
