@@ -242,9 +242,15 @@ public class ScannerIntegrationTests : IDisposable
     {
         var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
 
-        var markdown = MarkdownReportWriter.Write(report with { DeepPassRan = true, DeepPassCost = 0.42m });
+        var markdown = MarkdownReportWriter.Write(report with
+        {
+            DeepPassRan = true,
+            DeepPassBackend = "the Anthropic API (claude-opus-5)",
+            DeepPassCost = 0.42m,
+        });
 
         Assert.Contains("US$0.42", markdown, StringComparison.Ordinal);
+        Assert.Contains("on your API key", markdown, StringComparison.Ordinal);
     }
 
     /// <summary>A third of a cent is cheap, not free; "US$0.00" would say the wrong one.</summary>
@@ -253,10 +259,73 @@ public class ScannerIntegrationTests : IDisposable
     {
         var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
 
-        var markdown = MarkdownReportWriter.Write(report with { DeepPassRan = true, DeepPassCost = 0.003m });
+        var markdown = MarkdownReportWriter.Write(report with
+        {
+            DeepPassRan = true,
+            DeepPassBackend = "the Anthropic API (claude-opus-5)",
+            DeepPassCost = 0.003m,
+        });
 
         Assert.Contains("under US$0.01", markdown, StringComparison.Ordinal);
         Assert.DoesNotContain("US$0.00", markdown, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A subscription-backed pass bills nothing. The CLI still reports what the same request
+    /// would have cost through the API, and printing that would tell somebody whose card was
+    /// never touched that they had been charged.
+    /// </summary>
+    [Fact]
+    public async Task MarkdownReport_DoesNotClaimASubscriptionRunCostMoney()
+    {
+        var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
+
+        var markdown = MarkdownReportWriter.Write(report with
+        {
+            DeepPassRan = true,
+            DeepPassBackend = "the Claude Code CLI bundled with the Claude desktop app (2.1.219)",
+            DeepPassCost = null,
+        });
+
+        Assert.DoesNotContain("US$", markdown, StringComparison.Ordinal);
+        Assert.DoesNotContain("API key", markdown, StringComparison.Ordinal);
+        Assert.Contains("quota rather than money", markdown, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A deep pass that was asked for and could not run must not read as one that ran and cost
+    /// nothing, which is what a bare "US$0.00" would say.
+    /// </summary>
+    [Fact]
+    public async Task MarkdownReport_SaysWhenTheDeepPassDidNotRunAtAll()
+    {
+        var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
+
+        var markdown = MarkdownReportWriter.Write(report with
+        {
+            DeepPassRan = true,
+            DeepPassBackend = null,
+            DeepPassCost = null,
+        });
+
+        Assert.Contains("did not run", markdown, StringComparison.Ordinal);
+        Assert.DoesNotContain("US$0.00", markdown, StringComparison.Ordinal);
+    }
+
+    /// <summary>The report names what answered, so two scans that disagree can be told apart.</summary>
+    [Fact]
+    public async Task MarkdownReport_NamesTheBackendThatAnsweredTheDeepPass()
+    {
+        var report = await new Scanner().ScanAsync(BuildVulnerableProject(), ScanOptions.NoDependencyCheck);
+
+        var markdown = MarkdownReportWriter.Write(report with
+        {
+            DeepPassRan = true,
+            DeepPassBackend = "the Anthropic API (claude-opus-5)",
+            DeepPassCost = 0.42m,
+        });
+
+        Assert.Contains("the Anthropic API (claude-opus-5)", markdown, StringComparison.Ordinal);
     }
 
     private static string Jwt(string role)

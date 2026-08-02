@@ -16,10 +16,14 @@ namespace VibeCheck.Core.DeepPass;
 /// </remarks>
 public static class DeepPassRunner
 {
+    /// <summary>A backend to use, or the reason there is not one.</summary>
+    private readonly record struct BackendChoice(IDeepPassBackend? Backend, string? Problem);
+
     public static async Task<DeepPassResult> RunAsync(
         IReadOnlyList<RecoveredFile> files,
         IReadOnlyList<Finding> deterministicFindings,
         ScanOptions options,
+        IDeepPassBackend? backend = null,
         IProgress<ScanProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -32,12 +36,50 @@ public static class DeepPassRunner
             return new DeepPassResult();
         }
 
+        // A caller-supplied backend belongs to the caller, including its lifetime.
+        var supplied = backend is not null;
+        var chosen = supplied
+            ? new BackendChoice(backend, null)
+            : await ChooseAsync(options, cancellationToken).ConfigureAwait(false);
+
+        if (chosen.Backend is not { } client)
+        {
+            // Nothing could answer. Said out loud rather than returning an empty result, which
+            // would be indistinguishable from a deep pass that ran and found nothing.
+            return new DeepPassResult { Limitations = [chosen.Problem!] };
+        }
+
+        try
+        {
+            return await ReviewAllAsync(
+                files, deterministicFindings, options, client, progress, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            if (!supplied)
+            {
+                client.Dispose();
+            }
+        }
+    }
+
+    private static async Task<DeepPassResult> ReviewAllAsync(
+        IReadOnlyList<RecoveredFile> files,
+        IReadOnlyList<Finding> deterministicFindings,
+        ScanOptions options,
+        IDeepPassBackend client,
+        IProgress<ScanProgress>? progress,
+        CancellationToken cancellationToken)
+    {
         var triaged = DeepPassTriage.Select(files, deterministicFindings, options.DeepPassMaxFiles);
 
         if (triaged.Count == 0)
         {
             return new DeepPassResult
             {
+                Backend = client.Description,
+                Billed = client.BillsTheReader,
                 Limitations =
                 [
                     "The deep pass ran but found nothing worth reading: no file in this "
@@ -51,8 +93,6 @@ public static class DeepPassRunner
         var usage = new TokenUsage();
         var examined = 0;
         var fellBack = 0;
-
-        using var client = new DeepPassClient(options.DeepPassApiKey!, options.DeepPassModel);
 
         foreach (var file in triaged)
         {
@@ -79,6 +119,11 @@ public static class DeepPassRunner
                 limitations.Add(review.Limitation);
             }
         }
+
+        // Which thing answered. Two backends run different models under different settings, so
+        // a reader comparing two reports of the same application is owed this before they start
+        // wondering why the findings differ.
+        limitations.Add($"The deep pass was answered by {client.Description}.");
 
         // Said whether or not anything was found. A deep pass that read 12 of an
         // application's files has not cleared the other 300, and the report has to say which
@@ -109,6 +154,63 @@ public static class DeepPassRunner
             Limitations = limitations,
             FilesExamined = examined,
             Usage = usage,
+            Backend = client.Description,
+            Billed = client.BillsTheReader,
         };
+    }
+
+    /// <summary>
+    /// Decides what answers the deep pass, or why nothing can.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The local CLI route is gated to the developer audience, and that gate lives here rather
+    /// than in the UI. Claude Code is an agent with shell and filesystem access; the API is an
+    /// endpoint that cannot execute anything. Feeding source recovered from untrusted software
+    /// into the former is only defensible when the reader wrote that software. The flags this
+    /// backend passes reduce the risk, but they are a third party's flags and a weaker boundary
+    /// than an endpoint that has no hands. A gate enforced in the core cannot be lost to a
+    /// change in a view.
+    /// </para>
+    /// <para>
+    /// Every refusal below returns a reason rather than silently falling back to the API. A
+    /// reader who asked for their subscription to be used should not discover afterwards that
+    /// their card was charged instead.
+    /// </para>
+    /// </remarks>
+    private static async Task<BackendChoice> ChooseAsync(
+        ScanOptions options,
+        CancellationToken cancellationToken)
+    {
+        if (!options.DeepPassUseLocalCli)
+        {
+            return new BackendChoice(
+                new DeepPassClient(options.DeepPassApiKey!, options.DeepPassModel), null);
+        }
+
+        if (options.Audience != Audience.Developer)
+        {
+            return new BackendChoice(
+                null,
+                "The deep pass did not run. Answering it through Claude Code on this machine is "
+                + "offered only when reviewing an application you built yourself, because it "
+                + "means handing code to a tool that can act on this computer. Scans of "
+                + "software from elsewhere use the Anthropic API instead, which cannot.");
+        }
+
+        if (ClaudeCodeCliLocator.Locate() is not { } cli)
+        {
+            return new BackendChoice(
+                null,
+                "The deep pass did not run: no Claude Code installation was found on this "
+                + "machine. Install it, or supply an Anthropic API key instead.");
+        }
+
+        var auth = await ClaudeCodeCliBackend.CheckAuthenticationAsync(cli, cancellationToken)
+            .ConfigureAwait(false);
+
+        return auth.SignedIn
+            ? new BackendChoice(new ClaudeCodeCliBackend(cli, options.DeepPassModel), null)
+            : new BackendChoice(null, auth.Problem);
     }
 }

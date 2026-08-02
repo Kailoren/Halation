@@ -55,6 +55,14 @@ public sealed record ScanReport
     /// </summary>
     public decimal? DeepPassCost { get; init; }
 
+    /// <summary>
+    /// What answered the deep pass, or null when it did not run. Named in the report because
+    /// two backends run different models under different settings, so a reader comparing two
+    /// scans of the same application needs to know whether the tool changed or the application
+    /// did.
+    /// </summary>
+    public string? DeepPassBackend { get; init; }
+
     /// <summary>Version of the scanner that produced this report.</summary>
     public required string ScannerVersion { get; init; }
 

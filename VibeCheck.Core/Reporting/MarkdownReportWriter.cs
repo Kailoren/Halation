@@ -382,10 +382,33 @@ public static class MarkdownReportWriter
 
         if (report.DeepPassRan)
         {
-            output.AppendLine(" · Includes findings from the optional AI deep pass"
-                              + $", which cost {Money(report.DeepPassCost ?? 0m)} on your API key.");
+            output.AppendLine(" · " + DeepPassNote(report));
         }
     }
+
+    /// <summary>
+    /// What the deep pass cost, in the terms the reader actually paid in.
+    /// </summary>
+    /// <remarks>
+    /// Three outcomes, and conflating any two of them says something untrue. A pass answered
+    /// through a Claude subscription spends quota and bills nothing, so printing its
+    /// API-equivalent price would tell somebody their card was charged when it was not. A pass
+    /// that never ran costs nothing at all, and "US$0.00" would read as one that ran and was
+    /// free.
+    /// </remarks>
+    private static string DeepPassNote(ScanReport report) => report switch
+    {
+        { DeepPassBackend: null } =>
+            "The optional AI deep pass was requested but did not run; see the limitations above.",
+
+        { DeepPassCost: { } cost } =>
+            $"Includes findings from the optional AI deep pass, answered by "
+            + $"{report.DeepPassBackend}, which cost {Money(cost)} on your API key.",
+
+        _ => "Includes findings from the optional AI deep pass, answered by "
+             + $"{report.DeepPassBackend}. It spent your Claude subscription's quota rather "
+             + "than money, so there is no charge to expect.",
+    };
 
     /// <summary>
     /// Rounds to cents, but never down to nothing: a pass that cost a third of a cent is cheap,

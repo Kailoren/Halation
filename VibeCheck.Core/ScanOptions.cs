@@ -54,14 +54,30 @@ public sealed record ScanOptions
     /// </remarks>
     public string? DeepPassApiKey { get; init; }
 
+    /// <summary>
+    /// Runs the deep pass through a Claude Code installation on this machine instead of an API
+    /// key, so a reader with a Claude subscription does not have to buy credits twice.
+    /// </summary>
+    /// <remarks>
+    /// Off unless asked for, on the same reasoning as the key: a scan must not start spending
+    /// somebody's subscription quota because a tool happened to be installed. Honoured only for
+    /// <see cref="Model.Audience.Developer"/>, and ignored in <see cref="Isolate"/> mode, which
+    /// promises no network access; a local CLI still makes requests.
+    /// </remarks>
+    public bool DeepPassUseLocalCli { get; init; }
+
     /// <summary>Ceiling on files the deep pass sends, since the key holder pays per file.</summary>
     public int DeepPassMaxFiles { get; init; } = DeepPass.DeepPassTriage.DefaultMaxFiles;
 
     /// <summary>Overrides the deep pass model. Unset uses the current default.</summary>
     public string? DeepPassModel { get; init; }
 
-    /// <summary>True when a deep pass should run: a key was supplied and the scan can reach the network.</summary>
-    public bool DeepPassEnabled => !Isolate && !string.IsNullOrWhiteSpace(DeepPassApiKey);
+    /// <summary>
+    /// True when a deep pass should run: something was chosen to answer it, and the scan can
+    /// reach the network.
+    /// </summary>
+    public bool DeepPassEnabled =>
+        !Isolate && (!string.IsNullOrWhiteSpace(DeepPassApiKey) || DeepPassUseLocalCli);
 
     /// <summary>Default behaviour: live lookup, bundle written beside the artifact, no deep pass.</summary>
     /// <summary>

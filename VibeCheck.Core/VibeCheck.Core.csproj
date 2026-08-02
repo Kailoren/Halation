@@ -6,6 +6,14 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!-- The deep pass's CLI backend hands untrusted source to an agent that could act on this
+       machine, and the flags that stop it acting are the whole safety argument. Tests assert
+       the argument list and the envelope handling directly rather than inferring them from
+       behaviour, which needs to see inside. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="VibeCheck.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="ICSharpCode.Decompiler" Version="10.1.1.8388" />
 

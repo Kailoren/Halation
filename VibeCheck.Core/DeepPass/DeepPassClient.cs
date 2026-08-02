@@ -81,7 +81,30 @@ public sealed record DeepPassResult
 
     public TokenUsage Usage { get; init; } = new();
 
+    /// <summary>
+    /// What answered, in the words the report uses. Null when nothing did.
+    /// </summary>
+    public string? Backend { get; init; }
+
+    /// <summary>Whether <see cref="EstimatedCost"/> describes money the reader was charged.</summary>
+    /// <remarks>
+    /// Defaults to true because the API backend was the only one for most of this type's life,
+    /// and a new backend that spends something other than money has to say so deliberately.
+    /// </remarks>
+    public bool Billed { get; init; } = true;
+
+    /// <summary>What these tokens are worth at published API rates, whoever ends up paying.</summary>
     public decimal EstimatedCost => Usage.EstimatedCost;
+
+    /// <summary>
+    /// What the reader was actually charged, or null when they were not charged at all.
+    /// </summary>
+    /// <remarks>
+    /// A subscription-backed run consumes quota rather than money. The estimate above is still
+    /// a true statement about the tokens, and still the wrong number to put in front of
+    /// somebody as a bill, so the two are kept apart rather than conflated.
+    /// </remarks>
+    public decimal? BilledCost => Billed ? EstimatedCost : null;
 }
 
 /// <summary>
@@ -126,6 +149,9 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
 
     /// <inheritdoc/>
     public string Description => $"the Anthropic API ({model ?? DefaultModel})";
+
+    /// <summary>True. Every token here is charged to the key the reader supplied.</summary>
+    public bool BillsTheReader => true;
 
     /// <summary>
     /// Reviews one file. Returns an empty result rather than throwing, so a single failure

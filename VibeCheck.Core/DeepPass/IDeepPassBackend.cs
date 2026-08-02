@@ -28,6 +28,18 @@ public interface IDeepPassBackend : IDisposable
     string Description { get; }
 
     /// <summary>
+    /// Whether the tokens this backend reports correspond to money charged to the reader.
+    /// </summary>
+    /// <remarks>
+    /// True for a backend spending an API key the reader bought, false for one spending a
+    /// subscription they already hold. The distinction is not cosmetic: both routes can price
+    /// a run in dollars, but only one of them results in a charge, and telling somebody a scan
+    /// cost them money when their card was never touched is a false statement in a report whose
+    /// whole value is that it does not make them.
+    /// </remarks>
+    bool BillsTheReader { get; }
+
+    /// <summary>
     /// Reviews one file. Returns a result carrying a limitation rather than throwing, so a
     /// single failure costs one file's coverage instead of the whole pass.
     /// </summary>

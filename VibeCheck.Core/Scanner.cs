@@ -110,8 +110,8 @@ public sealed class Scanner
             recovery.Files,
             [.. PackagingChecks.Run(artifact).Concat(recovery.Findings).Concat(analysis.Findings)],
             options,
-            progress,
-            cancellationToken).ConfigureAwait(false);
+            progress: progress,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         progress?.Report(new ScanProgress(ScanStage.Scoring, "Scoring results"));
 
@@ -169,7 +169,12 @@ public sealed class Scanner
             BundlePath = bundlePath,
             RanIsolated = options.Isolate,
             DeepPassRan = options.DeepPassEnabled,
-            DeepPassCost = options.DeepPassEnabled ? deepPass.EstimatedCost : null,
+
+            // BilledCost, not EstimatedCost. A subscription-backed pass has a real token cost
+            // and a bill of nothing; reporting the former as the latter would tell somebody
+            // their card was charged when it was not.
+            DeepPassCost = deepPass.Backend is not null ? deepPass.BilledCost : null,
+            DeepPassBackend = deepPass.Backend,
             ScannerVersion = Version,
             Duration = stopwatch.Elapsed,
         };
