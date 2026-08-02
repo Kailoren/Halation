@@ -1,0 +1,86 @@
+<!--
+    Cyberpunk 2077, after gwannon/Cyberpunk-2077-theme-css.
+
+    Palette taken from that project's :root block verbatim:
+
+        yellow-color            #f9f002
+        yellow-color-opacity    #f9f00242
+        orange-color            #ff9800
+        border-color            #8ae66e
+        red-color               #ff003c
+        blue-color              #0c5f74
+        green-color             #298d29
+        neon-color              #39ff14
+        black-color             #000
+
+    (the source spells each of those with a leading double hyphen, which an XML comment
+    cannot contain)
+
+    Three deliberate departures, each noted where it happens: the yellow is an accent here
+    rather than the page background, the palette blue is lightened, and the "could not
+    analyse" grey is left alone.
+
+    To use it, copy this file to %LOCALAPPDATA%\VibeCheck\theme.xaml. To stop using it, delete
+    that file. See THEME.md.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- The source theme puts black on yellow. That is the right call for a landing page and
+         the wrong one for this: a scan report is several thousand words of body text, and a
+         saturated yellow field behind all of it is exhausting to read and drowns the severity
+         colours that are supposed to be the only loud thing on screen. So the relationship is
+         inverted, yellow becomes the accent, and the black stays. -->
+    <SolidColorBrush x:Key="Bg"          Color="#050505"/>
+    <SolidColorBrush x:Key="Panel"       Color="#0D0D0B"/>
+    <SolidColorBrush x:Key="PanelRaised" Color="#16160A"/>
+
+    <!-- The source's border-color, used for borders, which is what the source calls it. -->
+    <SolidColorBrush x:Key="Edge"        Color="#5C8AE66E"/>
+
+    <SolidColorBrush x:Key="Text"        Color="#EDEDED"/>
+
+    <!-- Secondary text carries most of the words on screen, so what it is set to decides what
+         the whole application reads as. The lime was tried here first and the result was
+         Matrix rather than Cyberpunk: a wall of green body text pulls the palette somewhere
+         the source never goes. This is the source's yellow desaturated and dimmed to caption
+         weight, which is the dirty industrial yellow the game's own interface actually uses. -->
+    <SolidColorBrush x:Key="Muted"       Color="#B5AE7A"/>
+
+    <!-- The source's yellow-color. The signature. -->
+    <SolidColorBrush x:Key="Accent"      Color="#F9F002"/>
+
+    <SolidColorBrush x:Key="Hover"       Color="#231F05"/>
+    <SolidColorBrush x:Key="CloseHover"  Color="#FF003C"/>
+
+    <!-- Black on the danger colour, which is the source theme's own habit. -->
+    <SolidColorBrush x:Key="OnDanger"    Color="#000000"/>
+
+    <!-- Severity ramp. The source's red, orange and yellow line up with critical,
+         high and medium exactly. -->
+    <SolidColorBrush x:Key="Critical" Color="#FF003C"/>
+    <SolidColorBrush x:Key="High"     Color="#FF9800"/>
+    <SolidColorBrush x:Key="Medium"   Color="#F9F002"/>
+
+    <!-- The source's blue is #0c5f74, which on a near-black background is close to unreadable at
+         the size this appears. Lightened along the same hue rather than swapped for something
+         off-palette. -->
+    <SolidColorBrush x:Key="Low"      Color="#2FB6D4"/>
+
+    <!-- The source's neon green, for the band that means nothing was found. -->
+    <SolidColorBrush x:Key="Good"     Color="#39FF14"/>
+
+    <!-- Left grey on purpose, and not up for negotiation by a theme. This is the "could not
+         analyse" band, and an artifact that was never read must not look like one that
+         passed. Every other colour here is a preference; this one is the tool telling the
+         truth about how little it saw. -->
+    <SolidColorBrush x:Key="Unknown"  Color="#6B7280"/>
+
+    <!-- The source recommends Advent Pro, Barlow, Tomorrow and Oxanium, none of which ship
+         with Windows. Listed first anyway so they are picked up if ever installed, with
+         Bahnschrift behind them: it is present on every Windows 10 and 11 machine and is the
+         closest thing in the box to the squared-off industrial face this wants. -->
+    <FontFamily x:Key="UiFont">Oxanium, Tomorrow, Barlow, Bahnschrift, Segoe UI</FontFamily>
+    <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
+
+</ResourceDictionary>

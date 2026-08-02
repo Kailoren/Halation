@@ -55,10 +55,6 @@ public static class ThemeLoader
             application.Resources.MergedDictionaries.Add(theme);
             return null;
         }
-        catch (XamlParseException ex)
-        {
-            return $"{Path} could not be read as a theme and was ignored.\n\n{ex.Message}";
-        }
         catch (IOException ex)
         {
             return $"{Path} could not be opened and was ignored.\n\n{ex.Message}";
@@ -66,6 +62,19 @@ public static class ThemeLoader
         catch (UnauthorizedAccessException ex)
         {
             return $"{Path} could not be opened and was ignored.\n\n{ex.Message}";
+        }
+
+        // Deliberately broad, and the one place in this codebase where that is the right
+        // shape. This parses a hand-edited file of arbitrary content, and the exceptions
+        // XamlReader can raise for arbitrary input are not enumerable: XamlParseException for
+        // XAML-level mistakes, XmlException for XML-level ones such as a "--" inside a
+        // comment, and type converter exceptions for anything a value fails to become.
+        // Catching only the ones that came to mind is how "a bad edit cannot stop the
+        // application starting" quietly stopped being true, which is what happened here: an
+        // illegal comment took the whole window down and only the catch list was at fault.
+        catch (Exception ex)
+        {
+            return $"{Path} could not be read as a theme and was ignored.\n\n{ex.Message}";
         }
     }
 }
