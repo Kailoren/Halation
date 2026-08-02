@@ -11,15 +11,51 @@ public sealed record Finding
     /// <summary>Short headline, written for a developer skimming a list.</summary>
     public required string Title { get; init; }
 
+    /// <summary>
+    /// How bad this is for the person shipping the application.
+    /// </summary>
     public required Severity Severity { get; init; }
+
+    /// <summary>
+    /// How bad this is for the person running the application, which is routinely not the
+    /// same answer.
+    /// </summary>
+    /// <remarks>
+    /// Required rather than defaulted, so that adding a rule forces the judgment. A silent
+    /// fallback to <see cref="Severity"/> would quietly file every developer-side problem as
+    /// the end user's problem too, which is the failure this whole split exists to prevent.
+    /// Producers that genuinely cannot distinguish, such as a CVE advisory, set both to the
+    /// same value deliberately.
+    /// </remarks>
+    public required Severity UserSeverity { get; init; }
 
     public required FindingCategory Category { get; init; }
 
-    /// <summary>What the problem is and why it matters, in plain language.</summary>
+    /// <summary>What the problem is and why it matters, for whoever wrote the code.</summary>
     public required string Description { get; init; }
 
-    /// <summary>Concrete steps to fix it. Absent only where no general remedy applies.</summary>
+    /// <summary>
+    /// The same finding told to someone who did not write the application and cannot change
+    /// it: what it could mean for them, and what they can do about it.
+    /// </summary>
+    /// <remarks>
+    /// Not a simplification of <see cref="Description"/>. It answers a different question,
+    /// and for a large class of findings the honest answer is that this is the author's
+    /// problem rather than the reader's.
+    /// </remarks>
+    public required string UserDescription { get; init; }
+
+    /// <summary>
+    /// Concrete steps to fix it, for the person who can. Absent only where no general remedy
+    /// applies.
+    /// </summary>
     public string? Remediation { get; init; }
+
+    /// <summary>
+    /// What the reader can do when they cannot change the code. Frequently null, because
+    /// frequently there is nothing, and inventing reassurance would be worse than silence.
+    /// </summary>
+    public string? UserRemediation { get; init; }
 
     /// <summary>Path relative to the recovery root, so reports do not leak local paths.</summary>
     public string? FilePath { get; init; }
@@ -52,4 +88,24 @@ public sealed record Finding
     public string Location => FilePath is null
         ? "(artifact)"
         : Line is null ? FilePath : $"{FilePath}:{Line}";
+
+    public Severity SeverityFor(Audience audience) =>
+        audience == Audience.EndUser ? UserSeverity : Severity;
+
+    public string DescriptionFor(Audience audience) =>
+        audience == Audience.EndUser ? UserDescription : Description;
+
+    public string? RemediationFor(Audience audience) =>
+        audience == Audience.EndUser ? UserRemediation : Remediation;
+
+    /// <summary>
+    /// Whether this finding bears on the given reader's decision.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Severity.Info"/> is how a finding says "not your problem" without being
+    /// hidden: it deducts nothing and never caps the score, but it is still shown, because
+    /// telling an end user that the leaked key is the author's rather than theirs is more
+    /// useful than silently dropping it and leaving them to wonder what the scanner saw.
+    /// </remarks>
+    public bool AffectsDecisionOf(Audience audience) => SeverityFor(audience) > Severity.Info;
 }

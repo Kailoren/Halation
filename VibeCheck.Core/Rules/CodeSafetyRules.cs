@@ -51,6 +51,7 @@ public static class CodeSafetyRules
         Id = "VC-CODE-001",
         Title = "SQL query built by string concatenation",
         Severity = Severity.Critical,
+        UserSeverity = Severity.Medium,
         Category = FindingCategory.CodeSafety,
         Description =
             "A SQL statement is assembled from interpolated or concatenated values. If any part "
@@ -64,6 +65,12 @@ public static class CodeSafetyRules
         // keyword. Matching the keyword alone fired on ordinary English: a WPF trace string
         // reading "Default update trigger resolved to {1}" was reported as SQL injection
         // because "update" was followed by a format placeholder.
+        UserDescription =
+            "The application builds database commands by gluing text together. If any of that "
+            + "text comes from something you opened or typed, a carefully crafted input can make it "
+            + "run a different command than intended, which can expose or destroy the data this app "
+            + "is holding.",
+        UserRemediation ="Be careful about opening files from people you do not know in this application.",
         Pattern = PatternRule.Compile(
             """
             (?:SELECT\s+[\w*,.\s()`'"\[\]]{1,120}?\s+FROM\s
@@ -112,6 +119,7 @@ public static class CodeSafetyRules
         Id = "VC-CODE-002",
         Title = "Dynamic code evaluation on a constructed string",
         Severity = Severity.High,
+        UserSeverity = Severity.High,
         Category = FindingCategory.CodeSafety,
         Description =
             "The application evaluates a string as code, and that string is built at runtime. "
@@ -119,6 +127,11 @@ public static class CodeSafetyRules
         Remediation =
             "Replace the evaluation with an explicit branch or a lookup table. If the value is "
             + "data, parse it with a data parser such as JSON.parse rather than executing it.",
+        UserDescription =
+            "The application builds a piece of code as text and then runs it. If any part of that "
+            + "text comes from a file you open or a server it talks to, then whoever controls that "
+            + "content decides what runs on your machine.",
+        UserRemediation ="Only open files from sources you trust in this application.",
         Pattern = PatternRule.Compile(
             """
             (?:\beval\s*\(\s*(?![)'"`]\s*\))
@@ -137,6 +150,7 @@ public static class CodeSafetyRules
         Id = "VC-CODE-003",
         Title = "Shell command built from interpolated values",
         Severity = Severity.Critical,
+        UserSeverity = Severity.High,
         Category = FindingCategory.CodeSafety,
         Description =
             "A shell command is assembled from interpolated or concatenated values. Because the "
@@ -146,6 +160,11 @@ public static class CodeSafetyRules
             "Pass the program and its arguments as a list rather than a single string, so no shell "
             + "parses it. In Node use execFile or spawn with an argument array; in .NET set "
             + "ProcessStartInfo.ArgumentList; in Python use subprocess with a list and shell=False.",
+        UserDescription =
+            "The application builds system commands by pasting values into them. If one of those "
+            + "values comes from a file, a link, or a server response, someone who controls it can "
+            + "get commands of their choosing to run on your computer.",
+        UserRemediation ="Only open files and links from sources you trust in this application.",
         Pattern = PatternRule.Compile(
             """
             (?:child_process\.(?:exec|execSync)\s*\(\s*[`"'][^`"']*(?:\$\{|"\s*\+|'\s*\+)
@@ -163,6 +182,7 @@ public static class CodeSafetyRules
         Id = "VC-CODE-004",
         Title = "Unsafe deserialisation of untrusted data",
         Severity = Severity.High,
+        UserSeverity = Severity.High,
         Category = FindingCategory.CodeSafety,
         Description =
             "The application uses a deserialiser that can construct arbitrary types and invoke "
@@ -171,6 +191,11 @@ public static class CodeSafetyRules
         Remediation =
             "Use a data-only format and parser: System.Text.Json in .NET, yaml.safe_load in "
             + "Python, and never pickle for data that crosses a trust boundary.",
+        UserDescription =
+            "The application rebuilds saved data back into live objects without checking it "
+            + "first. With this pattern, opening a file that somebody prepared for the purpose can "
+            + "start their code running on your machine rather than simply loading their data.",
+        UserRemediation ="Do not open project or save files sent to you by people you do not know.",
         Pattern = PatternRule.Compile(
             """
             (?:BinaryFormatter|NetDataContractSerializer|LosFormatter|ObjectStateFormatter
@@ -199,6 +224,7 @@ public static class CodeSafetyRules
         Id = "VC-CODE-005",
         Title = "Password hashed with a fast general-purpose digest",
         Severity = Severity.High,
+        UserSeverity = Severity.Medium,
         Category = FindingCategory.CodeSafety,
         Description =
             "Passwords are hashed with MD5 or SHA-1. These are designed to be fast, which is the "
@@ -207,6 +233,11 @@ public static class CodeSafetyRules
         Remediation =
             "Use a purpose-built password hash with a work factor: bcrypt, scrypt, or Argon2id. "
             + "In .NET, Rfc2898DeriveBytes with a high iteration count is acceptable.",
+        UserDescription =
+            "If you have an account with this application, your password is stored using a method "
+            + "that modern hardware can work through very quickly. Should that store ever be "
+            + "stolen, guessing your password from it is far easier than it should be.",
+        UserRemediation ="Use a password here that you do not use anywhere else.",
         Pattern = PatternRule.Compile(
             """
             (?:MD5|SHA1|SHA-1)[^;\r\n]{0,80}?(?:password|passwd|pwd)
@@ -221,6 +252,7 @@ public static class CodeSafetyRules
         Id = "VC-CODE-006",
         Title = "Broken or misused cipher",
         Severity = Severity.Medium,
+        UserSeverity = Severity.Medium,
         Category = FindingCategory.CodeSafety,
         Description =
             "The application uses DES, RC4, or ECB mode. DES and RC4 are broken, and ECB leaks "
@@ -228,6 +260,10 @@ public static class CodeSafetyRules
         Remediation =
             "Use AES in an authenticated mode such as GCM, which provides both confidentiality "
             + "and tamper detection.",
+        UserDescription =
+            "The application protects some of its data with an encryption method that is no "
+            + "longer considered sound. Whatever it is scrambling, which may include things you "
+            + "have given it, is not as protected as the presence of encryption suggests.",
         Pattern = PatternRule.Compile(
             """(?:\bDES(?:CryptoServiceProvider)?\b|\bRC4\b|CipherMode\.ECB|MODE_ECB|["']AES-\d+-ECB["'])""",
             RegexOptions.IgnoreCase),
@@ -254,6 +290,7 @@ public static class CodeSafetyRules
         Id = "VC-CODE-007",
         Title = "Security value generated from a predictable random source",
         Severity = Severity.High,
+        UserSeverity = Severity.Medium,
         Category = FindingCategory.CodeSafety,
         Description =
             "A token, session identifier, or password is derived from a general-purpose random "
@@ -262,6 +299,10 @@ public static class CodeSafetyRules
         Remediation =
             "Use a cryptographic generator: crypto.randomBytes in Node, secrets in Python, or "
             + "RandomNumberGenerator in .NET.",
+        UserDescription =
+            "The application generates security values such as tokens or reset links using a "
+            + "shortcut that produces predictable results. Someone targeting your account could "
+            + "work out a value they should not be able to guess.",
         Pattern = PatternRule.Compile(
             """
             (?:token|session|secret|password|nonce|salt|otp|verification|reset)
@@ -276,6 +317,7 @@ public static class CodeSafetyRules
         Id = "VC-CODE-008",
         Title = "Archive extracted without validating entry paths",
         Severity = Severity.High,
+        UserSeverity = Severity.High,
         Category = FindingCategory.CodeSafety,
         Description =
             "The application writes archive entries to disk using the path stored in the archive. "
@@ -286,6 +328,11 @@ public static class CodeSafetyRules
             "Resolve each destination to its full path and confirm it is still inside the target "
             + "directory before writing. In .NET, ExtractToDirectory performs this check; manual "
             + "loops over entries do not.",
+        UserDescription =
+            "The application unpacks archive files without checking where the contents claim to "
+            + "go. An archive built for the purpose can drop files outside the folder you expected, "
+            + "anywhere the app can write, which is a known way to plant something that later runs.",
+        UserRemediation ="Do not open zip or archive files from people you do not know in this application.",
         Pattern = PatternRule.Compile(
             """
             (?:entry\.FullName|entry\.filename|zipEntry\.Name|member\.name)

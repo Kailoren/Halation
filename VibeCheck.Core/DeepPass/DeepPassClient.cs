@@ -147,6 +147,8 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDispo
                         {
                             title = new { type = "string" },
                             severity = new { type = "string", @enum = new[] { "low", "medium", "high", "critical" } },
+                            user_severity = new { type = "string", @enum = new[] { "none", "low", "medium", "high", "critical" } },
+                            user_impact = new { type = "string" },
                             file = new { type = "string" },
                             evidence = new { type = "string" },
                             reachability = new { type = "string" },
@@ -156,8 +158,9 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDispo
                         },
                         required = new[]
                         {
-                            "title", "severity", "file", "evidence",
-                            "reachability", "why_rules_miss_it", "remediation", "confidence",
+                            "title", "severity", "user_severity", "user_impact", "file",
+                            "evidence", "reachability", "why_rules_miss_it", "remediation",
+                            "confidence",
                         },
                         additionalProperties = false,
                     },
@@ -181,6 +184,19 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDispo
           traced through the files you were given.
         - Logic errors in authorisation, validation, and state handling.
         - Two individually harmless pieces of code that are unsafe in combination.
+
+        Every finding is read by two people, and they are not asking the same question. Judge
+        both, separately:
+
+        - severity: how bad this is for whoever ships the application.
+        - user_severity: how bad this is for somebody who merely runs it, having not written
+          it and being unable to change it. Use "none" when it genuinely does not touch them.
+          A leaked credential belonging to the author is usually "none" or "low" for this
+          reader; something that lets a file or a web response run code on their machine is
+          usually higher here than it is for the developer.
+        - user_impact: that same finding written for that reader, in plain language. No rule
+          names, no CWE or CVE numbers, no jargon. Say what it could mean for them, and say
+          plainly when the honest answer is that this is the author's problem and not theirs.
 
         Rules for what you report:
         - Only report what the code you were shown demonstrates. If reachability depends on a
@@ -394,6 +410,11 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDispo
             RuleId = "VC-AI-001",
             Title = titleText,
             Severity = ParseSeverity(Text("severity")),
+
+            // Asked for rather than derived. The model has read the file and can tell whether
+            // a finding reaches the person running the application; a local rule mapping one
+            // severity onto the other would be guessing from strictly less information.
+            UserSeverity = ParseSeverity(Text("user_severity")),
             Category = FindingCategory.CodeSafety,
 
             // The whole point of the pass: never a rule finding, so it can never block.
@@ -402,6 +423,9 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDispo
             Description =
                 $"{Text("why_rules_miss_it")}\n\nReachability: {Text("reachability")}"
                 + $"\n\nConfidence: {confidence}.",
+            UserDescription = Text("user_impact")
+                ?? "This was identified by the AI deep pass, which did not describe what it "
+                   + "means for someone running the application.",
             Evidence = Text("evidence"),
             Remediation = Text("remediation"),
             FilePath = Text("file") ?? triaged.File.RelativePath,
@@ -414,6 +438,7 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDispo
         "high" => Severity.High,
         "medium" => Severity.Medium,
         "low" => Severity.Low,
+        "none" => Severity.Info,
         _ => Severity.Medium,
     };
 

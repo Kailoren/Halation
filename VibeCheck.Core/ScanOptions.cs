@@ -1,3 +1,5 @@
+using VibeCheck.Core.Model;
+
 using VibeCheck.Core.Dependencies;
 
 namespace VibeCheck.Core;
@@ -62,6 +64,12 @@ public sealed record ScanOptions
     public bool DeepPassEnabled => !Isolate && !string.IsNullOrWhiteSpace(DeepPassApiKey);
 
     /// <summary>Default behaviour: live lookup, bundle written beside the artifact, no deep pass.</summary>
+    /// <summary>
+    /// Who the report is being written for. Findings carry a severity per audience, so this
+    /// selects which question the score answers rather than only how it is worded.
+    /// </summary>
+    public Audience Audience { get; init; } = Audience.Developer;
+
     public static ScanOptions Default { get; } = new();
 
     /// <summary>No network, bundle only.</summary>

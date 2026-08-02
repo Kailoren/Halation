@@ -36,8 +36,10 @@ public class ValidationRegressionTests : IDisposable
         RuleId = "VC-TEST",
         Title = "test",
         Severity = severity,
+        UserSeverity = severity,
         Category = FindingCategory.CodeSafety,
         Description = "test",
+        UserDescription = "test",
     };
 
     // ---- Zero coverage must not read as a pass ----------------------------
@@ -427,7 +429,13 @@ public class ValidationRegressionTests : IDisposable
         // belongs to the blocking rules alone.
         foreach (var band in Enum.GetValues<ScoreBand>())
         {
-            var label = new Verdict { Score = 50, Band = band, AdviseAgainstInstall = false }.BandLabel;
+            var label = new Verdict
+            {
+                Score = 50,
+                Band = band,
+                AdviseAgainstInstall = false,
+                Audience = Audience.Developer,
+            }.BandLabel;
 
             Assert.DoesNotContain("install", label, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("safe", label, StringComparison.OrdinalIgnoreCase);

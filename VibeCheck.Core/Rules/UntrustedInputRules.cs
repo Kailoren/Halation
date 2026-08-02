@@ -77,6 +77,7 @@ public static class UntrustedInputRules
         // underneath them. What made it serious in the application this rule came from was the
         // unbounded value reaching a stackalloc, and that pairing is VC-INPUT-001's to report.
         Severity = Severity.Low,
+        UserSeverity = Severity.Low,
         Category = FindingCategory.Network,
         Description =
             "The response body is read into a single string or array in one call, so its size is "
@@ -88,6 +89,10 @@ public static class UntrustedInputRules
             + "is passed. Checking the Content-Length header instead is not equivalent: it is "
             + "absent on chunked responses and is supplied by the sender either way, so the limit "
             + "has to be enforced while reading rather than before it.",
+        UserDescription =
+            "The application downloads responses into memory without limiting how large they are "
+            + "allowed to be. A server that returned something enormous, whether by fault or on "
+            + "purpose, could make the app freeze or fill your disk.",
         Pattern = PatternRule.Compile(
             """
             \.(?:GetStringAsync
@@ -155,6 +160,7 @@ public static class UntrustedInputRules
         Id = "VC-INPUT-001",
         Title = "Stack allocation sized from a variable",
         Severity = Severity.High,
+        UserSeverity = Severity.Medium,
         Category = FindingCategory.CodeSafety,
         Description =
             "A stackalloc is sized from a value computed at runtime rather than from a constant. "
@@ -165,6 +171,10 @@ public static class UntrustedInputRules
             "Cap the length before allocating, and fall back to a pooled or heap buffer above the "
             + "threshold. The usual shape is: allocate on the stack only when the size is below a "
             + "fixed limit such as 256 elements, and rent an array otherwise.",
+        UserDescription =
+            "The application reserves working memory based on a number it read rather than a "
+            + "fixed size. Given an unusual input, this is the kind of mistake that makes a program "
+            + "crash, and sometimes rather more than crash.",
         Pattern = PatternRule.Compile(
             """stackalloc\s+\w+\s*\[\s*(?<size>[^\]]{1,80}?)\s*\]""",
             RegexOptions.IgnoreCase),
@@ -234,6 +244,7 @@ public static class UntrustedInputRules
         Id = "VC-INPUT-002",
         Title = "Shell-opens a URL without validating its scheme",
         Severity = Severity.Medium,
+        UserSeverity = Severity.High,
         Category = FindingCategory.Network,
         Description =
             "The application shell-opens an address held in a variable. If that value came from "
@@ -243,6 +254,11 @@ public static class UntrustedInputRules
         Remediation =
             "Parse the value with Uri.TryCreate and proceed only when the scheme is https, and "
             + "ideally only when the host is one you expect. Validate before launching, not after.",
+        UserDescription =
+            "The application hands links to your operating system to open without first checking "
+            + "what kind of link they are. A link does not have to point at a website, so a crafted "
+            + "one can start a program on your computer instead of opening a page.",
+        UserRemediation ="Do not click links from people you do not know inside this application.",
         Pattern = PatternRule.Compile(
             """Process\.Start\s*\(\s*(?:new\s+ProcessStartInfo\s*\(\s*)?\w*(?:url|uri|link|address|href)\w*""",
             RegexOptions.IgnoreCase),
@@ -263,6 +279,7 @@ public static class UntrustedInputRules
         Id = "VC-INPUT-003",
         Title = "Throwing numeric conversion applied to external data",
         Severity = Severity.Low,
+        UserSeverity = Severity.Low,
         Category = FindingCategory.CodeSafety,
         Description =
             "A value read out of parsed data is converted with a method that throws on malformed "
@@ -271,6 +288,10 @@ public static class UntrustedInputRules
         Remediation =
             "Use the TryParse form and decide explicitly what to do when the value is absent or "
             + "malformed, rather than letting the conversion throw.",
+        UserDescription =
+            "The application converts text it received into numbers without allowing for the text "
+            + "not being a number at all. Unexpected input makes it stop with an error rather than "
+            + "handle it, so the likely result is a crash.",
         Pattern = PatternRule.Compile(
             """
             (?:int|long|double|decimal|float)\.Parse\s*\(\s*

@@ -87,6 +87,12 @@ public static class MarkdownReportWriter
             : $"### {verdict.BandLabel}");
         output.AppendLine();
 
+        // Which question the number answered. The same artifact scores differently for the
+        // person shipping it and the person running it, so a bare number is ambiguous rather
+        // than merely terse.
+        output.AppendLine($"*{verdict.ScoreCaption}.*");
+        output.AppendLine();
+
         if (!verdict.HasMeaningfulScore)
         {
             output.AppendLine("> **No score is given for this artifact.** Too little of it could "
@@ -190,15 +196,20 @@ public static class MarkdownReportWriter
             return;
         }
 
+        var audience = report.Audience;
+
         output.AppendLine("## Findings");
         output.AppendLine();
 
         foreach (var severity in new[]
                  {
-                     Severity.Critical, Severity.High, Severity.Medium, Severity.Low, Severity.Info,
+                     Severity.Critical, Severity.High, Severity.Medium, Severity.Low,
                  })
         {
-            var group = report.Findings.Where(f => f.Severity == severity).ToList();
+            var group = report.Findings
+                .Where(f => f.SeverityFor(audience) == severity)
+                .ToList();
+
             if (group.Count == 0)
             {
                 continue;
@@ -209,16 +220,63 @@ public static class MarkdownReportWriter
 
             foreach (var finding in group)
             {
-                WriteFinding(output, finding);
+                WriteFinding(output, finding, audience);
             }
         }
+
+        WriteNotYourProblem(output, report, audience);
     }
 
-    private static void WriteFinding(StringBuilder output, Finding finding)
+    /// <summary>
+    /// The findings that do not reach this reader, listed briefly rather than dropped.
+    /// </summary>
+    /// <remarks>
+    /// Silently removing them would leave an end user unable to tell a scan that found the
+    /// developer's leaked key from one that never looked. Naming them and saying plainly that
+    /// they are somebody else's problem is both shorter and more trustworthy than either
+    /// hiding them or filing them under the reader's own risks.
+    /// </remarks>
+    private static void WriteNotYourProblem(
+        StringBuilder output,
+        ScanReport report,
+        Audience audience)
+    {
+        var others = report.NotRelevantToReader.ToList();
+        if (others.Count == 0)
+        {
+            return;
+        }
+
+        output.AppendLine(audience == Audience.EndUser
+            ? $"### Found, but not your problem ({others.Count})"
+            : $"### Informational ({others.Count})");
+        output.AppendLine();
+
+        if (audience == Audience.EndUser)
+        {
+            output.AppendLine("These were found and judged not to affect you. They are listed so "
+                              + "you can see the scan did look at them.");
+            output.AppendLine();
+        }
+
+        foreach (var finding in others)
+        {
+            output.AppendLine($"- **{finding.Title}.** {finding.DescriptionFor(audience)}");
+        }
+
+        output.AppendLine();
+    }
+
+    private static void WriteFinding(StringBuilder output, Finding finding, Audience audience)
     {
         output.AppendLine($"#### {finding.Title}");
         output.AppendLine();
-        output.AppendLine($"`{finding.RuleId}` · {Humanise(finding.Category)} · `{finding.Location}`");
+
+        // The rule identifier is a support handle for whoever can act on it, and noise to
+        // anyone who cannot.
+        output.AppendLine(audience == Audience.EndUser
+            ? $"{Humanise(finding.Category)} · `{finding.Location}`"
+            : $"`{finding.RuleId}` · {Humanise(finding.Category)} · `{finding.Location}`");
 
         if (finding.Source == FindingSource.Assisted)
         {
@@ -229,7 +287,7 @@ public static class MarkdownReportWriter
         }
 
         output.AppendLine();
-        output.AppendLine(finding.Description);
+        output.AppendLine(finding.DescriptionFor(audience));
         output.AppendLine();
 
         if (!string.IsNullOrWhiteSpace(finding.Evidence))
@@ -240,9 +298,11 @@ public static class MarkdownReportWriter
             output.AppendLine();
         }
 
-        if (!string.IsNullOrWhiteSpace(finding.Remediation))
+        if (finding.RemediationFor(audience) is { Length: > 0 } remediation)
         {
-            output.AppendLine($"**How to fix:** {finding.Remediation}");
+            output.AppendLine(audience == Audience.EndUser
+                ? $"**What you can do:** {remediation}"
+                : $"**How to fix:** {remediation}");
             output.AppendLine();
         }
 

@@ -9,13 +9,16 @@ public class ScoreCalculatorTests
         Severity severity,
         FindingCategory category = FindingCategory.CodeSafety,
         bool blocking = false,
-        FindingSource source = FindingSource.Rule) => new()
+        FindingSource source = FindingSource.Rule,
+        Severity? userSeverity = null) => new()
     {
         RuleId = $"VC-TEST-{severity}",
         Title = $"{severity} test finding",
         Severity = severity,
+        UserSeverity = userSeverity ?? severity,
         Category = category,
         Description = "Synthetic finding used by the scoring tests.",
+        UserDescription = "Synthetic finding as told to someone running the application.",
         IsBlocking = blocking,
         Source = source,
     };

@@ -24,8 +24,10 @@ public class DeepPassTests
         RuleId = "VC-TEST-001",
         Title = "test finding",
         Severity = Severity.Medium,
+        UserSeverity = Severity.Medium,
         Category = FindingCategory.CodeSafety,
         Description = "x",
+        UserDescription = "x",
         FilePath = path,
     };
 

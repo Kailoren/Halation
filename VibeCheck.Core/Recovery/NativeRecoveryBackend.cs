@@ -104,6 +104,14 @@ public sealed class NativeRecoveryBackend : IRecoveryBackend
                 RuleId = "VC-BIN-010",
                 Title = "Executable is not digitally signed",
                 Severity = Severity.Medium,
+                UserSeverity = Severity.Medium,
+                UserDescription =
+                    "This program is not digitally signed, so your computer cannot confirm who made it or "
+                    + "that it has not been altered since. This is common for small and hobby projects, but "
+                    + "it does mean you are trusting the download itself.",
+                UserRemediation =
+                    "Only run this if you trust where you got it from. Windows will warn you when you "
+                    + "open it, and that warning is accurate.",
                 Category = FindingCategory.BinaryHygiene,
                 Description =
                     $"{artifact.Name} carries no Authenticode signature, so there is nothing tying "
@@ -154,6 +162,16 @@ public sealed class NativeRecoveryBackend : IRecoveryBackend
             Severity = Severity.Low,
             Category = FindingCategory.BinaryHygiene,
             Description = description,
+
+            // The same for every hardening flag on purpose. Which protection is missing is a
+            // detail only the developer can act on; what the reader needs is that the app was
+            // built without a standard safety net, and that is one sentence rather than three.
+            UserSeverity = Severity.Low,
+            UserDescription =
+                "This program was built without one of the standard protections that modern "
+                + "compilers add to make bugs harder to exploit. It does not mean the app is "
+                + "unsafe, only that if it does turn out to have a flaw, that flaw is easier to "
+                + "take advantage of than it needed to be.",
             Remediation = remediation,
             FilePath = file,
         };

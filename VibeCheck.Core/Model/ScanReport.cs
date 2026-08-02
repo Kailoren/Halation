@@ -61,13 +61,28 @@ public sealed record ScanReport
     /// <summary>How long the scan took, for the UI and for spotting pathological inputs.</summary>
     public TimeSpan Duration { get; init; }
 
-    /// <summary>Findings ordered worst-first, which is how every view wants them.</summary>
+    /// <summary>
+    /// Who this report was written for. Taken from the verdict rather than stored twice, so
+    /// the ordering, the wording, and the number can never disagree about the reader.
+    /// </summary>
+    public Audience Audience => Verdict.Audience;
+
+    /// <summary>Findings ordered worst-first for this report's reader.</summary>
     public IEnumerable<Finding> FindingsBySeverity =>
-        Findings.OrderByDescending(f => f.Severity)
+        Findings.OrderByDescending(f => f.SeverityFor(Audience))
                 .ThenBy(f => f.Category)
                 .ThenBy(f => f.RuleId, StringComparer.Ordinal);
 
-    public int CountOf(Severity severity) => Findings.Count(f => f.Severity == severity);
+    public int CountOf(Severity severity) =>
+        Findings.Count(f => f.SeverityFor(Audience) == severity);
+
+    /// <summary>
+    /// Findings that do not bear on this reader at all. Counted rather than listed alongside
+    /// the rest, so an end user is not handed a page of the developer's problems, but is
+    /// still told they were found and looked at.
+    /// </summary>
+    public IEnumerable<Finding> NotRelevantToReader =>
+        Findings.Where(f => !f.AffectsDecisionOf(Audience));
 
     /// <summary>Human-readable kind, for headers and exports.</summary>
     public string KindLabel => Kind switch

@@ -34,6 +34,11 @@ public static class PackagingChecks
                 RuleId = "VC-PKG-001",
                 Title = "Debug symbols shipped with the release",
                 Severity = Severity.Low,
+                UserSeverity = Severity.Info,
+                UserDescription =
+                    "The developer shipped their debugging files alongside the application. It makes the "
+                    + "app easier for someone to pick apart, and it can reveal the folder names on the "
+                    + "machine that built it. It does nothing to you or your computer.",
                 Category = FindingCategory.BinaryHygiene,
                 Description =
                     "The distribution contains .pdb debug symbol files. These carry original "
@@ -57,6 +62,12 @@ public static class PackagingChecks
                 RuleId = "VC-PKG-002",
                 Title = "Environment file shipped with the application",
                 Severity = Severity.High,
+                UserSeverity = Severity.Low,
+                UserDescription =
+                    "A settings file of the kind normally used to hold passwords and keys was shipped "
+                    + "inside the application, so everyone who downloaded it has whatever was in there. "
+                    + "Most of that is the developer own to lose, but if one of those values opens a "
+                    + "database holding your data, it is open to everyone else too.",
                 Category = FindingCategory.Secrets,
                 Description =
                     "The distribution includes a .env file. These normally hold the credentials the "
@@ -76,6 +87,10 @@ public static class PackagingChecks
                 RuleId = "VC-PKG-003",
                 Title = "Source maps shipped with the release",
                 Severity = Severity.Low,
+                UserSeverity = Severity.Info,
+                UserDescription =
+                    "The developer shipped the files that reconstruct their original source code. It "
+                    + "makes the app easy to read, which is untidy for them and harmless to you.",
                 Category = FindingCategory.BinaryHygiene,
                 Description =
                     "The distribution contains JavaScript source maps, which reconstruct the "
@@ -94,6 +109,11 @@ public static class PackagingChecks
                 RuleId = "VC-PKG-004",
                 Title = "Version control directory shipped with the application",
                 Severity = Severity.High,
+                UserSeverity = Severity.Info,
+                UserDescription =
+                    "The developer accidentally included their entire version history in the download. It "
+                    + "exposes their old code and any password they ever committed and later removed. It "
+                    + "does not affect you or your machine.",
                 Category = FindingCategory.Secrets,
                 Description =
                     "The distribution contains a .git directory. It holds the project's full "

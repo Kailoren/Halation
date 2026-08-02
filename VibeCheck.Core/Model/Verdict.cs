@@ -27,6 +27,24 @@ public sealed record Verdict
     public IReadOnlyList<string> BlockingReasons { get; init; } = [];
 
     /// <summary>
+    /// Which reader this verdict was calculated for, and therefore which question
+    /// <see cref="Score"/> answers.
+    /// </summary>
+    public required Audience Audience { get; init; }
+
+    /// <summary>
+    /// The question the number answers, for display immediately beneath it.
+    /// </summary>
+    /// <remarks>
+    /// Not optional furniture. The same artifact scores differently for the person shipping
+    /// it and the person running it, because a leaked key ruins the first reader's day and
+    /// none of the second's. An unlabelled number that changes with a setting is worse than
+    /// either number on its own, so no display path should render <see cref="ScoreDisplay"/>
+    /// without this beside it.
+    /// </remarks>
+    public string ScoreCaption => Audience.ScoreCaption();
+
+    /// <summary>
     /// Whether a numeric score is meaningful for this result. False when too little of the
     /// artifact could be read; callers should show <see cref="BandLabel"/> alone rather than
     /// a number that would imply the application was examined.

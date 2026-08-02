@@ -59,11 +59,20 @@ public static class ScoreCalculator
     /// the verdict refuses to score rather than reporting a high one, because a scan that
     /// read nothing has found nothing for reasons that say nothing about the application.
     /// </param>
-    public static Verdict Calculate(IReadOnlyList<Finding> findings, int coveragePercent = 100)
+    /// <param name="audience">
+    /// Which question the score answers. Findings carry a severity per audience, so the same
+    /// artifact legitimately scores differently for the person shipping it and the person
+    /// running it. The verdict records which one it answered; every display path must show
+    /// that alongside the number.
+    /// </param>
+    public static Verdict Calculate(
+        IReadOnlyList<Finding> findings,
+        int coveragePercent = 100,
+        Audience audience = Audience.Developer)
     {
         ArgumentNullException.ThrowIfNull(findings);
 
-        var score = ScoreFor(findings);
+        var score = ScoreFor(findings, audience);
 
         // Findings can still exist at zero coverage: a native binary yields signing and
         // hardening observations without a line of source. Those are reported, but they do
@@ -81,6 +90,7 @@ public static class ScoreCalculator
                     ? ScoreBand.CriticalIssues
                     : ScoreBand.InsufficientCoverage,
                 AdviseAgainstInstall = blockingAtLowCoverage.Count > 0,
+                Audience = audience,
                 BlockingReasons = blockingAtLowCoverage
                     .Select(f => f.Title)
                     .Distinct(StringComparer.Ordinal)
@@ -101,6 +111,7 @@ public static class ScoreCalculator
             Score = score,
             Band = BandFor(score),
             AdviseAgainstInstall = blocking.Count > 0,
+            Audience = audience,
             BlockingReasons = blocking
                 .Select(f => f.Title)
                 .Distinct(StringComparer.Ordinal)
@@ -114,26 +125,28 @@ public static class ScoreCalculator
     /// alongside the coverage meter rather than implying the category is clean.
     /// </summary>
     public static IReadOnlyDictionary<FindingCategory, int> CategoryScores(
-        IReadOnlyList<Finding> findings)
+        IReadOnlyList<Finding> findings,
+        Audience audience = Audience.Developer)
     {
         ArgumentNullException.ThrowIfNull(findings);
 
         return Enum.GetValues<FindingCategory>()
             .ToDictionary(
                 category => category,
-                category => ScoreFor(findings.Where(f => f.Category == category).ToList()));
+                category => ScoreFor(
+                    findings.Where(f => f.Category == category).ToList(), audience));
     }
 
     /// <summary>Applies accumulated deductions, then the worst-finding cap.</summary>
-    private static int ScoreFor(IReadOnlyList<Finding> findings)
+    private static int ScoreFor(IReadOnlyList<Finding> findings, Audience audience)
     {
         if (findings.Count == 0)
         {
             return 100;
         }
 
-        var score = 100 - findings.Sum(f => DeductionFor(f.Severity));
-        var cap = CapFor(findings.Max(f => f.Severity));
+        var score = 100 - findings.Sum(f => DeductionFor(f.SeverityFor(audience)));
+        var cap = CapFor(findings.Max(f => f.SeverityFor(audience)));
 
         return Math.Clamp(Math.Min(score, cap), 0, 100);
     }

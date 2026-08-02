@@ -44,6 +44,7 @@ public static class MaliciousBehaviourRules
         Id = "VC-MAL-001",
         Title = "Application reads saved browser passwords",
         Severity = Severity.Critical,
+        UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
         Description =
@@ -56,6 +57,14 @@ public static class MaliciousBehaviourRules
             + "from a publisher you already trust, and that is specifically why you installed it. "
             + "If it is anything else, treat the machine as at risk and change your passwords from "
             + "a different device.",
+        UserDescription =
+            "This application contains code that reads the passwords saved in your web browser. "
+            + "There is no legitimate reason for an ordinary application to do this. If you have "
+            + "run it already, treat your saved passwords as known to somebody else.",
+        UserRemediation =
+            "Do not run this application. If you already have, change the passwords saved in your "
+            + "browser, starting with email and banking, and turn on two-factor authentication "
+            + "where you can.",
         Pattern = PatternRule.Compile(
             """
             (?:Google[\\/]Chrome[\\/]User\s?Data[^"'\r\n]{0,60}?Login\s?Data
@@ -72,6 +81,7 @@ public static class MaliciousBehaviourRules
         Id = "VC-MAL-002",
         Title = "Application reads browser session cookies",
         Severity = Severity.Critical,
+        UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
         Description =
@@ -83,6 +93,13 @@ public static class MaliciousBehaviourRules
             "Do not run this application. If it has already been run, sign out of your accounts "
             + "everywhere to invalidate existing sessions, then change your passwords from a "
             + "different device.",
+        UserDescription =
+            "This application contains code that reads your browser session cookies. Those are "
+            + "what keep you signed in, so taking them lets somebody else use your accounts without "
+            + "ever needing your password.",
+        UserRemediation =
+            "Do not run this application. If you already have, sign out of everything on that "
+            + "browser to invalidate the sessions, then change your passwords.",
         Pattern = PatternRule.Compile(
             """
             (?:User\s?Data[\\/][^"'\r\n]{0,40}?[\\/]Network[\\/]Cookies
@@ -98,6 +115,7 @@ public static class MaliciousBehaviourRules
         Id = "VC-MAL-003",
         Title = "Application reads cryptocurrency wallet files",
         Severity = Severity.Critical,
+        UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
         Description =
@@ -107,6 +125,13 @@ public static class MaliciousBehaviourRules
         Remediation =
             "Do not run this application. If it has already been run, move your funds to a new "
             + "wallet created on a machine you know to be clean.",
+        UserDescription =
+            "This application contains code that goes looking for cryptocurrency wallet files on "
+            + "your computer. Those files are the money. There is no legitimate reason for an "
+            + "unrelated application to read them.",
+        UserRemediation =
+            "Do not run this application. If you already have, move your funds to a new wallet "
+            + "from a different machine.",
         Pattern = PatternRule.Compile(
             """
             (?:wallet\.dat
@@ -124,6 +149,7 @@ public static class MaliciousBehaviourRules
         Id = "VC-MAL-004",
         Title = "Application harvests chat client authentication tokens",
         Severity = Severity.Critical,
+        UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
         Description =
@@ -134,6 +160,13 @@ public static class MaliciousBehaviourRules
         Remediation =
             "Do not run this application. If it has already been run, change your password to "
             + "invalidate existing tokens and warn your contacts about messages sent from your account.",
+        UserDescription =
+            "This application contains code that takes the sign-in tokens from your chat "
+            + "programs. Those tokens let someone use your account, read your messages, and message "
+            + "your contacts as you.",
+        UserRemediation =
+            "Do not run this application. If you already have, log out of every session in those "
+            + "chat apps and change the passwords.",
         Pattern = PatternRule.Compile(
             """
             (?:discord[\\/](?:Local\s?Storage|leveldb)
@@ -148,6 +181,7 @@ public static class MaliciousBehaviourRules
         Id = "VC-MAL-005",
         Title = "Application monitors the clipboard for wallet addresses",
         Severity = Severity.Critical,
+        UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
         Description =
@@ -157,6 +191,13 @@ public static class MaliciousBehaviourRules
         Remediation =
             "Do not run this application. Verify the full destination address on the receiving "
             + "device before confirming any transfer made from this machine.",
+        UserDescription =
+            "This application watches your clipboard for cryptocurrency addresses. This is the "
+            + "pattern used to swap the address you copied for the attacker own, so that a payment "
+            + "you thought you were sending to yourself goes to them instead.",
+        UserRemediation =
+            "Do not run this application. If you already have, check the address carefully on any "
+            + "recent transfer.",
         Pattern = PatternRule.Compile(
             """
             (?:clipboard|Clipboard\.(?:GetText|SetText)|pyperclip|clipboardy)
@@ -175,6 +216,7 @@ public static class MaliciousBehaviourRules
         Id = "VC-MAL-006",
         Title = "Application configures itself to run at startup",
         Severity = Severity.Medium,
+        UserSeverity = Severity.Medium,
         Category = FindingCategory.CodeSafety,
         Description =
             "The application writes an auto-start entry, so it runs every time the user signs in. "
@@ -183,6 +225,13 @@ public static class MaliciousBehaviourRules
         Remediation =
             "If persistent startup is not expected for this kind of application, treat it as "
             + "suspicious and review the other findings in this report together with it.",
+        UserDescription =
+            "The application sets itself to start automatically when you turn your computer on. "
+            + "Plenty of ordinary software does this, but it means the app keeps running whether or "
+            + "not you asked for it that day, so it is worth knowing it is there.",
+        UserRemediation =
+            "If you did not want this, look for a start with system setting in the app, or remove "
+            + "it from your startup programs.",
         Pattern = PatternRule.Compile(
             """
             (?:CurrentVersion[\\/]+Run

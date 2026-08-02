@@ -123,7 +123,11 @@ public sealed class Scanner
             .Concat(analysis.Findings)
             .Concat(VulnerabilityFindings.Build(lookup))
             .Concat(deepPass.Findings)
-            .OrderByDescending(f => f.Severity)
+
+            // Ordered by what matters to whoever is reading. Sorting an end user's report by
+            // the developer's severity would open it with a leaked key they cannot act on and
+            // bury the thing that actually reaches their machine.
+            .OrderByDescending(f => f.SeverityFor(options.Audience))
             .ThenBy(f => f.Category)
             .ThenBy(f => f.RuleId, StringComparer.Ordinal)
             .ToList();
@@ -140,10 +144,10 @@ public sealed class Scanner
 
             // Coverage gates the verdict: without it, an artifact that yielded no readable
             // code at all scores full marks for the absence of findings never looked for.
-            Verdict = ScoreCalculator.Calculate(findings, coverage.Percent),
+            Verdict = ScoreCalculator.Calculate(findings, coverage.Percent, options.Audience),
             Coverage = coverage,
             Findings = findings,
-            CategoryScores = ScoreCalculator.CategoryScores(findings),
+            CategoryScores = ScoreCalculator.CategoryScores(findings, options.Audience),
             VulnerabilityData = lookup.Provenance,
             Effort = new ScanEffort
             {

@@ -200,6 +200,14 @@ public static class AssemblyInspector
                 RuleId = "VC-BIN-001",
                 Title = "Assembly is not strong-name signed",
                 Severity = Severity.Low,
+                UserSeverity = Severity.Low,
+                UserDescription =
+                    "Nothing in this file proves who built it. If you got it from somewhere other than "
+                    + "the official source, there is no way to tell whether it is the real thing or a copy "
+                    + "somebody altered.",
+                UserRemediation =
+                    "Make sure you downloaded this from the official site rather than a mirror or a link "
+                    + "someone sent you.",
                 Category = FindingCategory.BinaryHygiene,
                 Description =
                     $"{label} carries no strong name, so nothing binds the file to a publisher. "
@@ -217,6 +225,15 @@ public static class AssemblyInspector
                 RuleId = "VC-BIN-002",
                 Title = "Type names appear obfuscated",
                 Severity = Severity.Medium,
+                UserSeverity = Severity.Medium,
+                UserDescription =
+                    "This application has been deliberately scrambled so that its code cannot easily be "
+                    + "read. Commercial software does this to protect its own work, but it also means this "
+                    + "scan could see very little of what the app actually does, so a clean result here "
+                    + "proves much less than usual.",
+                UserRemediation =
+                    "Weigh how much you trust wherever you got this from, because the checks here could "
+                    + "not see inside it.",
                 Category = FindingCategory.BinaryHygiene,
                 Description =
                     $"Most type names in {label} are single characters or non-identifier sequences, "

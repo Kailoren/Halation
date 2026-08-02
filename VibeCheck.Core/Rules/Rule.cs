@@ -92,13 +92,29 @@ public sealed class PatternRule : IRule
 
     public required string Title { get; init; }
 
+    /// <summary>How bad this is for whoever ships the application.</summary>
     public required Severity Severity { get; init; }
+
+    /// <summary>
+    /// How bad this is for whoever runs it. Required, so adding a rule cannot skip the
+    /// judgment and silently inherit the developer's answer.
+    /// </summary>
+    public required Severity UserSeverity { get; init; }
 
     public required FindingCategory Category { get; init; }
 
     public required string Description { get; init; }
 
+    /// <summary>The same finding written for someone who cannot change the code.</summary>
+    public required string UserDescription { get; init; }
+
     public required string Remediation { get; init; }
+
+    /// <summary>
+    /// What the reader can do about it when it is not their code. Null where there is
+    /// genuinely nothing, which is common and better said by omission than by padding.
+    /// </summary>
+    public string? UserRemediation { get; init; }
 
     public required Regex Pattern { get; init; }
 
@@ -188,9 +204,12 @@ public sealed class PatternRule : IRule
                 RuleId = Id,
                 Title = Title,
                 Severity = Severity,
+                UserSeverity = UserSeverity,
                 Category = Category,
                 Description = Description,
+                UserDescription = UserDescription,
                 Remediation = Remediation,
+                UserRemediation = UserRemediation,
                 FilePath = context.File.RelativePath,
                 Line = line,
                 Evidence = Redaction.BuildEvidence(context.LineText(line), secret),
