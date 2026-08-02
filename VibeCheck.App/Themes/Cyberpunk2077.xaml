@@ -68,6 +68,11 @@
     <SolidColorBrush x:Key="Hover"       Color="#231F05"/>
     <SolidColorBrush x:Key="CloseHover"  Color="#FF003C"/>
 
+    <!-- The accent at low alpha. One key, so the drop zone accepting a file and an audience
+         choice being pointed at are the same yellow because they read the same brush, not
+         because the same hex was typed in two templates and stayed in step by luck. -->
+    <SolidColorBrush x:Key="AccentWash"  Color="#1FF9F002"/>
+
     <!-- Black on the danger colour, which is the source theme's own habit. -->
     <SolidColorBrush x:Key="OnDanger"    Color="#000000"/>
 
@@ -95,16 +100,22 @@
          Typography and metrics
          ==================================================================== -->
 
-    <!-- The source recommends Advent Pro, Barlow, Tomorrow and Oxanium, none of which ship
-         with Windows. Listed first anyway so they are picked up if ever installed, with
-         Bahnschrift behind them: it is present on every Windows 10 and 11 machine and is the
-         closest thing in the box to the squared-off industrial face this wants. -->
-    <FontFamily x:Key="UiFont">Oxanium, Tomorrow, Barlow, Bahnschrift, Segoe UI</FontFamily>
-    <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
+    <!-- Barlow for everything that is read and Oxanium for everything that is looked at, which
+         is the pairing the source theme recommends and the division a display face is for.
 
-    <!-- Michroma on the headings only. It is a wide display face and a paragraph set in it is
-         unreadable, but it is the closest thing to the game's own lettering. -->
-    <FontFamily x:Key="DisplayFont">Michroma, Oxanium, Bahnschrift, Segoe UI</FontFamily>
+         Barlow is a narrow grotesque with a full range of real weights installed, Thin through
+         Black and an italic for each, so FontWeight in the markup resolves to a drawn face
+         rather than to a synthesised slant. Oxanium is squared and wide and correct for a
+         heading and unreadable for a paragraph, which is exactly why DisplayFont exists as a
+         separate key.
+
+         Neither ships with Windows. The fallbacks matter for that reason and are ordered so
+         the look degrades rather than breaks: Tomorrow and Advent Pro are the source theme's
+         other suggestions, Bahnschrift is on every Windows 10 and 11 machine and is the
+         closest thing in the box to a squared industrial face, and Segoe UI is the floor. -->
+    <FontFamily x:Key="UiFont">Barlow, Tomorrow, Advent Pro, Bahnschrift, Segoe UI</FontFamily>
+    <FontFamily x:Key="DisplayFont">Oxanium, Tomorrow, Bahnschrift, Segoe UI</FontFamily>
+    <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
 
     <!-- Square corners everywhere. Nothing in this game's interface is rounded, and the corner
          cut added by CardChrome below only reads as a cut against a right angle. -->
@@ -523,7 +534,7 @@
                         <!-- Drag state. Flood of the accent at low alpha plus the heavy glow,
                              faded in over the swift duration. -->
                         <Border x:Name="Active" Opacity="0"
-                                Background="#1FF9F002"
+                                Background="{DynamicResource AccentWash}"
                                 BorderBrush="{DynamicResource Accent}" BorderThickness="2"
                                 Effect="{DynamicResource DropZoneGlow}"/>
 

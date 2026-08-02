@@ -8,7 +8,7 @@
 
         ResizeMode="NoResize"
         Background="{StaticResource Bg}"
-        FontFamily="Segoe UI" FontSize="13"
+        FontFamily="{DynamicResource UiFont}" FontSize="{DynamicResource BodySize}"
         WindowStyle="None" AllowsTransparency="False">
 
     <!-- Sizes to whatever the explanatory text wraps to. It was a fixed 300 and the buttons
@@ -55,7 +55,7 @@
                          Background="{StaticResource PanelRaised}"
                          Foreground="{StaticResource Text}"
                          BorderBrush="{StaticResource Edge}" BorderThickness="1"
-                         FontFamily="Consolas"/>
+                         FontFamily="{DynamicResource MonoFont}"/>
 
             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,12,0,0"
                        Text="Only the files selected by triage are sent, and only on scans where you tick the deep pass box. Nothing is sent on an isolated scan. Leave the box empty and save to remove a stored key."/>

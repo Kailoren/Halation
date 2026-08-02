@@ -8,7 +8,7 @@
         Title="VibeCheck"
         Height="820" Width="1120" MinHeight="560" MinWidth="820"
         Background="{StaticResource Bg}"
-        FontFamily="Segoe UI" FontSize="13"
+        FontFamily="{DynamicResource UiFont}" FontSize="{DynamicResource BodySize}"
         WindowStyle="None" ResizeMode="CanResize" AllowsTransparency="False"
         AllowDrop="True"
         DragEnter="OnDragEnter" DragOver="OnDragOver" DragLeave="OnDragLeave" Drop="OnDrop">
@@ -84,9 +84,7 @@
                     <StackPanel>
                         <Button Command="{Binding ChooseAudienceCommand}"
                                 CommandParameter="Developer"
-                                HorizontalContentAlignment="Left" Padding="14,12"
-                                Background="{StaticResource Panel}" BorderThickness="0"
-                                Foreground="{StaticResource Text}" Cursor="Hand">
+                                Style="{StaticResource ChoiceBtn}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="I built this application" FontSize="15"/>
@@ -103,9 +101,7 @@
 
                         <Button Command="{Binding ChooseAudienceCommand}"
                                 CommandParameter="EndUser" Margin="0,10,0,0"
-                                HorizontalContentAlignment="Left" Padding="14,12"
-                                Background="{StaticResource Panel}" BorderThickness="0"
-                                Foreground="{StaticResource Text}" Cursor="Hand">
+                                Style="{StaticResource ChoiceBtn}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="I downloaded this application" FontSize="15"/>
@@ -134,7 +130,7 @@
                      flat colours and no theme could say otherwise. -->
                 <ContentControl x:Name="DropTarget" Style="{StaticResource DropZone}" Height="230">
                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets" FontSize="40"
+                        <TextBlock Text="&#xE7C3;" FontFamily="{DynamicResource IconFont}" FontSize="40"
                                    Foreground="{StaticResource Muted}" HorizontalAlignment="Center"/>
                         <TextBlock Text="Drop an application here"
                                    FontFamily="{DynamicResource DisplayFont}"
@@ -185,7 +181,7 @@
                             <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
                                        Text="API key:"/>
                             <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
-                                       Margin="6,0,0,0" FontFamily="Consolas"
+                                       Margin="6,0,0,0" FontFamily="{DynamicResource MonoFont}"
                                        Text="{Binding ApiKeyStatus}"/>
                             <Button Content="Set key" Style="{StaticResource Btn}" Margin="12,0,0,0"
                                     Click="OnSetApiKey"/>
@@ -439,7 +435,7 @@
                                                             <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
                                                                 <TextBlock Text="{Binding RuleId}"
                                                                            Style="{StaticResource Caption}"
-                                                                           FontFamily="Consolas"
+                                                                           FontFamily="{DynamicResource MonoFont}"
                                                                            Visibility="{Binding ShowRuleId,
                                                                                         Converter={StaticResource BoolToVisibility}}"/>
                                                                 <TextBlock Text="  ·  " Style="{StaticResource Caption}"
@@ -447,7 +443,7 @@
                                                                                         Converter={StaticResource BoolToVisibility}}"/>
                                                                 <TextBlock Text="{Binding Location}"
                                                                            Style="{StaticResource Caption}"
-                                                                           FontFamily="Consolas"
+                                                                           FontFamily="{DynamicResource MonoFont}"
                                                                            TextTrimming="CharacterEllipsis"/>
                                                             </StackPanel>
                                                         </StackPanel>
@@ -474,7 +470,7 @@
                                                             Background="{StaticResource Bg}"
                                                             Visibility="{Binding Evidence,
                                                                          Converter={StaticResource NullToVisibility}}">
-                                                        <TextBlock Text="{Binding Evidence}" FontFamily="Consolas"
+                                                        <TextBlock Text="{Binding Evidence}" FontFamily="{DynamicResource MonoFont}"
                                                                    FontSize="12" TextWrapping="Wrap"
                                                                    Foreground="{StaticResource Muted}"/>
                                                     </Border>
@@ -567,7 +563,7 @@
                                                     Converter={StaticResource NullToVisibility}}"/>
 
                             <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Style="{StaticResource Caption}"
-                                       FontFamily="Consolas" FontSize="11"
+                                       FontFamily="{DynamicResource MonoFont}" FontSize="11"
                                        Text="{Binding Sha256, StringFormat=SHA-256 {0}}"/>
                         </StackPanel>
                     </ContentControl>

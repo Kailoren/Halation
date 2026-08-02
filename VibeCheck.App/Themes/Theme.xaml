@@ -49,6 +49,13 @@
     <SolidColorBrush x:Key="CloseHover"  Color="#C42B1C"/>
     <SolidColorBrush x:Key="OnDanger"    Color="#FFFFFF"/>
 
+    <!-- The accent at low alpha, for a surface that is being pointed at or dragged onto rather
+         than merely hovered. Translucent on purpose: it is laid over whatever it highlights, so
+         one key covers every such surface whatever colour that surface happens to be, and every
+         one of them is then the same colour as the others by construction rather than because
+         somebody copied a hex value. -->
+    <SolidColorBrush x:Key="AccentWash"  Color="#1F4C8DFF"/>
+
     <!-- Severity ramp. Read left to right as worsening; keep them distinguishable to a
          colour-blind reader by lightness as well as by hue. -->
     <SolidColorBrush x:Key="Critical" Color="#FF4D4F"/>
@@ -339,6 +346,91 @@
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The two audience choices, which are buttons the size of paragraphs rather than
+         buttons the size of words.
+
+         They had no style at all until now, which meant they fell through to WPF's stock
+         Button template and lit up in the Aero2 mouse-over blue. That blue is baked into the
+         framework's own theme dictionary, so it was the one colour in the application that no
+         theme could reach and no palette could explain. Anything given to a user to click
+         needs a style here, even when the default happens to look acceptable.
+
+         Borderless at rest so the choices read as part of the card they sit in, with the whole
+         frame arriving on hover. AccentWash rather than Hover for the fill: this is a
+         selection, and it should look like the drop zone accepting a file rather than like a
+         toolbar button being passed over. -->
+    <Style x:Key="ChoiceBtn" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource Panel}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="14,12"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{DynamicResource ButtonRadius}"/>
+
+                        <!-- Thickness fixed rather than template-bound, because the control is
+                             borderless at rest and binding it would leave the hover state with
+                             nothing to draw. -->
+                        <Border x:Name="Hot" Opacity="0"
+                                Background="{DynamicResource AccentWash}"
+                                BorderBrush="{DynamicResource Accent}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource ButtonRadius}"
+                                Effect="{DynamicResource ButtonGlow}"/>
+
+                        <!-- Keyboard focus gets its own layer rather than sharing the hover
+                             one. Two triggers animating a single Opacity means whichever ran
+                             last owns it, and tabbing away while the pointer is still over the
+                             control would clear a highlight that should have stayed. -->
+                        <Border x:Name="Ring" Opacity="0"
+                                BorderBrush="{DynamicResource Accent}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource ButtonRadius}"/>
+
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1"
+                                                         Duration="{StaticResource SwiftDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0"
+                                                         Duration="{StaticResource CalmDuration}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Ring" Property="Opacity" Value="1"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

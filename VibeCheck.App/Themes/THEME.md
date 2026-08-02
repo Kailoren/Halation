@@ -51,8 +51,14 @@ it. If you add keys of your own and want them overridable in turn, refer to them
 | `Muted` | `#8B93A1` | Captions, explanatory text, title bar glyphs |
 | `Accent` | `#4C8DFF` | Links, focus and hover borders, progress bar |
 | `Hover` | `#2F3540` | Button and title bar button hover fill |
+| `AccentWash` | `#1F4C8DFF` | A surface being pointed at or dragged onto, laid **over** whatever it highlights |
 | `CloseHover` | `#C42B1C` | Close button hover fill |
 | `OnDanger` | `#FFFFFF` | Text on `CloseHover` |
+
+`AccentWash` is translucent on purpose. It is drawn over the surface it highlights rather than
+replacing that surface's colour, so one key covers every such surface whatever colour each one
+happens to be, and all of them are the same colour as each other by construction rather than
+because somebody copied a hex value into two templates and kept them in step by hand.
 
 ## Severity ramp
 
@@ -191,8 +197,15 @@ Restyling rather than recolouring means overriding these whole. Copy the one you
 | `Card` | The panels. A templated `ContentControl`, not a `Border` |
 | `DropZone` | The drop target, including its drag state |
 | `Btn` | Ordinary buttons |
+| `ChoiceBtn` | The two audience choices, which are buttons the size of paragraphs |
 | `CaptionBtn` | Minimise and maximise |
 | `CloseBtn` | Close, inherits `CaptionBtn` |
+
+> **Every clickable control needs a style here, including the ones that look fine without one.**
+> The audience choices had none for a while, so they fell through to WPF's stock `Button`
+> template and lit up in the Aero2 mouse-over blue. That blue lives in the framework's own theme
+> dictionary, which made it the single colour in the application that no theme could reach and no
+> palette could account for. An unstyled control is a hole in the theme, not a neutral default.
 
 `Card` and `DropZone` are `ContentControl`s so that a theme can own their shape and not merely
 their colour. A `Border` has exactly one child and no template, so the only thing a style could
