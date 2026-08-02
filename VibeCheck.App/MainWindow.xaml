@@ -369,6 +369,28 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- What this scan did. The counterpart to the limitations card below: a
+                         result that lands in under two seconds reads as skipped unless the work
+                         behind it is stated, and the honest way to answer that is to show the
+                         receipt rather than to slow the scan down. -->
+                    <Border Style="{StaticResource Card}" Margin="0,14,0,0"
+                            Visibility="{Binding Effort.Count,
+                                                 Converter={StaticResource CountToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="What this scan did" Style="{StaticResource Heading}"/>
+                            <ItemsControl ItemsSource="{Binding Effort}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Style="{StaticResource Caption}">
+                                <Run Text="All of it in"/><Run Text=" "/><Run Text="{Binding DurationLabel, Mode=OneWay}"/><Run Text=". Static analysis is fast; a quick result is not a shallow one, and the figures above are what it covered."/>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
                     <!-- What could not be checked -->
                     <Border Style="{StaticResource Card}" Margin="0,14,0,0"
                             Visibility="{Binding Limitations.Count,

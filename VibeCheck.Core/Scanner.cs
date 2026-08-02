@@ -135,6 +135,23 @@ public sealed class Scanner
             Findings = findings,
             CategoryScores = ScoreCalculator.CategoryScores(findings),
             VulnerabilityData = lookup.Provenance,
+            Effort = new ScanEffort
+            {
+                RecoveryMethod = ScanEffort.MethodFor(artifact.Kind),
+                FilesRecovered = coverage.RecoveredFileCount,
+                BytesRecovered = coverage.RecoveredBytes,
+                ChecksRun = _rules.Rules.Count,
+                FilesChecked = analysis.FilesAnalysed,
+                PackagesResolved = dependencies.Dependencies.Count,
+
+                // Resolved and checked differ whenever the lookup declined: isolate mode with
+                // no bundle, no network, or the check switched off. Reporting the resolved
+                // count as though it had been checked would claim work that did not happen.
+                PackagesChecked = lookup.Provenance.Origin == VulnerabilityDataOrigin.None
+                    ? 0
+                    : dependencies.Dependencies.Count,
+                VulnerabilityData = lookup.Provenance,
+            },
             BundlePath = bundlePath,
             RanIsolated = options.Isolate,
             ScannerVersion = Version,

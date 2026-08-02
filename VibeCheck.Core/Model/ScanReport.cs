@@ -33,6 +33,11 @@ public sealed record ScanReport
     public required Dependencies.VulnerabilityDataProvenance VulnerabilityData { get; init; }
 
     /// <summary>
+    /// What the scan did, so its speed can be read as fast rather than as skipped.
+    /// </summary>
+    public required ScanEffort Effort { get; init; }
+
+    /// <summary>
     /// Where the offline data bundle for this scan was written, when one was produced.
     /// </summary>
     public string? BundlePath { get; init; }

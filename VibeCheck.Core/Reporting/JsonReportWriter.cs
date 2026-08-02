@@ -65,6 +65,20 @@ public static class JsonReportWriter
                 checksNotPossible = report.Coverage.ChecksNotPossible,
             },
 
+            // What the run actually did, so a consumer can weigh a result that took two
+            // seconds without having to assume either thoroughness or negligence.
+            effort = new
+            {
+                recoveryMethod = report.Effort.RecoveryMethod,
+                filesRecovered = report.Effort.FilesRecovered,
+                bytesRecovered = report.Effort.BytesRecovered,
+                checksRun = report.Effort.ChecksRun,
+                filesChecked = report.Effort.FilesChecked,
+                packagesResolved = report.Effort.PackagesResolved,
+                packagesChecked = report.Effort.PackagesChecked,
+                summary = report.Effort.Describe(report.ScannedAt),
+            },
+
             vulnerabilityData = new
             {
                 origin = report.VulnerabilityData.Origin.ToString(),

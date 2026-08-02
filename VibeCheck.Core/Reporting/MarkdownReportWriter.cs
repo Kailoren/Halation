@@ -27,10 +27,36 @@ public static class MarkdownReportWriter
         WriteCoverage(output, report);
         WriteCategoryScores(output, report);
         WriteFindings(output, report);
+        WriteEffort(output, report);
         WriteLimitations(output, report);
         WriteFooter(output, report);
 
         return output.ToString();
+    }
+
+    /// <summary>
+    /// States the work, alongside the section that states what was skipped. Without it a scan
+    /// that finished in under two seconds looked like one that had not run.
+    /// </summary>
+    private static void WriteEffort(StringBuilder output, ScanReport report)
+    {
+        var lines = report.Effort.Describe(report.ScannedAt);
+        if (lines.Count == 0)
+        {
+            return;
+        }
+
+        output.AppendLine("## What this scan did");
+        output.AppendLine();
+
+        foreach (var line in lines)
+        {
+            output.AppendLine($"- {line}");
+        }
+
+        output.AppendLine();
+        output.AppendLine($"All of it in {report.Duration.TotalSeconds:F1}s.");
+        output.AppendLine();
     }
 
     private static void WriteHeader(StringBuilder output, ScanReport report)

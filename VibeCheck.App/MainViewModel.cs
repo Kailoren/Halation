@@ -152,6 +152,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public ObservableCollection<string> Limitations { get; } = [];
 
+    /// <summary>
+    /// What the scan did. Shown beside what it could not do, so a result that arrives in under
+    /// two seconds reads as quick rather than as skipped.
+    /// </summary>
+    public ObservableCollection<string> Effort { get; } = [];
+
     public string ArtifactName => Report?.ArtifactName ?? string.Empty;
 
     public string KindLabel => Report?.KindLabel ?? string.Empty;
@@ -291,10 +297,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Findings.Clear();
         CategoryScores.Clear();
         Limitations.Clear();
+        Effort.Clear();
 
         if (Report is null)
         {
             return;
+        }
+
+        foreach (var line in Report.Effort.Describe(Report.ScannedAt))
+        {
+            Effort.Add(line);
         }
 
         foreach (var finding in Report.FindingsBySeverity)
