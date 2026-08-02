@@ -191,7 +191,18 @@
                         <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,6,0,0"
                                    Text="Reads the files that handle untrusted input and reasons about them, catching incomplete guards and reachability that pattern rules cannot express. Findings are labelled as inferred and never trigger a do-not-install verdict."/>
 
-                        <StackPanel Margin="24,12,0,0">
+                        <!-- Replaced, not disabled. A row of controls that can be clicked at
+                             and does nothing is worse than no controls: it reads as broken
+                             rather than as withheld, and says nothing about how to proceed. -->
+                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                   Margin="24,10,0,0"
+                                   Text="{Binding DeepPassUnavailableHere}"
+                                   Visibility="{Binding DeepPassOfferedHere,
+                                                Converter={StaticResource InverseBoolToVisibility}}"/>
+
+                        <StackPanel Margin="24,12,0,0"
+                                    Visibility="{Binding DeepPassOfferedHere,
+                                                 Converter={StaticResource BoolToVisibility}}">
                             <RadioButton GroupName="DeepPassSource"
                                          Content="Use my Anthropic API key"
                                          IsChecked="{Binding DeepPassUsesApiKey}"
@@ -218,11 +229,14 @@
                                        Margin="20,4,0,0" Text="{Binding LocalCliStatus}"/>
                         </StackPanel>
 
-                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,12,0,0"
-                                   Text="{Binding DeepPassCostLine}"/>
+                        <StackPanel Visibility="{Binding DeepPassOfferedHere,
+                                                 Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,12,0,0"
+                                       Text="{Binding DeepPassCostLine}"/>
 
-                        <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,8,0,0"
-                                   Text="Only the files that handle untrusted input are sent, never the whole application, and never on an isolated scan. Both routes send them to Anthropic; they differ in what they spend, not in what leaves this machine. Your API key, if you set one, is encrypted to your Windows account and stored outside the application folder. The report names which files were read and what answered."/>
+                            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,8,0,0"
+                                       Text="Only the files that handle untrusted input are sent, never the whole application, and never on an isolated scan. Both routes send them to Anthropic; they differ in what they spend, not in what leaves this machine. Your API key, if you set one, is encrypted to your Windows account and stored outside the application folder. The report names which files were read and what answered."/>
+                        </StackPanel>
                     </StackPanel>
                 </ContentControl>
 
@@ -235,6 +249,14 @@
 
                 <!-- Bound rather than fixed: this promise stops being true the moment the
                      deep pass is switched on, and must say so. -->
+                <!-- Back to the opening question. The inline toggle above changes the reader
+                     in one click, which is right when you know what you want; this is for
+                     when what you actually want is the screen that explains the difference. -->
+                <Button Command="{Binding ReturnToSelectionCommand}"
+                        Content="Return to selection"
+                        Style="{StaticResource Btn}"
+                        HorizontalAlignment="Center" Margin="0,18,0,0"/>
+
                 <TextBlock Style="{StaticResource Caption}" Margin="0,18,0,0" TextWrapping="Wrap"
                            TextAlignment="Center"
                            Text="{Binding PrivacyLine}"/>

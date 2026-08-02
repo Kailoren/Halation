@@ -57,6 +57,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
         SwitchAudienceCommand = new RelayCommand(_ => Audience =
             Audience == Audience.EndUser ? Audience.Developer : Audience.EndUser);
 
+        // Back to the opening question rather than only the inline toggle. Which reader a scan
+        // is for changes what the scan does, not just how it reads, so it is worth a way back
+        // to the screen that explains the difference.
+        ReturnToSelectionCommand = new RelayCommand(
+            _ => State = AppState.ChoosingAudience,
+            _ => State != AppState.Scanning);
+
         // Started, not awaited. The answer only decides whether one option is offerable, and
         // the audience question is on screen first regardless; the status line says it is
         // still looking until it knows.
@@ -88,12 +95,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Notify(nameof(LastWasDeveloper));
             Notify(nameof(LastWasEndUser));
 
-            // Switching to the end user view withdraws the local agent option, because that
-            // view means the reader did not write what they are about to scan. Selecting it
-            // and then changing audience must not leave the choice standing.
+            // Switching to the end user view withdraws the deep pass entirely, because that
+            // view means the reader did not write what they are about to scan. Selecting a
+            // source and then changing audience must not leave the choice standing.
             Notify(nameof(LocalCliReady));
             Notify(nameof(LocalCliStatus));
             Notify(nameof(CanRunDeepPass));
+            Notify(nameof(DeepPassOfferedHere));
+            Notify(nameof(DeepPassSourceReady));
 
             if (DeepPassUsesLocalCli && !LocalCliReady)
             {
@@ -119,6 +128,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public ICommand ChooseAudienceCommand { get; }
 
     public ICommand SwitchAudienceCommand { get; }
+
+    public ICommand ReturnToSelectionCommand { get; }
 
     public string SwitchAudienceLabel => Audience == Audience.EndUser
         ? "Switch to the developer view"
@@ -239,11 +250,33 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public bool HasApiKey => ApiKeyStore.Load() is not null;
 
+    /// <summary>
+    /// Whether the deep pass is offered to this reader at all.
+    /// </summary>
+    /// <remarks>
+    /// Developer view only. Not a security rule (the API endpoint cannot execute anything, so
+    /// the key route would be safe on untrusted code) but a product one: someone checking
+    /// software they downloaded is asking whether to trust it, and an answer that costs money
+    /// and requires an Anthropic account is not the answer that question wants. The core still
+    /// permits an API-backed pass for either audience, so a library caller is not bound by
+    /// this; it is a decision about what this window offers.
+    /// </remarks>
+    public bool DeepPassOfferedHere => Audience == Audience.Developer;
+
     /// <summary>Whether the source currently chosen can actually answer.</summary>
-    public bool DeepPassSourceReady => DeepPassUsesLocalCli ? LocalCliReady : HasApiKey;
+    public bool DeepPassSourceReady =>
+        DeepPassOfferedHere && (DeepPassUsesLocalCli ? LocalCliReady : HasApiKey);
 
     /// <summary>Whether anything at all could answer, which is what gates the checkbox.</summary>
-    public bool CanRunDeepPass => HasApiKey || LocalCliReady;
+    public bool CanRunDeepPass => DeepPassOfferedHere && (HasApiKey || LocalCliReady);
+
+    /// <summary>
+    /// Shown in place of the controls when the pass is not on offer, rather than leaving a row
+    /// of dead controls for somebody to click at and get nothing from.
+    /// </summary>
+    public string DeepPassUnavailableHere =>
+        "Only available when reporting for whoever ships this, on an application you built "
+        + "yourself. Checking something you downloaded runs entirely on this machine.";
 
     /// <summary>
     /// Whether the local agent route is offerable.
