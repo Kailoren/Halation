@@ -161,21 +161,6 @@ carry a confidence level, and low-confidence ones are dropped rather than hedged
 can **trigger a "do not install" verdict**, because the strongest claim in a report must not
 depend on whether the reader happened to have a key or a subscription.
 
-## The interface is fixed
-
-Every colour, metric and typeface is compiled into the executable, and there is nothing beside
-it to edit. That is deliberate rather than unfinished: what you see has to be what was built and
-tested, and a security tool whose interface can be rearranged by a file in a user's profile is a
-security tool whose screenshots prove nothing.
-
-The three typefaces are bundled too, so the application draws the same on a machine with none of
-them installed. They are Barlow, Oxanium and Cascadia Mono, all SIL Open Font License 1.1, with
-each licence in [`VibeCheck.App/Fonts`](VibeCheck.App/Fonts) beside them.
-
-If you are building from source and want it to look different,
-[`Theme.xaml`](VibeCheck.App/Themes/Theme.xaml) is where every value lives and
-[`THEME.md`](VibeCheck.App/Themes/THEME.md) documents each key.
-
 ## Status
 
 Early development. The analysis core, the rule set, the desktop interface and the optional
