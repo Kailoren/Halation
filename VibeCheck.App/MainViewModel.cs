@@ -618,8 +618,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                              nameof(BandLabel), nameof(Band), nameof(HasMeaningfulScore),
                              nameof(AdviseAgainstInstall), nameof(BlockingReasons),
                              nameof(CoveragePercent), nameof(CoverageBasis), nameof(CoverageIsLow),
-                             nameof(SummaryLine), nameof(VulnerabilitySummary),
-                             nameof(VulnerabilityIsStale), nameof(Sha256),
+                             nameof(SummaryLine), nameof(VulnerabilitySummary), nameof(Sha256),
                              nameof(DurationLabel), nameof(ScoreCaption),
                          })
                 {
@@ -703,9 +702,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string VulnerabilitySummary => Report is null
         ? string.Empty
         : Report.VulnerabilityData.Describe(Report.ScannedAt);
-
-    public bool VulnerabilityIsStale =>
-        Report is not null && Report.VulnerabilityData.IsStale(Report.ScannedAt);
 
     // ---- Commands ----------------------------------------------------------
 

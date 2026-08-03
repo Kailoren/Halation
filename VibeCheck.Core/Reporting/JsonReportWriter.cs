@@ -86,7 +86,6 @@ public static class JsonReportWriter
                     ? null
                     : (DateTimeOffset?)report.VulnerabilityData.AsOf,
                 ageInDays = report.VulnerabilityData.AgeInDays(report.ScannedAt),
-                stale = report.VulnerabilityData.IsStale(report.ScannedAt),
                 ecosystems = report.VulnerabilityData.Ecosystems,
             },
 

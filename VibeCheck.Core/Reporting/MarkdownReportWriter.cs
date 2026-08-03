@@ -475,17 +475,6 @@ public static class MarkdownReportWriter
         output.AppendLine($"Dependency checks used {provenance.Describe(report.ScannedAt)}.");
         output.AppendLine();
 
-        // Age is stated rather than merely dated. A result checked against data three months
-        // old is a materially weaker claim than one checked a second ago, and the difference
-        // is invisible unless the report says so.
-        if (provenance.IsStale(report.ScannedAt))
-        {
-            output.AppendLine($"> **This data is {provenance.AgeInDays(report.ScannedAt)} days old.** "
-                              + "Anything published since is not reflected here. Re-run with a "
-                              + "network connection for a current answer.");
-            output.AppendLine();
-        }
-
         output.AppendLine("---");
         output.AppendLine();
         output.AppendLine($"VibeCheck {report.ScannerVersion}");
