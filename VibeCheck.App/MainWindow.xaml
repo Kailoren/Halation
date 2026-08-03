@@ -431,11 +431,19 @@
                         </StackPanel>
                     </ContentControl>
 
-                    <!-- Coverage -->
+                    <!-- Coverage.
+
+                         The first of the seven folding sections, and the first to start folded.
+                         Findings is the only one that opens with the report, because it is what
+                         a reader came for; the rest are the workings, and thirty eight check
+                         rows between the score and the findings is a scroll rather than a
+                         reading. Nothing is hidden by starting closed: every header states how
+                         much is inside it, which is the condition under which folding is a
+                         convenience rather than a way for the report to say less. -->
                     <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0">
                         <StackPanel>
                             <ToggleButton x:Name="CoverageSection" Style="{StaticResource SectionHeader}"
-                                          Content="Coverage" Tag="{Binding CoverageCount}" IsChecked="True"/>
+                                          Content="Coverage" Tag="{Binding CoverageCount}" IsChecked="False"/>
 
                             <StackPanel Margin="0,12,0,0"
                                         Visibility="{Binding IsChecked, ElementName=CoverageSection,
@@ -472,7 +480,7 @@
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <ToggleButton x:Name="ChecksSection" Style="{StaticResource SectionHeader}"
-                                          Content="Source code checks" Tag="{Binding ChecksCount}" IsChecked="True"/>
+                                          Content="Source code checks" Tag="{Binding ChecksCount}" IsChecked="False"/>
 
                             <StackPanel Margin="0,12,0,0"
                                         Visibility="{Binding IsChecked, ElementName=ChecksSection,
@@ -543,7 +551,7 @@
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <ToggleButton x:Name="CategoriesSection" Style="{StaticResource SectionHeader}"
-                                          Content="Scores by category" Tag="{Binding CategoriesCount}" IsChecked="True"/>
+                                          Content="Scores by category" Tag="{Binding CategoriesCount}" IsChecked="False"/>
 
                             <StackPanel Margin="0,12,0,0"
                                         Visibility="{Binding IsChecked, ElementName=CategoriesSection,
@@ -731,7 +739,7 @@
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <ToggleButton x:Name="EffortSection" Style="{StaticResource SectionHeader}"
-                                          Content="What this scan did" IsChecked="True"/>
+                                          Content="What this scan did" IsChecked="False"/>
 
                             <StackPanel Margin="0,12,0,0"
                                         Visibility="{Binding IsChecked, ElementName=EffortSection,
@@ -756,7 +764,7 @@
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <ToggleButton x:Name="LimitationsSection" Style="{StaticResource SectionHeader}"
-                                          Content="What could not be checked" Tag="{Binding LimitationsCount}" IsChecked="True"/>
+                                          Content="What could not be checked" Tag="{Binding LimitationsCount}" IsChecked="False"/>
 
                             <StackPanel Margin="0,12,0,0"
                                         Visibility="{Binding IsChecked, ElementName=LimitationsSection,
@@ -779,7 +787,7 @@
                     <ContentControl Style="{StaticResource Card}" Margin="0,14,0,24">
                         <StackPanel>
                             <ToggleButton x:Name="ProvenanceSection" Style="{StaticResource SectionHeader}"
-                                          Content="Vulnerability data" IsChecked="True"/>
+                                          Content="Vulnerability data" IsChecked="False"/>
 
                             <StackPanel Margin="0,12,0,0"
                                         Visibility="{Binding IsChecked, ElementName=ProvenanceSection,

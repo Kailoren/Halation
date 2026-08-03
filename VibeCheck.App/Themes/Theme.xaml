@@ -680,9 +680,10 @@
                     </Grid>
 
                     <ControlTemplate.Triggers>
-                        <!-- Written as the closed state rather than the open one so a section
-                             that starts open starts at rest, with no storyboard holding the
-                             arrow where the markup already put it. -->
+                        <!-- Written as the closed state rather than the open one because that
+                             is the state the arrow has to be turned to: the Path is drawn
+                             pointing down, which is where an open section leaves it, so an
+                             open one needs no storyboard holding it there. -->
                         <Trigger Property="IsChecked" Value="False">
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
