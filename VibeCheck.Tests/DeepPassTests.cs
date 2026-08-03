@@ -183,6 +183,102 @@ public class DeepPassTests
         Assert.Contains("truncated", excerpt, StringComparison.Ordinal);
     }
 
+    // ---- The progress line -------------------------------------------------
+
+    private sealed class SilentBackend : IDeepPassBackend
+    {
+        public string Description => "a stand-in backend";
+
+        public bool BillsTheReader => false;
+
+        public Task<FileReview> ReviewAsync(TriagedFile triaged, CancellationToken ct = default) =>
+            Task.FromResult(new FileReview());
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class Reported : IProgress<ScanProgress>
+    {
+        public List<string> Messages { get; } = [];
+
+        public void Report(ScanProgress value) => Messages.Add(value.Message);
+    }
+
+    private static async Task<string> ProgressLineFor(string path)
+    {
+        var reported = new Reported();
+
+        await DeepPassRunner.RunAsync(
+            [File(path, "var json = await Http.GetStringAsync(url);")],
+            [],
+            new ScanOptions { DeepPassApiKey = "sk-ant-test" },
+            new SilentBackend(),
+            reported);
+
+        return Assert.Single(reported.Messages);
+    }
+
+    /// <summary>
+    /// The count comes first because it is the half of this line that cannot grow. On screen
+    /// the line is one label of fixed width, and when the path led it pushed both the file
+    /// name and the count off the ends, leaving a reader watching the middle of a path with
+    /// no idea how far through the pass it was.
+    /// </summary>
+    [Fact]
+    public async Task Leads_the_progress_line_with_the_count()
+    {
+        var message = await ProgressLineFor("Services/CatalogLoader.cs");
+
+        Assert.StartsWith("Deep pass 1 of 1:", message, StringComparison.Ordinal);
+        Assert.EndsWith("Services/CatalogLoader.cs", message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A path too long to show is cut from the left, so the part that survives is the part
+    /// that identifies the file. Cutting from the right, which is what a text-trimming label
+    /// would have done on its own, removes exactly the file name.
+    /// </summary>
+    [Fact]
+    public async Task Shortens_a_deep_path_from_the_left_on_a_folder_boundary()
+    {
+        const string path = "MyApp/Infrastructure/Networking/Handlers/InboundMessageHandler.cs";
+
+        var message = await ProgressLineFor(path);
+
+        Assert.EndsWith("Handlers/InboundMessageHandler.cs", message, StringComparison.Ordinal);
+        Assert.Contains("…/", message, StringComparison.Ordinal);
+
+        // Whatever survived the cut is a run of whole folder names, not half of one: a folder
+        // shown as half its name reads as the name of a different folder.
+        var shown = message[(message.IndexOf("…/", StringComparison.Ordinal) + 2)..];
+        Assert.Contains("/" + shown, path, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The fallback for a path with no folder boundary left to cut on. Rare, but a decompiled
+    /// namespace path arrives as one long segment often enough to matter.
+    /// </summary>
+    [Fact]
+    public async Task Shortens_a_long_name_that_has_no_folder_boundary()
+    {
+        var name = new string('x', 80) + "Handler.cs";
+        var message = await ProgressLineFor(name);
+
+        Assert.EndsWith("Handler.cs", message, StringComparison.Ordinal);
+        Assert.True(message.Length < "Deep pass 1 of 1: ".Length + 50, message);
+    }
+
+    /// <summary>A path that fits is shown whole rather than shortened on principle.</summary>
+    [Fact]
+    public async Task Leaves_a_short_path_alone()
+    {
+        var message = await ProgressLineFor("Client.cs");
+
+        Assert.Equal("Deep pass 1 of 1: Client.cs", message);
+    }
+
     // ---- Cost --------------------------------------------------------------
 
     [Fact]

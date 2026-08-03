@@ -100,9 +100,13 @@ public static class DeepPassRunner
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            // Counter first, path last. The count is the part that says how much is left and
+            // it is the same length every time; the path is the part that varies without
+            // bound, so anything the label cannot fit comes off the end of the path rather
+            // than off the progress.
             progress?.Report(new ScanProgress(
                 ScanStage.Analysing,
-                $"Deep pass: reading {file.File.RelativePath} ({examined + 1} of {triaged.Count})",
+                $"Deep pass {examined + 1} of {triaged.Count}: {ForProgress(file.File.RelativePath)}",
                 (int)((examined + 1) / (double)triaged.Count * 100)));
 
             var review = await client.ReviewAsync(file, cancellationToken).ConfigureAwait(false);
@@ -186,6 +190,35 @@ public static class DeepPassRunner
             Backend = client.Description,
             Billed = client.BillsTheReader,
         };
+    }
+
+    /// <summary>
+    /// The path as it appears in the progress line, shortened from the left when it is too
+    /// long to show whole.
+    /// </summary>
+    /// <remarks>
+    /// The line it goes in is one label of fixed width on screen. A deep path left uncut
+    /// overran it in both directions, so the reader lost the file name off one end and the
+    /// count off the other and was left watching a middle section of a path. Cutting from the
+    /// left keeps the two identifying parts, the file name and the folder it sits in, and the
+    /// full path of every file that was read is in the report either way.
+    /// </remarks>
+    private static string ForProgress(string relativePath)
+    {
+        const int max = 46;
+
+        if (relativePath.Length <= max)
+        {
+            return relativePath;
+        }
+
+        // Cut on a folder boundary where there is one within reach: half a folder name reads
+        // as the name of a different folder, whereas a dropped one is visibly dropped.
+        var boundary = relativePath.IndexOf('/', relativePath.Length - max + 1);
+
+        return boundary >= 0
+            ? "…/" + relativePath[(boundary + 1)..]
+            : "…" + relativePath[^(max - 1)..];
     }
 
     /// <summary>
