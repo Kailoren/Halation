@@ -99,10 +99,20 @@ Opus. **They differ in whose account pays and in what that costs you.**
 
 ### Route 1: connect the Claude Code you already have
 
-If Claude Code is installed and signed in, VibeCheck can ask it. The app finds the installation
-itself and tells you what it found; if it is there but not signed in, a **Sign in** button opens
-Claude Code's own sign-in for you. VibeCheck never sees your credentials. The CLI holds them,
-exactly as it does when you use it directly.
+VibeCheck looks for Claude Code when it starts, including the copy bundled inside the Claude
+desktop app, and asks it whether it is signed in. That happens on its own, with nothing to click
+and nothing to configure, and **Claude Code does not need to be running**. If it is installed and
+signed in, the app says so and the route is ready; if it is installed but signed out, a **Sign
+in** button appears and opens Claude Code's own sign-in for you. VibeCheck never sees your
+credentials. The CLI holds them, exactly as it does when you use it directly.
+
+**Detection still does not mean a scan will use it.** The deep pass is a tick box, off by
+default, and no scan sends anything anywhere until you tick it. What being signed in buys you is
+that ticking the box is the only thing you have to do: the route is chosen for you, so there is
+no second setting to find.
+
+One thing worth knowing: the check runs once, at startup. Sign in to Claude Code while VibeCheck
+is already open and it will not notice until you press **Sign in** or restart it.
 
 **This spends the usage allowance of the Claude subscription you already pay for.** Nothing is
 charged on top. A deep pass is a handful of requests, so on a Pro or Max plan it is a small
