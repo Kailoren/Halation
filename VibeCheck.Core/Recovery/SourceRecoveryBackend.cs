@@ -12,10 +12,8 @@ namespace VibeCheck.Core.Recovery;
 /// or a build output directory.
 /// </summary>
 /// <remarks>
-/// This is the highest-coverage path in the scanner and the one the pre-release persona
-/// hits, since they still have their project. Bundled output is read too, not skipped:
-/// a committed key that was stripped from source but baked into <c>dist/</c> is still
-/// shipped to every user, and the bundle is what actually gets distributed.
+/// The highest-coverage path in the scanner. Bundled output is read rather than skipped: a key
+/// stripped from source but baked into <c>dist/</c> still ships to every user.
 /// </remarks>
 public sealed class SourceRecoveryBackend : IRecoveryBackend
 {
@@ -27,10 +25,8 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
     /// Directories that are never worth walking for source.
     /// </summary>
     /// <remarks>
-    /// <c>node_modules</c> is excluded from source scanning but not from analysis: its
-    /// manifests are still collected below, because dependency versions are exactly where
-    /// the interesting findings live. Scanning every vendored file would multiply the work
-    /// by a hundred for findings the user cannot act on anyway.
+    /// <c>node_modules</c> is excluded from source scanning but not from analysis: its manifests
+    /// are still collected, because dependency versions are where the findings are.
     /// </remarks>
     private static readonly string[] SkippedDirectories =
     [
@@ -108,10 +104,9 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
     /// States what a frozen Python application keeps out of reach.
     /// </summary>
     /// <remarks>
-    /// Most of the application is normally compiled to .pyc inside an archive, which this
-    /// scanner does not decompile. The readable .py that remains is often only the entry
-    /// point and any plugins, so a short findings list here is a narrow view of the
-    /// application rather than a clean one, and the report has to say so.
+    /// Most of a frozen application is .pyc inside an archive, which this scanner does not
+    /// decompile, so the readable .py left over is often just the entry point. A short findings
+    /// list here is a narrow view rather than a clean one, and the report says so.
     /// </remarks>
     /// <returns>How many modules exist but could not be read, for the coverage denominator.</returns>
     private static int NotePythonLimitations(ArtifactDescriptor artifact, List<string> warnings)
@@ -333,19 +328,10 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
     /// Recovers applications packed inside the archive, and counts the ones that could not be.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// This is the download shape. Almost nothing arrives as a bare executable and almost
-    /// everything arrives as a zip with a program inside it, and until this existed the reader
-    /// of that zip got a score computed from whatever loose text happened to be beside the
-    /// program. VibeCheck's own release archive scored 100 out of 100 on the strength of one
-    /// theme file while the 65 MB executable next to it went unopened and unmentioned, which is
-    /// the worst thing this tool can do and it did it to itself.
-    /// </para>
-    /// <para>
-    /// A second pass rather than a wider first one, so ordinary source archives keep the limits
-    /// and behaviour they already had. Everything stays in memory, as everywhere else in this
-    /// layer.
-    /// </para>
+    /// The download shape, and the one that produced the worst result this scanner has given:
+    /// VibeCheck's own release zip scored 100/100 on the strength of one theme file while the
+    /// 65 MB executable beside it went unopened and unmentioned. A second pass rather than a
+    /// wider first one, so ordinary source archives keep the limits they had.
     /// </remarks>
     private static (int Recovered, int Unread) ReadNestedApplications(
         ZipArchive archive,

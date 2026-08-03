@@ -8,17 +8,10 @@ namespace VibeCheck.App;
 /// Remembers which of the two reports this person wants.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Stored rather than asked per scan, because the answer is a fact about the reader rather
-/// than about the artifact: someone checking their own builds is checking their own builds
-/// every time. It is a plain file with no protection, unlike the API key beside it, because
-/// the worst outcome of tampering is that somebody reads the wrong report.
-/// </para>
-/// <para>
-/// The absence of the file is meaningful and is not a default. It means the question has not
-/// been asked yet, which is what triggers asking it, so <see cref="Load"/> returns null rather
-/// than guessing developer and quietly showing an end user the wrong document forever.
-/// </para>
+/// A plain file with no protection, unlike the key beside it, because the worst outcome of
+/// tampering is reading the wrong report. <b>Its absence is meaningful and is not a default</b>:
+/// it means the question has not been asked, so <see cref="Load"/> returns null rather than
+/// guessing developer and showing an end user the wrong document forever.
 /// </remarks>
 public static class AudienceStore
 {

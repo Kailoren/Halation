@@ -7,14 +7,9 @@ namespace VibeCheck.Core.Rules;
 /// Masks sensitive values before they reach a report.
 /// </summary>
 /// <remarks>
-/// A scanner that quotes a live API key in full has disclosed it again. Reports get pasted
-/// into issue trackers, chat, and screenshots, so evidence is redacted at the point it is
-/// produced rather than at the point it is displayed. Every rendering path then inherits the
-/// protection instead of each one having to remember.
-/// <para>
-/// Enough of the prefix survives for the developer to identify which key it is, since
-/// "rotate the key" is useless advice if they cannot tell which of several it refers to.
-/// </para>
+/// A scanner that quotes a live key in full has disclosed it again, and reports get pasted into
+/// issue trackers. Redacted where evidence is produced rather than where it is shown, so every
+/// rendering path inherits it. Enough of the prefix survives to tell which key to rotate.
 /// </remarks>
 public static class Redaction
 {
@@ -60,20 +55,10 @@ public static class Redaction
     /// Flattens text that came from a language model into a single line of plain prose.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// The deep pass reads an application's own source and returns text derived from it, so
-    /// every field it fills is attacker-controlled by way of a prompt injection. The Markdown
-    /// export puts a finding's title into a heading, and a title carrying two newlines and a
-    /// <c>##</c> was enough to forge a whole verdict section reading "no known issues found,
-    /// safe to install" in a document the reader saves and forwards. Nothing was wrong with the
-    /// report on screen; the artifact people pass around said the opposite of what was found.
-    /// </para>
-    /// <para>
-    /// Line breaks are what carry the attack, because Markdown structure is decided at the
-    /// start of a line, so they are what goes. The composed description keeps its own paragraph
-    /// breaks: those are added by this codebase around the flattened pieces, and a caller
-    /// cannot be tricked into arranging its own text.
-    /// </para>
+    /// Everything the deep pass returns is derived from the scanned application's own source,
+    /// so a prompt injection reaches it. A title carrying two newlines and a <c>##</c> forged a
+    /// whole verdict section reading "safe to install" in an exported report. Markdown structure
+    /// is decided at the start of a line, so the line breaks are what goes.
     /// </remarks>
     public static string? Flatten(string? text, int max = 400)
     {
@@ -101,20 +86,11 @@ public static class Redaction
     /// publish.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// The rest of this class protects secrets found <i>in</i> a scanned application. This one
-    /// protects the reader's own credential, and it exists because two paths carry text this
-    /// codebase did not write into a report the reader can export: an exception message from
-    /// the Anthropic SDK, and whatever a locally installed Claude Code prints when it fails.
-    /// Neither is known to include a credential and neither is expected to. The point is that
-    /// the cost of being wrong is somebody's billing key pasted into a public issue tracker,
-    /// which is a poor thing to be shipped by a scanner whose own report warns other people
-    /// about leaked keys.
-    /// </para>
-    /// <para>
-    /// Applied where limitations and errors are constructed rather than where they are shown,
-    /// so a message added later cannot forget to ask for it.
-    /// </para>
+    /// The rest of this class protects secrets found <i>in</i> a scanned application; this one
+    /// protects the reader's own. Two paths carry text this codebase did not write into an
+    /// exportable report: an SDK exception, and whatever a local Claude Code prints on failure.
+    /// Neither is known to carry a credential, but the cost of being wrong is a billing key in a
+    /// public issue tracker. Applied where messages are built, so a later one inherits it.
     /// </remarks>
     public static string Scrub(string text)
     {

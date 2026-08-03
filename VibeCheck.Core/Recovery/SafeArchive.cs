@@ -27,20 +27,12 @@ public sealed record ArchiveLimits
 /// Reads entries out of an untrusted zip without ever writing to disk.
 /// </summary>
 /// <remarks>
-/// <para>
-/// This is the scanner's own attack surface. It exists to open archives that are assumed
-/// hostile, so it takes the same precautions the tool looks for in others: nothing is
-/// extracted to the filesystem, so zip-slip and hostile symlinks are structurally
-/// impossible rather than merely guarded against; sizes are enforced during the read
-/// rather than read from the central directory, which an attacker controls; and entry
-/// counts, per-file size, total size, and compression ratio are all capped so a bomb
-/// fails the scan instead of the machine.
-/// </para>
-/// <para>
-/// Traversal sequences in entry names are still rejected. Nothing is written, but those
-/// paths are rendered in reports, and a name like <c>../../etc/passwd</c> shown as the
-/// location of a finding is misleading on its own.
-/// </para>
+/// The scanner's own attack surface, so it takes the precautions the tool looks for in others.
+/// Nothing is extracted, which makes zip-slip and hostile symlinks structurally impossible
+/// rather than guarded against; sizes are enforced while reading rather than trusted from the
+/// central directory an attacker controls; entry count, per-file size, total size and
+/// compression ratio are all capped. Traversal sequences in names are still rejected, because
+/// those names are rendered in reports.
 /// </remarks>
 public static class SafeArchive
 {

@@ -10,23 +10,18 @@ namespace VibeCheck.Core.Recovery;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This exists because of what people actually download. An installer is a native PE, so the
-/// scanner classified it as unreadable and honestly refused - while the real application sat
-/// compressed a few layers inside. For an Electron app that is the difference between zero
-/// coverage and reading the entire source.
+/// An installer is a native PE, so the scanner refused it while the real application sat
+/// compressed a few layers inside.
 /// </para>
 /// <para>
-/// Deliberately, this does not interpret the install script. NSIS has no file table: names
-/// come from opcodes in a bytecode section, and reproducing that interpreter would be a large
-/// amount of code with a large amount of attack surface. The data section is a flat sequence
-/// of length-prefixed blobs, so walking it recovers every payload without any of that. The
-/// cost is that blobs arrive unnamed, which is acceptable because the next stage identifies
-/// them by content anyway.
+/// <b>The install script is deliberately not interpreted.</b> NSIS has no file table, names
+/// come from opcodes, and reproducing that interpreter would be a lot of code and a lot of
+/// attack surface. The data section is a flat run of length-prefixed blobs, so walking it finds
+/// every payload; they arrive unnamed and the next stage identifies them by content.
 /// </para>
 /// <para>
-/// Nothing is written to disk, matching <see cref="SafeArchive"/>. A stored blob is exposed
-/// as a window onto the original file rather than copied into memory, because the payload is
-/// routinely 100 MB or more and buffering it would cost more than the whole scan.
+/// Nothing is written to disk. A stored blob is exposed as a window onto the original file
+/// rather than copied, since payloads run to 100 MB and more.
 /// </para>
 /// </remarks>
 public static class NsisArchive

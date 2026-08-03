@@ -9,18 +9,10 @@ namespace VibeCheck.Core.Rules;
 /// Handling of data that arrives from somewhere the application does not control.
 /// </summary>
 /// <remarks>
-/// <para>
-/// These rules come from real findings in hand-audited desktop applications rather than from
-/// a generic vulnerability list, and they cover a gap the OWASP-shaped checks miss. A desktop
-/// application that parses a public data feed, a pasted import file, or an API response has a
-/// genuine attacker-reachable input path, but no web request to model it as, so this class of
-/// bug goes unlooked-for.
-/// </para>
-/// <para>
-/// The pattern each rule encodes: a value taken from that input is used to size an
-/// allocation, drive a conversion that can throw, or launch something, without a bound or a
-/// check in between.
-/// </para>
+/// Each rule encodes the same shape: a value from that input sizes an allocation, drives a
+/// conversion that can throw, or launches something, with no bound in between. Drawn from real
+/// findings in hand-audited desktop apps, which OWASP-shaped checks miss because there is no
+/// web request to model the input path as.
 /// </remarks>
 public static class UntrustedInputRules
 {
@@ -51,19 +43,10 @@ public static class UntrustedInputRules
     /// Reading an entire remote response into memory with no size limit.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// These calls materialise the whole response before the caller sees any of it, so there
-    /// is no point at which a length can be checked. The size is decided by whoever answers
-    /// the request. That is fine against an endpoint the application controls and is a hole
-    /// against any third-party API, because the trust assumption is invisible at the call
-    /// site: the same line is correct or wrong depending only on what it points at.
-    /// </para>
-    /// <para>
-    /// Found by scanning a hand-audited application that had already been through a security
-    /// pass. It capped responses from its own service and read a third-party API with no cap
-    /// at all, which is the wrong way round, and the unbounded string then fed a stackalloc.
-    /// Neither half was noticed by review.
-    /// </para>
+    /// The whole response materialises before the caller sees any of it, so there is no point
+    /// at which a length can be checked, and the size is decided by whoever answers. Fine
+    /// against an endpoint the application owns, a hole against a third-party API, and the
+    /// call site looks identical either way.
     /// </remarks>
     private static PatternRule UnboundedRemoteRead { get; } = new()
     {
@@ -115,11 +98,9 @@ public static class UntrustedInputRules
     /// what anyone wrote.
     /// </summary>
     /// <remarks>
-    /// Decompiling an async method can emit both the readable <c>await</c> and the raw state
-    /// machine that implements it, so one call site arrives twice. Reporting both counted a
-    /// single mistake up to three times in one file and pointed the second copy at
-    /// <c>&lt;result&gt;5__4</c>, a name that exists in no source file and that the reader
-    /// cannot go and look at. The readable form is the one worth keeping.
+    /// Decompiling an async method emits the readable <c>await</c> and the state machine that
+    /// implements it, so one call site arrives twice and the second copy points at a generated
+    /// name the reader cannot go and look at.
     /// </remarks>
     private static bool IsDecompilerArtifact(string line) => StateMachineField.IsMatch(line);
 
@@ -133,12 +114,9 @@ public static class UntrustedInputRules
     /// True when the call is handed a limit, which is what a bounded wrapper looks like.
     /// </summary>
     /// <remarks>
-    /// The fix this rule asks for is a helper that takes a maximum, and such a helper almost
-    /// always keeps the familiar name so its call sites read unchanged. Without this the rule
-    /// reported the very shape it recommends: the first application fixed against it wrote
-    /// <c>BoundedHttp.GetStringAsync(http, url, MaxResponseBytes, ct)</c> and was flagged
-    /// again for it. Telling someone their correct fix is still a bug is worse than missing
-    /// the case, and it is the same trap the stackalloc rule already needed guarding against.
+    /// The fix this rule asks for is a wrapper taking a maximum, which usually keeps the
+    /// familiar name. Without this the rule flagged the very shape it recommends, and telling
+    /// someone their correct fix is still a bug is worse than missing the case.
     /// </remarks>
     private static bool IsGivenACeiling(string line) => CeilingArgument.IsMatch(line);
 
@@ -150,10 +128,9 @@ public static class UntrustedInputRules
     /// Stack allocation sized from a variable.
     /// </summary>
     /// <remarks>
-    /// This was the headline finding of a real audit: a <c>stackalloc</c> sized from a string
-    /// arriving on a public data firehose, giving anyone able to publish to that feed a
-    /// remote crash of every client. The stack is small and cannot be recovered from, so an
-    /// overflow terminates the process outright rather than raising a catchable exception.
+    /// The stack is small and an overflow terminates the process outright rather than raising
+    /// anything catchable. Found in a real audit sized from a string off a public data feed,
+    /// which made it a remote crash of every client.
     /// </remarks>
     private static PatternRule UnboundedStackAllocation { get; } = new()
     {
@@ -186,18 +163,10 @@ public static class UntrustedInputRules
     /// True when the allocation is already bounded.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// The guarded ternary is the recommended fix for this very rule and keeps the check on
-    /// the same line as the allocation:
-    /// <c>name.Length > 256 ? new char[name.Length] : stackalloc char[name.Length]</c>.
-    /// Reporting that form tells a developer their correct fix is still a bug, which is worse
-    /// than missing the case entirely.
-    /// </para>
-    /// <para>
-    /// Matching guard keywords is not enough: the bound is often written against a local
-    /// (<c>len &lt;= 128</c>) rather than against a Length property. So this compares the
-    /// actual size expression used in the allocation against the comparisons on the line.
-    /// </para>
+    /// The guarded ternary is the fix this rule recommends, so reporting it would tell a
+    /// developer their correct fix is still a bug. Keyword matching is not enough, because the
+    /// bound is often written against a local rather than a Length property, so this compares
+    /// the actual size expression against the comparisons on the line.
     /// </remarks>
     private static bool IsBounded(string sizeExpression, string line)
     {
@@ -234,10 +203,9 @@ public static class UntrustedInputRules
     /// Shell-opening a URL held in a variable.
     /// </summary>
     /// <remarks>
-    /// From a real finding on an update-check "Download" link. Process.Start with shell
-    /// execution hands the string to the operating system, which will happily act on
-    /// <c>file:</c> and other schemes, so a value that reached the application from a remote
-    /// response can launch something local rather than opening a browser.
+    /// Shell execution hands the string to the operating system, which acts on <c>file:</c> and
+    /// other schemes, so a URL from a remote response can launch something local rather than
+    /// opening a browser. From a real finding on an update-check "Download" link.
     /// </remarks>
     private static PatternRule ShellOpenOfDynamicUrl { get; } = new()
     {

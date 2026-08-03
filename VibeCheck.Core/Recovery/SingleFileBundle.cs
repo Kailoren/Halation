@@ -22,22 +22,16 @@ public enum BundleFileType : byte
 /// </summary>
 /// <remarks>
 /// <para>
-/// Without this, a single-file application is opaque. The launcher itself carries no managed
-/// metadata, so a PE reader reports it as an ordinary native binary and the entire
-/// application goes unanalysed, which is how a real published app came back with zero
-/// coverage in testing.
+/// Without this a single-file application is opaque: the launcher carries no managed metadata,
+/// so a PE reader calls it a native binary and the whole application goes unanalysed.
 /// </para>
 /// <para>
-/// Layout: the launcher embeds an 8-byte header offset immediately followed by a fixed
-/// 32-byte signature, so locating the signature locates the manifest. The manifest gives a
-/// version, a file count, and then one entry per file with its offset, size, optional
-/// compressed size, type, and path.
+/// Layout: an 8-byte header offset immediately followed by a fixed 32-byte signature, so
+/// locating the signature locates the manifest, which then gives one entry per file.
 /// </para>
 /// <para>
-/// Every offset and length below is read from the file being examined and is therefore
-/// attacker-controlled. All of them are range-checked against the real stream length before
-/// use, and nothing is written to disk: entries are decompressed into memory under a cap,
-/// exactly as the archive reader does.
+/// Every offset and length here is attacker-controlled and range-checked against the real
+/// stream length before use. Nothing is written to disk.
 /// </para>
 /// </remarks>
 public static class SingleFileBundle

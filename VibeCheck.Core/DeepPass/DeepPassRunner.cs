@@ -225,20 +225,11 @@ public static class DeepPassRunner
     /// Decides what answers the deep pass, or why nothing can.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// The local CLI route is gated to the developer audience, and that gate lives here rather
-    /// than in the UI. Claude Code is an agent with shell and filesystem access; the API is an
-    /// endpoint that cannot execute anything. Feeding source recovered from untrusted software
-    /// into the former is only defensible when the reader wrote that software. The flags this
-    /// backend passes reduce the risk, but they are a third party's flags and a weaker boundary
-    /// than an endpoint that has no hands. A gate enforced in the core cannot be lost to a
-    /// change in a view.
-    /// </para>
-    /// <para>
-    /// Every refusal below returns a reason rather than silently falling back to the API. A
-    /// reader who asked for their subscription to be used should not discover afterwards that
-    /// their card was charged instead.
-    /// </para>
+    /// The local CLI route is gated to the developer audience here rather than in the UI, where
+    /// a change to a view could lose it. Claude Code can act on the machine and the API cannot,
+    /// so feeding it untrusted source is only defensible when the reader wrote that source.
+    /// Every refusal returns a reason rather than falling back to the API, since somebody who
+    /// asked for their subscription should not find their card was charged instead.
     /// </remarks>
     private static async Task<BackendChoice> ChooseAsync(
         ScanOptions options,

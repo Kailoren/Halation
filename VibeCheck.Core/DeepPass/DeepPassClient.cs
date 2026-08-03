@@ -139,26 +139,20 @@ public sealed record DeepPassResult
 /// </summary>
 /// <remarks>
 /// <para>
-/// Everything here is advisory. Findings come back as <see cref="FindingSource.Assisted"/>,
-/// which <c>ScoreCalculator</c> already refuses to let drive a do-not-install verdict: the
-/// strongest claim in a report must not depend on whether the reader happened to supply an
-/// API key.
+/// Everything here is advisory: findings come back as <see cref="FindingSource.Assisted"/>,
+/// which cannot drive a do-not-install verdict.
 /// </para>
 /// <para>
-/// Two API behaviours are load-bearing rather than incidental. Findings are requested as a
-/// JSON schema, so the result is validated structure and not prose to be regex'd. And a
-/// refusal is checked before the content is read: this model runs elevated cybersecurity
-/// safeguards, a request reading like "find the vulnerabilities in this code" is squarely
-/// what they watch for, and a decline arrives as a normal success response rather than an
-/// error.
+/// Two API behaviours are load-bearing. Findings are requested as a JSON schema, so the result
+/// is validated structure rather than prose to be parsed. And <b>a refusal is checked before
+/// the content is read</b>: this model runs elevated cybersecurity safeguards, "find the
+/// vulnerabilities in this code" is squarely what they watch for, and a decline arrives as a
+/// success response with empty content.
 /// </para>
 /// <para>
-/// Because a decline is a realistic outcome here rather than a remote one, server-side
-/// fallbacks are opted into: a policy decline is re-served by another model inside the same
-/// call, so it costs a differently-sourced answer rather than the whole file. This is the
-/// reason the request goes through the beta surface. <c>"default"</c> is used in preference to
-/// naming a substitute, because the right substitute depends on why the request was declined,
-/// and a named one would need revisiting every time that model is retired.
+/// Server-side fallbacks are opted into for the same reason, so a policy decline costs one
+/// differently-sourced answer rather than the file. <c>"default"</c> rather than a named
+/// substitute, which would need revisiting whenever that model retires.
 /// </para>
 /// </remarks>
 public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepPassBackend

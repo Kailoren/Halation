@@ -23,20 +23,11 @@ public sealed record RedundancyResult
 /// Looks for repetition and dead weight in recovered source.
 /// </summary>
 /// <remarks>
-/// <para>
 /// <b>Decompiled files are excluded, and that is the whole design.</b> Decompilation
-/// manufactures duplication that the author never wrote: async methods and iterators become
-/// generated state machine classes, closures become display classes, generic instantiations
-/// repeat per type argument, and the compiler inlines things written once. A duplication report
-/// over decompiled output would mostly be describing the compiler, and confidently telling
-/// somebody their code is repetitive when it is not is exactly the kind of wrong this tool
-/// cannot afford. So this runs on text that was read verbatim and stays silent on the rest,
-/// and the report says which of the two it did.
-/// </para>
-/// <para>
-/// Everything here is informational. Repetition is a maintenance cost rather than a risk, so
-/// none of it moves the score, and none of it can reach the install verdict.
-/// </para>
+/// manufactures duplication nobody wrote: state machines, display classes, generics repeated
+/// per type argument. A duplication report over that would be describing the compiler. So this
+/// runs on verbatim text only, and the report says which it did. Everything here is
+/// informational, because repetition is a maintenance cost rather than a risk.
 /// </remarks>
 public static class RedundancyChecks
 {

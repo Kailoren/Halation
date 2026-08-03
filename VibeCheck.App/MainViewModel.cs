@@ -221,11 +221,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// Whether the source choice is live.
     /// </summary>
     /// <remarks>
-    /// The checkbox is the switch and these are the settings behind it, which is the only
-    /// arrangement where the checkbox earns its place. Storing an API key stays reachable
-    /// whether or not the pass is on, because it is configuration rather than part of this
-    /// scan's choice, and gating it behind the switch would leave someone with no key unable
-    /// to reach the control that would give them one.
+    /// Storing a key stays reachable whether or not the pass is on: it is configuration rather
+    /// than part of this scan, and gating it would leave someone with no key unable to reach the
+    /// control that would give them one.
     /// </remarks>
     public bool CanChooseApiKey => DeepPassEnabled && HasApiKey;
 
@@ -280,12 +278,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// Whether the deep pass is offered to this reader at all.
     /// </summary>
     /// <remarks>
-    /// Developer view only. Not a security rule (the API endpoint cannot execute anything, so
-    /// the key route would be safe on untrusted code) but a product one: someone checking
-    /// software they downloaded is asking whether to trust it, and an answer that costs money
-    /// and requires an Anthropic account is not the answer that question wants. The core still
-    /// permits an API-backed pass for either audience, so a library caller is not bound by
-    /// this; it is a decision about what this window offers.
+    /// Developer view only, and a product decision rather than a security one: the API endpoint
+    /// cannot execute anything, but somebody checking a download is asking whether to trust it,
+    /// and an answer costing money and an account is not what that question wants. The core
+    /// still permits an API-backed pass for either audience.
     /// </remarks>
     public bool DeepPassOfferedHere => Audience == Audience.Developer;
 
@@ -308,10 +304,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// Whether the local agent route is offerable.
     /// </summary>
     /// <remarks>
-    /// The audience is part of the test, not a presentational detail. Claude Code can act on
-    /// this machine and the Anthropic API cannot, so feeding it source recovered from software
-    /// the reader did not write is the attack this tool exists to warn about. The core refuses
-    /// regardless; this only decides whether the option is offered rather than explained.
+    /// The audience is part of the test rather than presentation: Claude Code can act on this
+    /// machine and the API cannot. The core refuses regardless; this only decides whether the
+    /// option is offered or explained.
     /// </remarks>
     public bool LocalCliReady =>
         _localCli is not null && _localCliSignedIn && Audience == Audience.Developer;
@@ -364,19 +359,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// Runs the CLI's own interactive sign-in, then re-checks.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// The credential never passes through this application and is not supposed to. Claude Code
-    /// opens its own browser flow, the reader authenticates with Anthropic directly, and the
-    /// result lands in the CLI's own store. VibeCheck learns only what <c>auth status</c> tells
-    /// it afterwards, which is a yes or a no.
-    /// </para>
-    /// <para>
-    /// The arguments are a fixed literal and nothing the reader typed reaches the command line.
-    /// The only variable is the executable path, and that came from the locator's own search
-    /// rather than from input. <c>UseShellExecute</c> is on because this is the one place the
-    /// process is meant to be seen: it is an interactive sign-in and it needs a console of its
-    /// own to run in.
-    /// </para>
+    /// The credential never passes through this application: Claude Code opens its own browser
+    /// flow and VibeCheck learns only what <c>auth status</c> says afterwards. The arguments are
+    /// a fixed literal and the only variable is the executable path, which came from the
+    /// locator. <c>UseShellExecute</c> is on because an interactive sign-in needs a console.
     /// </remarks>
     private async Task SignInToClaudeCodeAsync()
     {
@@ -468,11 +454,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// Looks for a usable Claude Code installation, off the UI thread.
     /// </summary>
     /// <remarks>
-    /// Installed and signed in are separate facts, and the second costs a process launch to
-    /// establish, so it is done once at startup rather than when the scan button is pressed.
-    /// Finding nothing is a normal outcome and is reported in the status line, never as an
-    /// error: most readers will not have Claude Code, and that is not a problem with their
-    /// machine.
+    /// Installed and signed in are separate facts and the second costs a process launch, so it
+    /// happens once at startup rather than when the scan button is pressed. Finding nothing is a
+    /// normal outcome, reported in the status line and never as an error.
     /// </remarks>
     private async Task DetectLocalCliAsync()
     {
@@ -802,10 +786,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// folded away.
     /// </summary>
     /// <remarks>
-    /// A section is allowed to be closed; it is not allowed to be silent about its own size
-    /// while closed. Without these, folding "What could not be checked" away would leave a
-    /// screen that looks exactly like a scan with nothing it could not check, which is the one
-    /// thing this report may never do.
+    /// A section may be closed but not silent about its own size. Without these, folding "what
+    /// could not be checked" away leaves a screen identical to a scan that had nothing it could
+    /// not check.
     /// </remarks>
     public string FindingsCount => Counted(Findings.Count, "finding");
 
@@ -972,14 +955,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
-/// <summary>One finding, prepared for display.</summary>
 /// <summary>
 /// One finding as shown to a particular reader.
 /// </summary>
 /// <remarks>
-/// The audience is resolved here rather than in the view, so no binding can accidentally
-/// reach past it to the developer's copy. Every member below that differs between the two
-/// readers goes through the finding's own accessor.
+/// The audience is resolved here rather than in the view, so no binding can reach past it to
+/// the developer's copy.
 /// </remarks>
 public sealed class FindingCard(Finding finding, Audience audience) : INotifyPropertyChanged
 {
@@ -1063,10 +1044,8 @@ public sealed record CategoryScore(string Name, int Score);
 /// One check as the results screen shows it.
 /// </summary>
 /// <remarks>
-/// The three states are rendered distinctly on purpose. A tick and a dash have to be legible
-/// as different things at a glance, because a check that passed and a check that had nothing
-/// to run against are opposite results, and a reader who reads them as the same has been
-/// told a scan covered ground it never reached.
+/// A tick and a dash must read as different things at a glance: a check that passed and a check
+/// that had nothing to run against are opposite results.
 /// </remarks>
 public sealed class CheckCard(CheckOutcome check, Audience audience)
 {

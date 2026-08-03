@@ -4,11 +4,10 @@ namespace VibeCheck.Core.DeepPass;
 /// Which install a Claude Code executable came from.
 /// </summary>
 /// <remarks>
-/// Recorded rather than discarded because the five kinds are not equally durable. A standalone
-/// install sits at a stable path its own installer maintains. The copy bundled with the desktop
-/// app lives inside that app's private storage under a version-numbered directory, so it moves
-/// on every update and is not ours to depend on. A report that says which one answered lets a
-/// reader make sense of a scan that worked last week and does not today.
+/// Recorded because the five kinds are not equally durable: a standalone install has a stable
+/// path, while the bundled copy sits in another app's private storage under a version-numbered
+/// directory that moves on every update. Naming which one answered explains a scan that worked
+/// last week and does not today.
 /// </remarks>
 public enum ClaudeCodeCliSource
 {
@@ -102,24 +101,16 @@ public sealed record ClaudeCodeCliProbe
 /// </summary>
 /// <remarks>
 /// <para>
-/// The desktop app bundles a working CLI, and looking for it is not as simple as reading
-/// <c>%APPDATA%</c>. When the desktop app was installed as a package (MSIX, i.e. from the
-/// Store), Windows redirects its view of roaming application data into the package's private
-/// storage. A process running inside that package sees the executable at
-/// <c>%APPDATA%\Claude\claude-code\&lt;version&gt;\claude.exe</c>; VibeCheck, which is not in
-/// the package, looks at that same path and finds nothing there at all. The real file is under
-/// <c>%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\</c>, and only the unredirected path
-/// works from out here. This was confirmed on a machine where the two views disagreed: the
-/// same absolute path executed successfully from inside the package and produced
-/// "is not recognized" from a normal shell.
+/// <b>The MSIX redirection is the trap.</b> When the desktop app is a Store package, Windows
+/// redirects its view of roaming application data into the package's private storage, so a
+/// process inside the package sees the CLI at <c>%APPDATA%\Claude\claude-code\...</c> while
+/// anything outside finds nothing there. The real file is under
+/// <c>%LOCALAPPDATA%\Packages\Claude_*\LocalCache\Roaming\</c>. Confirmed on a machine where
+/// the same absolute path ran inside the package and was "not recognized" from a normal shell.
 /// </para>
 /// <para>
-/// Order runs from most durable to least. A standalone install is preferred over the bundled
-/// copy even when both exist, because the bundled one sits in another application's private
-/// storage under a version-numbered directory that moves whenever that application updates.
-/// It is searched last rather than not at all, because for most people the desktop app is the
-/// only Claude Code they have, and refusing to look there would mean the deep pass is
-/// unavailable to them for no reason they could act on.
+/// Ordered most durable first, with the bundled copy last rather than not at all, since for
+/// most people the desktop app is the only Claude Code they have.
 /// </para>
 /// </remarks>
 public static class ClaudeCodeCliLocator
@@ -243,11 +234,9 @@ public static class ClaudeCodeCliLocator
     /// Picks the newest install under a directory of version-named subdirectories.
     /// </summary>
     /// <remarks>
-    /// Versions are compared as versions and not as text, because the obvious string sort gets
-    /// it backwards exactly when it matters: "2.1.99" sorts above "2.1.219" and would pin a
-    /// machine to an install two hundred releases stale. Directories whose names do not parse
-    /// are still considered, after every one that does, so an unrecognised naming scheme costs
-    /// precedence rather than the whole location.
+    /// Compared as versions rather than text, because a string sort puts "2.1.99" above
+    /// "2.1.219" and would pin a machine to an install two hundred releases stale. Names that do
+    /// not parse are still considered, after every one that does.
     /// </remarks>
     private static ClaudeCodeCli? HighestVersioned(string root, ClaudeCodeCliSource source)
     {

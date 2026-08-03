@@ -7,18 +7,11 @@ namespace VibeCheck.Core.Recovery;
 /// dependencies it merely ships.
 /// </summary>
 /// <remarks>
-/// <para>
-/// This is the .NET equivalent of skipping node_modules, and without it the results are
-/// dominated by other people's code. Measured on three real community applications: of 48
-/// findings on one, 37 were DirectX interop inside SharpDX; another reported socket binding
-/// inside NetMQ's transport layer and cipher constants inside SharpZipLib. None of it is
-/// actionable by the person who shipped the app, and it buried the handful of findings that
-/// were.
-/// </para>
-/// <para>
-/// Three strategies, strongest first. Which one ran is recorded, because an approximate
-/// separation should be visible in the report rather than presented as certainty.
-/// </para>
+/// The .NET equivalent of skipping node_modules. Without it, results are dominated by other
+/// people's libraries: of 48 findings on one real application, 37 were DirectX interop inside
+/// SharpDX, none of it actionable by whoever shipped the app. Three strategies, strongest
+/// first, with the one used recorded so an inferred separation is visible rather than
+/// presented as certainty.
 /// </remarks>
 public sealed class AssemblyOwnership
 {

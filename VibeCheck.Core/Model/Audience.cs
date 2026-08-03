@@ -4,18 +4,11 @@ namespace VibeCheck.Core.Model;
 /// Who is reading the report, and therefore which question it answers.
 /// </summary>
 /// <remarks>
-/// <para>
-/// These are two different questions with two different honest answers, not one result in
-/// two voices. A private key baked into the bundle is the worst thing in the report for the
-/// person shipping it, and very nearly irrelevant to the person running it, because the key
-/// that is exposed belongs to the author rather than to them. Run the same severity past both
-/// and one of them is reading a number that answers somebody else's question.
-/// </para>
-/// <para>
-/// The honesty condition attached to this is that the headline must say which question it
-/// answered. A number that silently changes meaning with a setting is worse than either
+/// Two questions with two honest answers rather than one result in two voices: a private key in
+/// the bundle is the worst thing in the report for whoever ships it and nearly irrelevant to
+/// whoever runs it. The condition attached is that the headline must say which question it
+/// answered, because a number that silently changes meaning with a setting is worse than either
 /// number alone.
-/// </para>
 /// </remarks>
 public enum Audience
 {

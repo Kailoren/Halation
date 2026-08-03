@@ -8,23 +8,12 @@ namespace VibeCheck.Core.Rules;
 /// Behaviour that endangers the person installing the application.
 /// </summary>
 /// <remarks>
-/// <para>
-/// This is the only category permitted to advise against installation, and the rules are
-/// held to a higher precision bar than the rest of the catalog because of it. Every rule
-/// here matches a specific artefact of credential theft rather than a general capability:
-/// the literal path of a browser password database, a wallet file, a token store.
-/// </para>
-/// <para>
-/// The distinction from the rest of the catalog is who is harmed. A leaked API key is a
-/// critical problem for the developer whose key it is. Code that reads the user's saved
-/// browser passwords is a problem for the person who double-clicks the installer, and that
-/// is the only thing worth interrupting them over.
-/// </para>
-/// <para>
-/// Legitimate software does occasionally touch these paths, chiefly password managers and
-/// browser import features. The findings are worded to say what was observed rather than to
-/// assert intent, so a user with an actual password manager can recognise the explanation.
-/// </para>
+/// The only category permitted to advise against installation, so every rule matches a
+/// specific artefact of credential theft rather than a capability: the literal path of a
+/// browser password database, a wallet file, a token store. What separates these from the rest
+/// of the catalog is who is harmed, since a leaked key hurts the developer and a password
+/// stealer hurts whoever double-clicked. Findings say what was observed rather than asserting
+/// intent, because password managers touch these paths legitimately.
 /// </remarks>
 public static class MaliciousBehaviourRules
 {
@@ -87,12 +76,10 @@ public static class MaliciousBehaviourRules
     /// runs one.
     /// </summary>
     /// <remarks>
-    /// Found by scanning VibeCheck's own published build with VibeCheck. The patterns in this
-    /// file are string literals, they survive decompilation intact, and the rules duly matched
-    /// their own definitions: the scanner advised against installing itself. Any application
-    /// that ships pattern-based detection has the same shape, and a false "do not install" is
-    /// the most expensive mistake this catalog can make, because it is the one claim a reader
-    /// cannot check for themselves.
+    /// The patterns in this file are string literals that survive decompilation, so scanning
+    /// VibeCheck's own build made the rules match their own definitions and advise against
+    /// installing the scanner. Any application shipping pattern-based detection has the same
+    /// shape.
     /// </remarks>
     private static bool LooksLikeAPattern(Match match, RuleContext context)
     {
@@ -281,13 +268,9 @@ public static class MaliciousBehaviourRules
     /// The dropper shape: fetch something, put it on disk, run it.
     /// </summary>
     /// <remarks>
-    /// <b>Reported, never blocking</b>, and the distinction matters more here than anywhere
-    /// else in this file. An application that updates itself does exactly this, and so does
-    /// every installer that fetches a runtime. The sequence is worth surfacing because it is
-    /// also how a small clean-looking program becomes an arbitrary one after installation, and
-    /// because the reader can weigh it against whether this application has any business
-    /// updating itself. What it is not is proof, and telling somebody not to install their own
-    /// updater would spend the credibility the blocking rules depend on.
+    /// <b>Reported, never blocking.</b> An updater is this shape, so the sequence is worth
+    /// surfacing but is not proof, and telling somebody not to install their own updater would
+    /// spend the credibility the blocking rules depend on.
     /// </remarks>
     private static PatternRule DownloadsAndRuns { get; } = new()
     {
@@ -339,19 +322,11 @@ public static class MaliciousBehaviourRules
     /// Execution routed through a Windows binary that exists for something else.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// Blocking, and held to the same bar as the credential rules above: each alternative is a
-    /// named technique rather than a capability. An application with its own HTTP client has no
-    /// reason to download through <c>certutil</c>, and nothing legitimate hands a URL to
-    /// <c>mshta</c> or pipes a web response into a shell. These appear in application code when
-    /// somebody wanted the download and the execution to happen somewhere a reviewer was not
-    /// looking.
-    /// </para>
-    /// <para>
-    /// Deliberately absent: <c>powershell -EncodedCommand</c> on its own. Real installers use it
-    /// to get around quoting, so it is a capability rather than a technique, and blocking on it
-    /// would put "do not install this application" on ordinary software.
-    /// </para>
+    /// Blocking, and held to the same bar as the credential rules: each alternative is a named
+    /// technique rather than a capability. An application with its own HTTP client has no reason
+    /// to download through <c>certutil</c>, and nothing legitimate pipes a web response into a
+    /// shell. <c>powershell -EncodedCommand</c> is deliberately absent, being something real
+    /// installers do to get around quoting.
     /// </remarks>
     private static PatternRule LivesOffTheLand { get; } = new()
     {

@@ -10,17 +10,10 @@ namespace VibeCheck.Core.Rules;
 /// Detects credentials committed into source or baked into shipped bundles.
 /// </summary>
 /// <remarks>
-/// <para>
-/// This is the single most common failure in AI-generated projects. The assistant writes
-/// working code with the key inline because that is what makes the example run, and the key
-/// then travels into the repository and the build output.
-/// </para>
-/// <para>
-/// None of these rules are blocking. That is deliberate: a leaked credential is severe, but
-/// it harms the <em>developer</em> whose key it is, not the person installing the software.
-/// "Do not install" is reserved for findings that endanger the installing user, and diluting
-/// it with developer-side problems would make the strongest signal in the report meaningless.
-/// </para>
+/// The most common failure in AI-generated projects: the assistant writes the key inline
+/// because that is what makes the example run, and it travels into the repository and the
+/// build. None of these rules block, deliberately. A leaked credential harms the developer
+/// whose key it is, and "do not install" is reserved for what endangers the installing user.
 /// </remarks>
 public static class SecretRules
 {
@@ -309,21 +302,11 @@ public static class SecretRules
 /// Detects a Supabase <c>service_role</c> key shipped to clients.
 /// </summary>
 /// <remarks>
-/// <para>
-/// This is the most damaging single mistake in the vibecoded stack, and it deserves a rule
-/// of its own rather than a generic JWT match. Supabase issues two keys that look identical:
-/// the <c>anon</c> key, which is meant to be public and is constrained by row-level security,
-/// and the <c>service_role</c> key, which <em>bypasses row-level security entirely</em>.
-/// </para>
-/// <para>
-/// They are visually indistinguishable, so the wrong one gets pasted into client code
-/// routinely. The only reliable way to tell them apart is to decode the token payload and
-/// read the role claim, which is what this rule does.
-/// </para>
-/// <para>
-/// A shipped <c>service_role</c> key is full read and write access to every row in the
-/// database for anyone who opens the bundle.
-/// </para>
+/// Supabase issues two keys that look identical: <c>anon</c>, which is meant to be public and
+/// is constrained by row-level security, and <c>service_role</c>, which bypasses it entirely.
+/// Telling them apart means decoding the payload and reading the role claim, which is what this
+/// does. A shipped <c>service_role</c> key is read and write on every row for anyone who opens
+/// the bundle.
 /// </remarks>
 public sealed class SupabaseServiceKeyRule : IRule
 {

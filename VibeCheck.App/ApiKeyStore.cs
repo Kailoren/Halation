@@ -8,17 +8,10 @@ namespace VibeCheck.App;
 /// Stores the optional deep pass API key on this machine, encrypted to this Windows account.
 /// </summary>
 /// <remarks>
-/// <para>
-/// DPAPI with <see cref="DataProtectionScope.CurrentUser"/>: the ciphertext is only readable
-/// by the account that wrote it, so copying the file to another machine or reading it as
-/// another user yields nothing. No key material is invented or managed here, which is the
-/// point - the operating system already owns this problem.
-/// </para>
-/// <para>
-/// Kept outside the repository and outside the install directory. The key is the reader's
-/// billing credential, and a scanner that quietly left one somewhere a later scan could
-/// report would be indefensible.
-/// </para>
+/// DPAPI with <see cref="DataProtectionScope.CurrentUser"/>, so the ciphertext is readable only
+/// by the account that wrote it and no key material is invented here. Kept outside the install
+/// directory: a scanner that left a billing credential somewhere a later scan could report
+/// would be indefensible.
 /// </remarks>
 public static class ApiKeyStore
 {

@@ -22,19 +22,10 @@ public sealed record TriagedFile
 /// Chooses which recovered files the deep pass reads.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Triage is by <b>attack surface</b>, not by where a rule already matched. Selecting only
-/// regions the pattern pass flagged would mean the model could deepen findings that already
-/// exist and never discover one in code no regex happened to hit. Tested against a real
-/// application, both findings the deterministic pass missed lived in files with zero
-/// findings; a hits-only pass would not have been shown either file.
-/// </para>
-/// <para>
-/// Files that <i>call</i> a flagged file are pulled in too. That one hop is what makes
-/// reachability gradeable: the same application's unbounded stackalloc was recorded as "a
-/// latent crash rather than remotely triggerable" from reading the flagged line alone, and
-/// was remotely reachable via an HTTP response handled one file away.
-/// </para>
+/// Triage is by <b>attack surface</b>, not by where a rule matched: a hits-only pass could only
+/// deepen findings that already exist, and both findings the rules missed on a real application
+/// were in files with zero findings. Callers of a flagged file come too, since that one hop is
+/// what makes reachability gradeable.
 /// </remarks>
 /// <summary>Which files were chosen, and how many were in the running.</summary>
 public sealed record TriageResult

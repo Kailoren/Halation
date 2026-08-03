@@ -8,17 +8,9 @@ namespace VibeCheck.Core.Recovery;
 /// native launcher and decompiling the assemblies inside it.
 /// </summary>
 /// <remarks>
-/// <para>
-/// Without this, a single-file publish is a dead end: the launcher carries no managed
-/// metadata of its own, so the application reads as an opaque native binary and none of its
-/// code is analysed. Since single-file is a common way to ship a .NET desktop application,
-/// that gap covered a large share of the artifacts this scanner exists to examine.
-/// </para>
-/// <para>
-/// Assemblies are decompiled straight from memory. Extracting them to a temporary directory
-/// would be simpler, and would also mean writing the contents of an untrusted binary to disk,
-/// which is the one thing the recovery layer does not do.
-/// </para>
+/// Without this a single-file publish is a dead end: the launcher carries no managed metadata,
+/// so the application reads as an opaque native binary. Assemblies are decompiled straight from
+/// memory, because extracting them would mean writing an untrusted binary's contents to disk.
 /// </remarks>
 public sealed class SingleFileRecoveryBackend : IRecoveryBackend
 {
@@ -80,11 +72,8 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
     /// judged them with.
     /// </summary>
     /// <remarks>
-    /// Public because a bundle does not only arrive as a file somebody dropped in. An installer
-    /// carries the same launcher as a payload, and it has to be read the same way rather than by
-    /// a second implementation that starts identical and drifts. The alternative was copying the
-    /// ownership lookup and the entry loop into the installer backend, where a later fix to
-    /// either would reach only one of them.
+    /// Public because an installer carries the same launcher as a payload, and it has to be read
+    /// the same way rather than by a second implementation that starts identical and drifts.
     /// </remarks>
     /// <param name="resolverBasePath">
     /// Where to look for referenced assemblies, or null when there is nowhere to look. A

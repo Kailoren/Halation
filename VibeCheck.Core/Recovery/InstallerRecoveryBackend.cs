@@ -13,18 +13,11 @@ namespace VibeCheck.Core.Recovery;
 /// Recovers the application packed inside a Windows installer.
 /// </summary>
 /// <remarks>
-/// <para>
-/// This is the download-and-check case as it actually arrives. Almost nothing is distributed
-/// as a bare executable; it comes as an installer, and until this existed every one of them
-/// reported zero coverage while the application sat readable a few layers in.
-/// </para>
-/// <para>
-/// The chain for an Electron build is installer, then a nested archive, then the asar, and
-/// only the last of those holds anything a rule can read. Each layer is opened in memory and
-/// bounded independently. Nothing is written to disk and nothing is executed, which matters
-/// more here than anywhere else in the scanner: an installer is a program whose whole purpose
-/// is to modify the machine, and the entire point is to read it without running it.
-/// </para>
+/// The download-and-check case as it actually arrives, since almost nothing ships as a bare
+/// executable. For an Electron build the chain is installer, nested archive, asar, and only the
+/// last holds anything a rule can read. Each layer is opened in memory and bounded
+/// independently: an installer is a program whose purpose is to modify the machine, and the
+/// point is to read it without running it.
 /// </remarks>
 public sealed class InstallerRecoveryBackend : IRecoveryBackend
 {
@@ -159,13 +152,10 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
     /// Reads an asar stored as a payload in its own right, rather than inside a nested archive.
     /// </summary>
     /// <remarks>
-    /// Buffered rather than handed straight to the reader, and that is a fix rather than a
-    /// preference. An asar's header is at the front and its file table gives offsets into the
-    /// rest, so the reader asks the stream how long it is; a compressed payload arrives as a
-    /// deflate stream, which answers that question by throwing. The nested-archive path buffers
-    /// already and never hit it, and electron-builder puts the asar inside a nested archive, so
-    /// the crash sat behind a layout that is legal, produced by other packers, and was never
-    /// tested.
+    /// Buffered rather than passed straight through, which is a fix rather than a preference:
+    /// the reader asks the stream for its length, and a compressed payload arrives as a deflate
+    /// stream, which answers by throwing. electron-builder nests the asar inside an archive and
+    /// that path already buffers, so the crash sat behind a layout nothing here tested.
     /// </remarks>
     private static int ReadAsarPayload(
         Stream installer,
@@ -215,19 +205,11 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
     /// assembly of a framework-dependent publish, which NSIS stores as its own payload per file.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// Until this existed, an installer wrapping a .NET application reported nothing readable
-    /// while the same executable dropped in on its own was decompiled in full. The recovery was
-    /// already written; the installer simply never reached it, and the gap was invisible from
-    /// the report because "an installer holding a native application" and "an installer holding
-    /// an application we did not try to read" printed the same sentence.
-    /// </para>
-    /// <para>
-    /// Buffered into memory first, because both the bundle reader and the decompiler seek and
-    /// the payload arrives through a decompressing stream that cannot. It stays in memory: an
-    /// installer's payload is the least trustworthy content this scanner handles and writing it
-    /// out is exactly what the recovery layer promises not to do.
-    /// </para>
+    /// An installer wrapping a .NET application used to report nothing readable while the same
+    /// executable dropped in alone was decompiled in full: the recovery existed, the installer
+    /// never reached it, and the report could not distinguish that from a native payload.
+    /// Buffered into memory because both readers seek and the payload arrives through a
+    /// decompressing stream that cannot; it stays in memory, as everything here does.
     /// </remarks>
     private static int ReadManagedPayload(
         Stream installer,

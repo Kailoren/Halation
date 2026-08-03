@@ -18,38 +18,20 @@ public sealed record ClaudeCodeCliAuth
 /// </summary>
 /// <remarks>
 /// <para>
-/// This exists because a Claude subscription does not cover API usage. Those are separate
-/// products with separate billing and no bridge between them, so somebody already paying for
-/// Max would otherwise have to buy credits a second time to use this feature. Running their own
-/// Claude Code is the only route to the subscription they hold.
+/// A Claude subscription does not cover API usage, so without this somebody already paying for
+/// Max would have to buy credits a second time.
 /// </para>
 /// <para>
-/// <b>The security boundary is <c>--tools ""</c>, and it is not a preference.</b> The deep pass
-/// reads source recovered from an application the reader does not trust. Claude Code is an agent
-/// with shell and filesystem access; the Anthropic API endpoint is not. Piping untrusted code
-/// into an agent that can act hands any prompt injection in that code a way to run commands on
-/// the machine of somebody who was trying to find out whether an application was safe. The
-/// scanned application never has to be executed, because getting VibeCheck to read it becomes
-/// the attack, and that is precisely the bug class this tool exists to find. Every one of the
-/// following is load-bearing:
+/// <b>The security boundary is <c>--tools ""</c>, and it is not a preference.</b> This feeds
+/// untrusted source to an agent with shell and filesystem access, so a prompt injection in that
+/// code would otherwise run commands on the machine of somebody trying to find out whether the
+/// application was safe. Also load-bearing: <c>--safe-mode</c> (no CLAUDE.md, skills, hooks or
+/// MCP servers), an empty working directory, <c>--no-session-persistence</c>, and content on
+/// stdin rather than in a readable command line.
 /// </para>
-/// <list type="bullet">
-///   <item><c>--tools ""</c> reduces the agent to text in, text out.</item>
-///   <item><c>--safe-mode</c> drops CLAUDE.md, skills, plugins, hooks, MCP servers and custom
-///   agents, none of which the reader chose when they asked for a scan.</item>
-///   <item>An empty temporary directory as the working directory, so there is nothing local to
-///   discover even if one of the above stops meaning what it means in a future version.</item>
-///   <item><c>--no-session-persistence</c>, because the input is somebody else's code and it
-///   should not be written into the reader's session history.</item>
-///   <item>The file content goes in on <b>stdin</b>, never in an argument: the process list is
-///   readable by other processes on the machine, and arguments have length limits that would
-///   truncate a review into a misleading one.</item>
-/// </list>
 /// <para>
-/// Because those mitigations rest on third-party flags continuing to mean what they mean, this
-/// backend is additionally gated to the developer audience, where the reader is examining their
-/// own application rather than something downloaded. That gate is enforced in
-/// <see cref="DeepPassRunner"/> rather than trusted to the UI.
+/// Those rest on third-party flags continuing to mean what they mean, so the route is also
+/// gated to the developer audience in <see cref="DeepPassRunner"/> rather than in the UI.
 /// </para>
 /// </remarks>
 public sealed class ClaudeCodeCliBackend : IDeepPassBackend
@@ -95,10 +77,9 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
     /// False. The run spends the reader's subscription quota, and nothing is charged to them.
     /// </summary>
     /// <remarks>
-    /// The CLI reports a <c>total_cost_usd</c> on every run, and it is a real number even on a
-    /// subscription, because it prices what the same request would have cost through the API.
-    /// Printing it as money would tell somebody whose card was never touched that they had been
-    /// billed. Tokens are reported instead.
+    /// The CLI reports a real <c>total_cost_usd</c> even on a subscription, because it prices
+    /// what the API would have charged. Printing it would tell somebody whose card was never
+    /// touched that they had been billed, so tokens are reported instead.
     /// </remarks>
     public bool BillsTheReader => false;
 
@@ -106,10 +87,9 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
     /// Asks the CLI whether it can authenticate, before a scan starts spending time on files.
     /// </summary>
     /// <remarks>
-    /// Being installed and being signed in are separate things, and the second is not implied
-    /// by the desktop application being signed in: the bundled binary keeps its own credential.
-    /// Asked with <c>auth status</c>, which answers without making a request, rather than by
-    /// sending a real review and reading the failure.
+    /// Installed and signed in are separate facts, and the bundled binary keeps its own
+    /// credential rather than sharing the desktop app's. Asked with <c>auth status</c>, which
+    /// answers without making a request.
     /// </remarks>
     public static async Task<ClaudeCodeCliAuth> CheckAuthenticationAsync(
         ClaudeCodeCli cli,

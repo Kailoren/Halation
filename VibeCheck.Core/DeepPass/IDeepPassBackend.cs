@@ -4,17 +4,10 @@ namespace VibeCheck.Core.DeepPass;
 /// Something that can review one file and report what it found.
 /// </summary>
 /// <remarks>
-/// <para>
-/// There is more than one way to reach a model. The Anthropic API is one, billed to a key the
-/// reader bought. A Claude Code installation the reader already has is another, billed to a
-/// subscription they are already paying for. The pass itself should not care which answered,
-/// so the difference is confined to an implementation of this.
-/// </para>
-/// <para>
-/// What must not vary is the question. Both implementations ask through
-/// <see cref="DeepPassPrompt"/> and read the answer back through it, so two scans differ
-/// because the application differed and not because the plumbing did.
-/// </para>
+/// Two ways to reach a model, one billed to a key the reader bought and one to a subscription
+/// they already hold, and the pass should not care which answered. What must not vary is the
+/// question: both ask through <see cref="DeepPassPrompt"/>, so two scans differ because the
+/// application differed and not because the plumbing did.
 /// </remarks>
 public interface IDeepPassBackend : IDisposable
 {

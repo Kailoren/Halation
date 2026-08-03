@@ -6,23 +6,11 @@ namespace VibeCheck.Core.Model;
 /// What the scan actually did, stated in countable terms.
 /// </summary>
 /// <remarks>
-/// <para>
-/// A scan of a hundred-megabyte application finishes in under two seconds, which reads as
-/// though nothing happened. The work is real - locating a payload inside an installer,
-/// decompiling a few hundred files, running the catalog over all of them, resolving packages
-/// and asking a remote database about every one of them - but the report only ever showed the
-/// conclusions, so the reader had nothing to weigh the speed against.
-/// </para>
-/// <para>
-/// The honest fix is to print the receipt, not to slow the scan down or animate a progress bar
-/// for longer than the work takes. A tool whose entire claim is that it tells you what it did
-/// and did not check cannot manufacture the appearance of effort; if that were ever noticed,
-/// every other statement in the report would deserve the same suspicion.
-/// </para>
-/// <para>
-/// The dependency line is the load-bearing one, because it is the only claim here that cannot
-/// be fabricated: it names an external service and the moment it answered.
-/// </para>
+/// A hundred-megabyte application finishes in under two seconds, which reads as though nothing
+/// happened. The honest answer is to print the receipt rather than to slow the scan down or
+/// animate a longer progress bar: a tool whose claim is that it says what it did cannot
+/// manufacture the appearance of effort. The dependency line is the load-bearing one, being the
+/// only claim here that cannot be fabricated.
 /// </remarks>
 public sealed record ScanEffort
 {

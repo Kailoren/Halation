@@ -6,17 +6,10 @@ namespace VibeCheck.Core.Scoring;
 /// Turns a set of findings into the headline score, band, and install verdict.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The design point here is the cap. Scores that average across many checks reward breadth
-/// of passing trivia: an app can pass fifty header-style checks, ship a live API key in its
-/// bundle, and still score in the nineties. That number is worse than no number, because it
-/// actively tells the reader the app is fine.
-/// </para>
-/// <para>
-/// So deductions accumulate normally, and then the score is hard-capped by the single worst
-/// finding present. Any critical finding caps at 39 no matter what else passed. Fifty clean
-/// checks cannot lift an app with a leaked service key out of the red band.
-/// </para>
+/// The design point is the cap. Averaging across checks rewards breadth of passing trivia: an
+/// app can pass fifty of them, ship a live API key, and score in the nineties, which is worse
+/// than no number at all. Deductions accumulate normally and the score is then hard-capped by
+/// the single worst finding, so any critical caps at 39 whatever else passed.
 /// </remarks>
 public static class ScoreCalculator
 {
@@ -37,25 +30,11 @@ public static class ScoreCalculator
     /// The range the worst finding present confines the score to.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// The ceiling is the original design point and stays: one critical finding caps at 39 no
-    /// matter how much else passed, so breadth of passing trivia cannot lift an application
-    /// that ships a live key.
-    /// </para>
-    /// <para>
-    /// The floor is the correction. Deductions used to subtract from 100 and clamp at zero,
-    /// which meant three critical findings and forty produced the same number, and that number
-    /// asserted something no static scan can know: that nothing measured about the application
-    /// was acceptable. Zero is now reserved for the one case that earns it, which is a scan
-    /// that could not read enough to say anything, and that is handled by the coverage gate
-    /// rather than here.
-    /// </para>
-    /// <para>
-    /// The bands line up with <see cref="BandFor"/> exactly and in both directions, so the
-    /// number and the label can never disagree. That was previously true only downwards: five
-    /// high findings and no critical ones scored zero and were labelled "critical issues",
-    /// which named a severity the scan had not found.
-    /// </para>
+    /// The floor is the part worth explaining. Deductions used to clamp at zero, so three
+    /// critical findings and forty produced the same number, which asserted something no static
+    /// scan can know. Zero is reserved for a scan that could not read enough to say anything,
+    /// and the coverage gate handles that. Bands line up with <see cref="BandFor"/> in both
+    /// directions so the number and the label cannot disagree.
     /// </remarks>
     private static (int Floor, int Ceiling) RangeFor(Severity worst) => worst switch
     {
@@ -193,11 +172,8 @@ public static class ScoreCalculator
     /// Places the score inside the band its worst finding allows.
     /// </summary>
     /// <remarks>
-    /// The weight of everything found decides where in that band it lands, with each further
-    /// finding moving it less than the one before. That is deliberate rather than a softening:
-    /// the fifth critical finding tells a reader far less than the second did, and a model that
-    /// weights them equally stops distinguishing between a bad application and a catastrophic
-    /// one exactly where the distinction starts to matter.
+    /// Each further finding moves the score less than the one before, because the fifth
+    /// critical tells a reader far less than the second did.
     /// </remarks>
     private static int ScoreFor(IReadOnlyList<Finding> findings, Audience audience)
     {

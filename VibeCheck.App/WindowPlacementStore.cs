@@ -22,18 +22,11 @@ public sealed record WindowPlacement
 /// Remembers the window's position and size between launches.
 /// </summary>
 /// <remarks>
-/// <para>
-/// A plain file beside the audience choice, with no protection: the worst outcome of tampering
-/// is a badly placed window. Any failure to read or write is swallowed, because a preference
-/// that cannot be saved is not worth refusing to start over.
-/// </para>
-/// <para>
 /// <b>The restored position is validated against the screens that exist now.</b> A window
-/// remembered on a second monitor, or on a laptop docked at a different resolution, restores
-/// to coordinates that are no longer visible, and the application then appears not to launch
-/// at all. That is indistinguishable from a crash to the person it happens to, and it happens
-/// on the day their setup changes rather than the day the feature shipped.
-/// </para>
+/// remembered on a monitor that is gone restores to coordinates nobody can see, and an
+/// application that opens where you cannot find it is indistinguishable from one that failed to
+/// start. Read and write failures are swallowed: a preference that cannot be saved is not worth
+/// refusing to start over.
 /// </remarks>
 public static class WindowPlacementStore
 {
