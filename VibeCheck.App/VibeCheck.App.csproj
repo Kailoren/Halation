@@ -11,6 +11,27 @@
     <Resource Include="VibeCheck.ico" />
   </ItemGroup>
 
+  <!-- The typefaces, compiled in rather than named and hoped for.
+
+       A FontFamily naming a face by name asks the machine it runs on, and a machine without
+       Barlow silently draws Segoe UI instead: the application still opens, still works, and
+       looks like a different program. Nothing in a screenshot says a fallback happened, which
+       is what makes it worth removing rather than documenting.
+
+       All three are SIL Open Font License 1.1, which permits bundling provided the licence
+       travels with the font. OFL-*.txt beside them is that licence, and Fonts/README.md records
+       where each came from. Segoe MDL2 Assets, which draws the title bar glyphs, is deliberately
+       not here: it ships with Windows and is not ours to redistribute. -->
+  <ItemGroup>
+    <Resource Include="Fonts\*.ttf" />
+
+    <!-- Resources rather than files copied beside the executable: the licence has to travel
+         with the font, and the font travels inside the binary, so the licence goes where the
+         font goes. It is also in the repository in plain sight, which is where anyone
+         actually looks. -->
+    <Resource Include="Fonts\OFL-*.txt" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>

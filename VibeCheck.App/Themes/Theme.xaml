@@ -90,14 +90,28 @@
          Typography and metrics
          ==================================================================== -->
 
-    <FontFamily x:Key="UiFont">Barlow, Tomorrow, Advent Pro, Bahnschrift, Segoe UI</FontFamily>
-    <FontFamily x:Key="MonoFont">Cascadia Mono, Consolas</FontFamily>
+    <!-- Every face is compiled into the executable and addressed by pack URI, so the
+         application draws the same on a machine with none of them installed as it does on the
+         one it was built on. Named faces were tried first and are the reason this is here: a
+         FontFamily that names "Barlow" asks whichever machine it lands on, and one without
+         Barlow quietly draws Segoe UI instead. The program still opens, still works, and looks
+         like a different program, with nothing in a screenshot to say why.
+
+         The URI form matters and is the reason this comment is long. A relative "./Fonts/#Barlow"
+         resolves against the folder holding this dictionary, which is Themes/, so it looked for
+         Themes/Fonts and found nothing; a font URI that resolves to nothing does not throw, it
+         falls back, and on a machine with Barlow installed the fallback is Barlow. It looked
+         perfect here and would have shipped drawing Segoe UI for everybody else. The absolute
+         pack URI names the assembly, which is VibeCheck rather than VibeCheck.App, and the part
+         after the hash is the family's own internal name rather than its file name.
+         Fonts/README.md records what each file is. -->
+    <FontFamily x:Key="UiFont">pack://application:,,,/VibeCheck;component/Fonts/#Barlow</FontFamily>
+    <FontFamily x:Key="MonoFont">pack://application:,,,/VibeCheck;component/Fonts/#Cascadia Mono</FontFamily>
 
     <!-- Headings, the app name and the score. Separate from UiFont because display faces are
          usually wide and unreadable at body size, so a theme wanting one needs somewhere to
-         put it that is not the paragraph text. Defaults to UiFont's face, meaning a theme that
-         ignores this key looks exactly as it did. -->
-    <FontFamily x:Key="DisplayFont">Oxanium, Tomorrow, Bahnschrift, Segoe UI</FontFamily>
+         put it that is not the paragraph text. -->
+    <FontFamily x:Key="DisplayFont">pack://application:,,,/VibeCheck;component/Fonts/#Oxanium</FontFamily>
 
     <!-- Segoe MDL2 Assets supplies the title bar glyphs. Replacing it means replacing the
          glyph codes in the window markup too. -->

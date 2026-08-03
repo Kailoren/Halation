@@ -87,13 +87,60 @@ here is worse than an absent one.
 Every report states which source it used and when the data was current, so a check that could
 not run is never mistaken for one that came back clean.
 
-## Optional deep pass (bring your own key)
+## Optional deep pass
 
-The scan above is free, needs no account, and sends nothing but package names. Optionally,
-you can supply your own Anthropic API key to add a second pass that reads the code and
-reasons about it, which is what catches the things a pattern cannot express: a guard that
-exists but is incomplete, whether untrusted input can actually reach a dangerous operation,
-two individually harmless pieces of code that are unsafe together.
+The scan above is free, needs no account, and sends nothing but package names. Optionally, a
+second pass reads the code and reasons about it, which is what catches the things a pattern
+cannot express: a guard that exists but is incomplete, whether untrusted input can actually
+reach a dangerous operation, two individually harmless pieces of code that are unsafe together.
+
+It is off unless you turn it on, per scan, and there are two ways to power it. Both use Claude
+Opus. **They differ in whose account pays and in what that costs you.**
+
+### Route 1: connect the Claude Code you already have
+
+If Claude Code is installed and signed in, VibeCheck can ask it. The app finds the installation
+itself and tells you what it found; if it is there but not signed in, a **Sign in** button opens
+Claude Code's own sign-in for you. VibeCheck never sees your credentials. The CLI holds them,
+exactly as it does when you use it directly.
+
+**This spends the usage allowance of the Claude subscription you already pay for.** Nothing is
+charged on top. A deep pass is a handful of requests, so on a Pro or Max plan it is a small
+share of a day's allowance, but it does come out of the same pot as your own work with Claude,
+and a large application read at the file ceiling will make a dent in it.
+
+The report says which installation answered, and states plainly that no money was charged.
+
+### Route 2: bring your own Anthropic API key
+
+Paste an API key from the [Anthropic Console](https://console.anthropic.com) and VibeCheck calls
+the API directly.
+
+**This costs real money, every scan.** The API is billed per token against credit you buy up
+front; it is a separate product from a Claude subscription, with separate billing and no bridge
+between the two, so a Pro or Max plan does not cover it and its allowance is not touched. A
+typical pass over a dozen files runs to a few cents, and the report prints the estimate with the
+tokens it is based on, so you can see what a scan cost rather than find out at the end of the
+month.
+
+Your key is encrypted to your Windows account and stored outside the application folder. It is
+never written to a report, and the interface only ever shows it masked.
+
+### Both routes are for applications you built
+
+The deep pass is offered in **developer mode only**. Checking something you downloaded runs
+entirely on this machine, with no account, no key and nothing leaving it.
+
+For the API route that is a decision about what the window offers. **For the Claude Code route
+it is a refusal enforced in the core**, and the reason is worth stating: Claude Code is an agent
+with shell and filesystem access, and the API is an endpoint that cannot execute anything.
+Feeding source recovered from software you do not trust into something that can act on your
+machine is the attack this tool exists to warn people about. The scanned program never has to
+run, because getting VibeCheck to read it becomes the attack instead.
+
+Where it is used, that agent is fenced in: no tools, safe mode, an empty working directory, no
+session persistence, and the file content arrives on standard input rather than on a command
+line other processes can read.
 
 **What is sent.** The files that handle input the application does not control, plus any file
 that calls into one a rule flagged. Not the whole application, and not only the lines a rule
@@ -106,13 +153,28 @@ matched. Both of those bounds are deliberate:
   an unbounded stack allocation recorded as a local-only crash risk; it was reachable from a
   remote HTTP response, and the file that proved it was one call away.
 
-The report lists exactly which files were read and how much the pass cost.
+The report lists exactly which files were read, what answered, and what the pass cost.
 
-**Bounds on it.** Off unless you turn it on, per scan. Your key
-is encrypted to your Windows account and stored outside the application folder. Findings from
-this pass are labelled as inferred, carry a confidence level, and **can never trigger a "do
-not install" verdict** — the strongest claim in a report must not depend on whether the reader
-happened to have an API key.
+**Bounds on it.** At most 40 files per scan, whichever route answers, so neither your allowance
+nor your credit can run away on one large application. Findings from this pass are labelled `AI`,
+carry a confidence level, and low-confidence ones are dropped rather than hedged. None of them
+can **trigger a "do not install" verdict**, because the strongest claim in a report must not
+depend on whether the reader happened to have a key or a subscription.
+
+## The interface is fixed
+
+Every colour, metric and typeface is compiled into the executable, and there is nothing beside
+it to edit. That is deliberate rather than unfinished: what you see has to be what was built and
+tested, and a security tool whose interface can be rearranged by a file in a user's profile is a
+security tool whose screenshots prove nothing.
+
+The three typefaces are bundled too, so the application draws the same on a machine with none of
+them installed. They are Barlow, Oxanium and Cascadia Mono, all SIL Open Font License 1.1, with
+each licence in [`VibeCheck.App/Fonts`](VibeCheck.App/Fonts) beside them.
+
+If you are building from source and want it to look different,
+[`Theme.xaml`](VibeCheck.App/Themes/Theme.xaml) is where every value lives and
+[`THEME.md`](VibeCheck.App/Themes/THEME.md) documents each key.
 
 ## Status
 

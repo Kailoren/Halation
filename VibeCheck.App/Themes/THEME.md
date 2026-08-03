@@ -4,66 +4,46 @@ Every colour, font and metric the interface uses is a named key in
 [`Theme.xaml`](Theme.xaml). Nothing visual is hardcoded in a window: if a value cannot be
 changed from the theme, that is a bug in the theme rather than a preference of the window.
 
-## Trying a different look
+## The theme is compiled in
 
-1. Copy `Theme.xaml` to `%LOCALAPPDATA%\VibeCheck\theme.xaml`.
-2. Edit it. Keep only the keys you are changing; everything you leave out falls back to the
-   built-in default.
-3. Restart VibeCheck.
+`Theme.xaml` is built into `VibeCheck.exe`, along with every typeface it names. There is no
+theme file beside the executable and no override read from disk, which is deliberate: what a
+reader sees has to be what was built and tested, and a security tool whose interface can be
+rearranged by a file in the user's profile is a security tool whose screenshots prove nothing.
 
-**To revert, delete `%LOCALAPPDATA%\VibeCheck\theme.xaml`.** The default is compiled into the
-executable, so it cannot be lost, and there is nothing to reinstall.
+**Changing the look means editing this file and rebuilding.** Every key below is read from here
+and nowhere else.
 
-A theme that fails to parse is reported in a message box once and then ignored, so a bad edit
-gives you the application back with an explanation rather than a window that will not open.
+An earlier version merged a loose theme file from the user's profile over this one, which
+brought a validator with it: XAML is not a data format, it names types and the parser builds
+them, and `ObjectDataProvider` exists to call a method. That whole surface, the loader, the
+allowlist and the risk, went when the override did.
 
-## What a theme is allowed to be
+Keys are still referred to with `DynamicResource` rather than `StaticResource` throughout, which
+now buys something narrower but still real: a style defined earlier in the file can name a brush
+defined later, and editing one value changes everything built from it without hunting for
+declaration order. `BasedOn` remains the exception and must stay `StaticResource`, because WPF
+resolves style inheritance at load and throws on a dynamic reference.
 
-A theme is checked against an allowlist before it is parsed, and refused with a message naming
-whatever it was that broke the rule.
+## Fonts are bundled, not requested
 
-This exists because XAML is not a data format. It names types and the parser constructs them,
-and a few of the types reachable from the WPF namespace do more than describe a colour:
-`ObjectDataProvider` is there to call a method, and it will call one on `Process` as readily as
-on anything else. Until the check existed, a theme file was an executable wearing a
-stylesheet's clothes, which is a poor thing to be shipped by the application whose entire
-purpose is talking people out of running software a stranger handed them.
+Barlow, Oxanium and Cascadia Mono are compiled into the executable as resources and addressed by
+pack URI. A `FontFamily` that merely names a face asks whichever machine it lands on, and a
+machine without Barlow silently draws Segoe UI: the application opens, works, and looks like a
+different program, with nothing in a screenshot to say why.
 
-A theme may use:
+Two traps, both of which cost time here and are worth knowing before editing a font key:
 
-- the three namespaces at the top of `Theme.xaml`, and no others, since `clr-namespace:` is how
-  any type in any assembly gets imported
-- the brushes, shapes, geometry, transforms, effects, templates, triggers and animations listed
-  in `ThemeGuard`, which is generous about anything that draws
-- `Binding`, `StaticResource`, `DynamicResource`, `TemplateBinding`, `RelativeSource`, `x:Null`
-  and `x:Type`
+- **Use the absolute pack URI**, `pack://application:,,,/VibeCheck;component/Fonts/#Family`.
+  A relative `./Fonts/#Family` resolves against the folder holding this dictionary, which is
+  `Themes/`, so it finds nothing. A font URI that resolves to nothing does not throw. It falls
+  back, and on a developer machine with the font installed the fallback is the correct font, so
+  it looks perfect right up until somebody else runs it.
+- **The name after the hash is the family's internal name**, not the file name, and the assembly
+  is `VibeCheck` rather than `VibeCheck.App`.
 
-A theme may not use anything else, whether or not it is harmful. That includes `x:Static`, which
-reads a static member and so calls a getter; `x:FactoryMethod`; `ImageBrush` and `ShaderEffect`,
-which take a URI and therefore a file or a socket; and any `Source` property, which is the quiet
-one, because a merged dictionary with a `Source` makes the parser fetch and parse a second
-document that no check ever sees.
-
-Being straight about what that is worth: it narrows a theme to a drawing vocabulary, which makes
-installing one mean what you think it means. It is not a proof that the vocabulary is inert. The
-only airtight answer is to not parse a stranger's XAML at all, so a theme from someone you have
-no reason to trust is still worth reading before you install it.
-
-A minimal override is legitimate and is the recommended shape:
-
-```xml
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <SolidColorBrush x:Key="Bg"     Color="#0B0E14"/>
-    <SolidColorBrush x:Key="Accent" Color="#C77DFF"/>
-</ResourceDictionary>
-```
-
-Every key below can be overridden this way, including the ones the built-in styles use
-internally. That works because the default theme refers to its own keys with
-`DynamicResource` rather than `StaticResource`: a `StaticResource` is resolved once when the
-default loads, so a later override would silently fail to reach anything already built from
-it. If you add keys of your own and want them overridable in turn, refer to them the same way.
+`Fonts/README.md` lists each file, what it is used for, and its licence. `IconFont` is the one
+exception: Segoe MDL2 Assets ships with Windows and is not ours to redistribute.
 
 ## Palette
 
@@ -139,12 +119,12 @@ in the same change.
 
 ## Typography
 
-| Key | Default | Notes |
+| Key | Face | Notes |
 |---|---|---|
-| `UiFont` | `Segoe UI` | Body text, buttons, captions |
-| `DisplayFont` | `Segoe UI` | The app name, card headings, the big screen titles, and the score. Separate from `UiFont` because display faces are usually wide and unreadable at paragraph size |
-| `MonoFont` | `Consolas` | Evidence snippets, file paths, hashes |
-| `IconFont` | `Segoe MDL2 Assets` | Title bar glyphs. Changing this means changing the glyph codes in the window markup too |
+| `UiFont` | Barlow, bundled | Body text, buttons, captions. Real Light, SemiBold and Bold faces, so none of those weights is synthesised |
+| `DisplayFont` | Oxanium, bundled | The app name, card headings, the big screen titles, and the score. Separate from `UiFont` because display faces are usually wide and unreadable at paragraph size |
+| `MonoFont` | Cascadia Mono, bundled | Evidence snippets, file paths, hashes |
+| `IconFont` | Segoe MDL2 Assets, from Windows | Title bar glyphs. The one face not bundled, and not ours to redistribute. Changing this means changing the glyph codes in the window markup too |
 | `BodySize` | `13` | |
 | `CaptionSize` | `12` | Captions and explanatory text |
 | `HeadingSize` | `15` | Card headings |

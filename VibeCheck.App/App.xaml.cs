@@ -29,17 +29,6 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
             ReportCrash(args.ExceptionObject as Exception);
 
-        // Before the first window is built, so StaticResource lookups in the markup resolve
-        // against the overridden values rather than the defaults.
-        if (ThemeLoader.Apply(this) is { } themeProblem)
-        {
-            MessageBox.Show(
-                themeProblem,
-                "Custom theme not applied",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-        }
-
         var path = e.Args.FirstOrDefault(a => !a.StartsWith('-'));
 
         if (path is null || (!File.Exists(path) && !Directory.Exists(path)))
