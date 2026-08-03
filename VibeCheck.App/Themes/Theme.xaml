@@ -616,6 +616,115 @@
         </Setter>
     </Style>
 
+    <!-- The heading of a section that can be folded away.
+
+         A ToggleButton rather than a heading with a click handler on it, because that is what
+         it is: a two-state control, and WPF already gives one a focus rectangle, a space bar
+         and a name a screen reader can say. The heading text is its Content; its Tag is a
+         short count of what the section holds, shown beside the arrow so a folded section
+         still says how much is inside it. Folding is a convenience and must never be a way for
+         the report to say less than it found.
+
+         Content and Tag are read as text rather than presented, so both must be strings. That
+         is the trade for having the heading carry the Heading style: a ContentPresenter would
+         take any content and give this template no way to style the words inside it.
+
+         The arrow is a Path rather than a glyph from IconFont. A theme restyling it then draws
+         a shape instead of hunting for a code point in a font it may not ship, which is the
+         same reason cards are templated controls rather than borders. -->
+    <Style x:Key="SectionHeader" TargetType="ToggleButton">
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <!-- Transparent rather than unset, so the whole strip takes the click and
+                         not only the words on it. -->
+                    <Grid Background="Transparent">
+
+                        <!-- Both layers are inset negatively so the lit row lines up with the
+                             edge of the card's padding rather than with the heading. -->
+                        <Border x:Name="Hot" Opacity="0" Margin="-8,-6" Background="{DynamicResource AccentWash}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" />
+
+                        <!-- Focus gets its own layer rather than sharing the hover one, for the
+                             reason ChoiceBtn gives: two triggers animating one Opacity means
+                             whichever ran last owns it. -->
+                        <Border x:Name="Ring" Opacity="0" Margin="-8,-6" BorderBrush="{DynamicResource Accent}" BorderThickness="1" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Margin cleared: the Heading style spaces itself from the
+                                 paragraph it normally sits above, and here that gap belongs to
+                                 the content below, which is not always there. -->
+                            <TextBlock Grid.Column="0" Style="{DynamicResource Heading}" Margin="0" VerticalAlignment="Center" Text="{Binding Content, RelativeSource={RelativeSource TemplatedParent}}" />
+
+                            <TextBlock Grid.Column="1" Style="{DynamicResource Caption}" VerticalAlignment="Center" Margin="12,0,0,0" Text="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" />
+
+                            <!-- Points down while the section is open and turns a quarter turn
+                                 to the right when it closes, so the direction it points is
+                                 always the direction the content is. Stretch="None" for the
+                                 reason the tick in the CheckBox gives: a stretched Path scales
+                                 its stroke with its geometry. -->
+                            <Path x:Name="Arrow" Grid.Column="2" Stretch="None" Margin="14,0,2,0" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5" Stroke="{DynamicResource Muted}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="M 0,0 L 5,5 L 10,0">
+                                <Path.RenderTransform>
+                                    <RotateTransform Angle="0" />
+                                </Path.RenderTransform>
+                            </Path>
+                        </Grid>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <!-- Written as the closed state rather than the open one so a section
+                             that starts open starts at rest, with no storyboard holding the
+                             arrow where the markup already put it. -->
+                        <Trigger Property="IsChecked" Value="False">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Arrow" Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" To="-90" Duration="{StaticResource CalmDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Arrow" Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)" To="0" Duration="{StaticResource CalmDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Arrow" Property="Stroke" Value="{DynamicResource Accent}" />
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot" Storyboard.TargetProperty="Opacity" To="1" Duration="{StaticResource SwiftDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Hot" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource CalmDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Ring" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- ====================================================================
          Inputs
 

@@ -790,6 +790,36 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// <summary>The three counts in one line, since any two without the third mislead.</summary>
     public string ChecksSummary => Report?.Checks.Describe() ?? string.Empty;
 
+    // ---- What each section is holding --------------------------------------
+
+    /// <summary>
+    /// The counts shown beside the headings on the results screen, one per section that can be
+    /// folded away.
+    /// </summary>
+    /// <remarks>
+    /// A section is allowed to be closed; it is not allowed to be silent about its own size
+    /// while closed. Without these, folding "What could not be checked" away would leave a
+    /// screen that looks exactly like a scan with nothing it could not check, which is the one
+    /// thing this report may never do.
+    /// </remarks>
+    public string FindingsCount => Counted(Findings.Count, "finding");
+
+    public string ChecksCount => Counted(Checks.Count, "check");
+
+    public string CategoriesCount => Counted(CategoryScores.Count, "category", "categories");
+
+    /// <summary>
+    /// Deliberately "notes" rather than "checks": the list holds both checks that could not run
+    /// and remarks about how the scan was answered, and counting the second kind as the first
+    /// would overstate what was missed.
+    /// </summary>
+    public string LimitationsCount => Counted(Limitations.Count, "note");
+
+    public string CoverageCount => Report is null ? string.Empty : $"{CoveragePercent}% readable";
+
+    private static string Counted(int count, string one, string? many = null) =>
+        count == 1 ? $"1 {one}" : $"{count} {many ?? one + "s"}";
+
     /// <summary>
     /// How the score was arrived at, shown under it. A low number with no account of itself
     /// reads as a judgement rather than a measurement.
@@ -809,6 +839,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             Notify(nameof(HasAssistedFindings));
             Notify(nameof(ChecksSummary));
+            NotifySectionCounts();
             return;
         }
 
@@ -859,6 +890,25 @@ public sealed class MainViewModel : INotifyPropertyChanged
         foreach (var limitation in Report.Coverage.ChecksNotPossible)
         {
             Limitations.Add(limitation);
+        }
+
+        NotifySectionCounts();
+    }
+
+    /// <summary>
+    /// Raised by hand because every one of these reads a collection's Count. An
+    /// ObservableCollection tells a binding that its items changed, not that a string property
+    /// derived from its length did.
+    /// </summary>
+    private void NotifySectionCounts()
+    {
+        foreach (var name in new[]
+                 {
+                     nameof(FindingsCount), nameof(ChecksCount), nameof(CategoriesCount),
+                     nameof(LimitationsCount), nameof(CoverageCount),
+                 })
+        {
+            Notify(name);
         }
     }
 

@@ -297,6 +297,7 @@ Restyling rather than recolouring means overriding these whole. Copy the one you
 | `ChoiceBtn` | The two audience choices, which are buttons the size of paragraphs |
 | `CaptionBtn` | Minimise and maximise |
 | `CloseBtn` | Close, inherits `CaptionBtn` |
+| `SectionHeader` | The heading of a results section, and the arrow that folds it away |
 | *(implicit)* `ScrollBar` | Every scroll bar in every window |
 | `ScrollThumb` | The draggable part, used by the above |
 | `ScrollPage` | The click-to-page halves of the track, used by the above |
@@ -324,6 +325,26 @@ theme that never mentions any of these still gets versions that match it.
 `Card` and `DropZone` are `ContentControl`s so that a theme can own their shape and not merely
 their colour. A `Border` has exactly one child and no template, so the only thing a style could
 ever say about one was what colour it was.
+
+### `SectionHeader`
+
+A `ToggleButton`, because a fold is a two-state control and WPF already gives one of those a
+focus rectangle, a space bar and a name a screen reader can say. Each section on the results
+screen has one, and the content below it is bound to `IsChecked`.
+
+Three things it has to keep doing:
+
+- **The heading is `Content` and the count is `Tag`, and both are read as text.** The template
+  puts them in `TextBlock`s rather than a `ContentPresenter`, which is what lets the heading
+  carry the `Heading` style, and means both must be strings.
+- **Keep the count visible.** It is there so a section that is folded away still says how much
+  it is holding. A closed "What could not be checked" with no count beside it looks exactly like
+  a scan that had nothing it could not check, and that is the one thing this report may never
+  look like.
+- **Point the arrow at the content.** Down while the section is open, a quarter turn away when
+  it is closed. The default draws it as a `Path` named `Arrow` and animates
+  `RenderTransform.Angle` between `0` and `-90`, so restyling it is drawing a shape rather than
+  hunting for a code point in whatever font `IconFont` names.
 
 ## The shipped theme as a worked example
 
