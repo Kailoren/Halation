@@ -175,13 +175,23 @@ internal static class CoverageBuilder
             : $" Dependencies were separated from application code by {ownership.Method}"
               + (ownership.IsApproximate ? " (approximate)." : ".");
 
+        // Said out loud, because otherwise the number is a lie by arithmetic: "decompiled 0 of
+        // 2,400 types" reads as a decompiler that failed, when what happened is that it worked
+        // and produced text with the names taken out.
+        var scrambled = budget.TypesUnreadable == 0
+            ? string.Empty
+            : $" A further {budget.TypesUnreadable:N0} decompiled into text with the names "
+              + "stripped by an obfuscator. Those are in the report and the rules still read "
+              + "them for literal values, but nothing can follow what they do, so they are not "
+              + "counted as covered.";
+
         return new CoverageReport
         {
             Percent = Math.Clamp(percent, 0, 100),
             Basis = budget.TypesSeen == 0
                 ? "No managed types were found to decompile."
                 : $"Decompiled {budget.TypesRecovered:N0} of {budget.TypesSeen:N0} "
-                  + $"top-level types to C#.{separation}",
+                  + $"top-level types to C#.{separation}{scrambled}",
             RecoveredFileCount = files.Count,
             RecoveredBytes = files.Sum(f => (long)f.Content.Length),
             ChecksNotPossible = notes.Distinct(StringComparer.Ordinal).Take(50).ToList(),

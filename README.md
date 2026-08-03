@@ -33,7 +33,9 @@ So VibeCheck does not print a verdict of "safe". It reports:
   lift an app that ships a live API key out of the red band.
 - **A coverage figure**, kept deliberately separate from the score, saying how much of the
   application could actually be read. A clean result at 12% coverage is a different claim
-  from a clean result at 95%.
+  from a clean result at 95%. Coverage measures what was *understood*, not what was written
+  out: an obfuscated application decompiles into thousands of files of `a.b(c)`, none of which
+  count, so it gets no score at all rather than a good one.
 - **What could not be checked**, listed explicitly, so a short findings list is never
   mistaken for a clean bill of health.
 

@@ -76,6 +76,39 @@ public static class MaliciousBehaviourRules
     private static bool NoDownloadNearby(RuleContext context) =>
         !Fetches.IsMatch(context.Content) || !WritesAFile.IsMatch(context.Content);
 
+    /// <summary>
+    /// Constructs that only appear in a regular expression, never in a command.
+    /// </summary>
+    private static readonly Regex RegexSyntax = PatternRule.Compile(
+        @"\(\?[:i]|\[\^|\\[sbdwSBDW]|\.\*");
+
+    /// <summary>
+    /// Whether the matched line is a pattern that describes a command rather than a line that
+    /// runs one.
+    /// </summary>
+    /// <remarks>
+    /// Found by scanning VibeCheck's own published build with VibeCheck. The patterns in this
+    /// file are string literals, they survive decompilation intact, and the rules duly matched
+    /// their own definitions: the scanner advised against installing itself. Any application
+    /// that ships pattern-based detection has the same shape, and a false "do not install" is
+    /// the most expensive mistake this catalog can make, because it is the one claim a reader
+    /// cannot check for themselves.
+    /// </remarks>
+    private static bool LooksLikeAPattern(Match match, RuleContext context)
+    {
+        // A window around the match rather than the line it sits on. A minified bundle is one
+        // line of several hundred kilobytes, and testing all of it would let a regular
+        // expression anywhere in the file explain away a match anywhere else, which quietly
+        // turned this guard into a way of never reporting a bundled application at all.
+        const int reach = 120;
+
+        var content = context.Content;
+        var start = Math.Max(0, match.Index - reach);
+        var end = Math.Min(content.Length, match.Index + match.Length + reach);
+
+        return RegexSyntax.IsMatch(content[start..end]);
+    }
+
     private static PatternRule BrowserCredentialAccess { get; } = new()
     {
         Id = "VC-MAL-001",
@@ -298,7 +331,8 @@ public static class MaliciousBehaviourRules
             |Runtime\.getRuntime\(\)\.exec)
             """,
             RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace),
-        Ignore = (_, context) => NoDownloadNearby(context),
+        Ignore = (match, context) =>
+            NoDownloadNearby(context) || LooksLikeAPattern(match, context),
     };
 
     /// <summary>
@@ -354,6 +388,7 @@ public static class MaliciousBehaviourRules
             |(?:curl|wget)[^\r\n|]{0,120}?\|\s*(?:ba)?sh\b)
             """,
             RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace),
+        Ignore = LooksLikeAPattern,
     };
 
     /// <summary>

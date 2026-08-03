@@ -24,17 +24,43 @@ public sealed class DecompilationBudget
 
     public int TypesSeen { get; private set; }
 
+    /// <summary>Types that came back as source a rule can read. This is the coverage numerator.</summary>
     public int TypesRecovered { get; private set; }
+
+    /// <summary>
+    /// Types that decompiled successfully into text nothing can read, because an obfuscator had
+    /// already taken the names out.
+    /// </summary>
+    /// <remarks>
+    /// Counted apart from <see cref="TypesRecovered"/> rather than added to it, and that
+    /// distinction is the whole point. Decompiling a scrambled assembly produces thousands of
+    /// files of <c>a.b(c)</c>, which is a pile of recovered text and nothing a check can act on.
+    /// Counting it as covered meant an obfuscated application scored like a legible one that
+    /// happened to have no findings, when the truthful statement was that the scan could not read
+    /// it. Coverage measures what was understood, not what was written out.
+    /// </remarks>
+    public int TypesUnreadable { get; private set; }
 
     public int CharactersRecovered { get; private set; }
 
-    public bool Exhausted => TypesRecovered >= MaxTypes || CharactersRecovered >= MaxCharacters;
+    /// <summary>
+    /// Both kinds of type count against the ceiling. They cost the same to produce, and a
+    /// scrambled application must not get an unbounded scan by virtue of being unreadable.
+    /// </summary>
+    public bool Exhausted =>
+        TypesRecovered + TypesUnreadable >= MaxTypes || CharactersRecovered >= MaxCharacters;
 
     internal void CountSeen() => TypesSeen++;
 
     internal void CountRecovered(int characters)
     {
         TypesRecovered++;
+        CharactersRecovered += characters;
+    }
+
+    internal void CountUnreadable(int characters)
+    {
+        TypesUnreadable++;
         CharactersRecovered += characters;
     }
 }
@@ -87,6 +113,12 @@ public static class ManagedAssemblyDecompiler
         var metadata = peReader.GetMetadataReader();
 
         findings.AddRange(AssemblyInspector.Inspect(metadata, peReader, label));
+
+        // Decided once for the assembly rather than per type, because obfuscation is a property
+        // of the build. The types are still decompiled and still handed to the rules: string
+        // literals survive an obfuscator, and a hardcoded wallet path is as findable in
+        // scrambled code as in readable code. What changes is that none of it counts as covered.
+        var obfuscated = AssemblyInspector.LooksObfuscated(metadata);
 
         var settings = new DecompilerSettings(LanguageVersion.CSharp10_0)
         {
@@ -151,7 +183,14 @@ public static class ManagedAssemblyDecompiler
                 continue;
             }
 
-            budget.CountRecovered(code.Length);
+            if (obfuscated)
+            {
+                budget.CountUnreadable(code.Length);
+            }
+            else
+            {
+                budget.CountRecovered(code.Length);
+            }
 
             files.Add(new RecoveredFile
             {
@@ -291,7 +330,7 @@ public static class AssemblyInspector
     /// Heuristic: obfuscators rename types to one or two characters, or to sequences that are
     /// not valid C# identifiers at all.
     /// </summary>
-    private static bool LooksObfuscated(MetadataReader metadata)
+    internal static bool LooksObfuscated(MetadataReader metadata)
     {
         var total = 0;
         var suspicious = 0;

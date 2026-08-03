@@ -397,6 +397,34 @@ public class RuleEngineTests
     }
 
     /// <summary>
+    /// A pattern that describes the technique is not the technique.
+    /// </summary>
+    /// <remarks>
+    /// Found by scanning VibeCheck's own published build with VibeCheck. Its rule patterns are
+    /// string literals, they survive decompilation intact, and both dropper rules matched their
+    /// own definitions: the scanner advised against installing itself, with 13/100 and a
+    /// do-not-install banner. Every application shipping pattern-based detection has this shape.
+    /// The fixtures below are the real lines that did it.
+    /// </remarks>
+    [Theory]
+    [InlineData("""Pattern = Compile("(?:certutil[^\\r\\n]{0,60}?-(?:urlcache|decode))");""")]
+    [InlineData("""var p = "mshta[^\\r\\n]{0,20}?https?:";""")]
+    [InlineData("""private static readonly Regex Lol = new(@"regsvr32.*\/i:https?:");""")]
+    public void APatternDescribingTheTechnique_IsNotTheTechnique(string line) =>
+        Assert.False(Fired("VC-MAL-008", line, "Rules.cs"));
+
+    /// <summary>The same guard on the dropper rule, whose patterns decompile the same way.</summary>
+    [Fact]
+    public void APatternDescribingADropper_IsNotADropper() =>
+        Assert.False(Fired(
+            "VC-MAL-007",
+            """
+            var fetches = Compile("HttpClient|WebClient|DownloadFile|GetTempPath|WriteAllBytes");
+            var runs = Compile("(?:Process\\.Start|ProcessStartInfo|ShellExecute(?:Ex)?)");
+            """,
+            "Rules.cs"));
+
+    /// <summary>
     /// Encoded PowerShell is left out on purpose. Real installers encode a command to get
     /// around quoting, so it is a capability rather than a technique, and blocking on it would
     /// print "do not install this application" over ordinary software.

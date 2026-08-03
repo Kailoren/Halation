@@ -97,7 +97,7 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
         {
             Files = files,
             Findings = AssemblyInspector.Collapse(findings),
-            Coverage = BuildCoverage(files, considered, payloads, blobs.Count, warnings),
+            Coverage = BuildCoverage(files, considered, payloads, blobs.Count, budget, warnings),
         });
     }
 
@@ -519,6 +519,7 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
         int considered,
         int payloads,
         int blobs,
+        DecompilationBudget budget,
         List<string> warnings)
     {
         var limitations = warnings.Distinct(StringComparer.Ordinal).Take(50).ToList();
@@ -526,6 +527,10 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
         limitations.Add(
             "The installer's own script was not analysed. What it does to the machine during "
             + "installation, including any files it fetches, is outside what this scan covers.");
+
+        // One file per decompiled type, so what came back unreadable subtracts exactly. An
+        // obfuscated payload must not report as covered here either; see DecompilationBudget.
+        var readable = Math.Max(0, files.Count - budget.TypesUnreadable);
 
         string basis;
 
@@ -540,15 +545,21 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
         }
         else
         {
-            basis = $"Read {files.Count:N0} of {considered:N0} application files from inside the "
+            basis = $"Read {readable:N0} of {considered:N0} application files from inside the "
                     + $"installer, across {payloads} packed payload(s).";
+
+            if (budget.TypesUnreadable > 0)
+            {
+                basis += $" {budget.TypesUnreadable:N0} of them decompiled with the names "
+                         + "stripped by an obfuscator and are not counted as covered.";
+            }
         }
 
         return new CoverageReport
         {
             Percent = considered == 0
                 ? 0
-                : Math.Clamp((int)Math.Round(files.Count / (double)considered * 100), 0, 100),
+                : Math.Clamp((int)Math.Round(readable / (double)considered * 100), 0, 100),
             Basis = basis,
             RecoveredFileCount = files.Count,
             RecoveredBytes = files.Sum(f => (long)f.Content.Length),

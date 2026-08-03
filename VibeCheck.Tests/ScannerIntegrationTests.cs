@@ -172,6 +172,38 @@ public class ScannerIntegrationTests : IDisposable
         Assert.Equal(ScoreBand.CriticalIssues, report.Verdict.Band);
     }
 
+    /// <summary>
+    /// The promise the obfuscation change was made for, checked where a reader would meet it:
+    /// not in the coverage figure but in the verdict. A scrambled application decompiles into
+    /// thousands of files nothing can read, matches no rules because there is nothing legible to
+    /// match, and used to come out the far end with a high score and a short findings list. It
+    /// now gets no number at all, which is the honest answer, and a band that is grey rather
+    /// than green.
+    /// </summary>
+    [Fact]
+    public async Task ObfuscatedApplication_GetsNoScoreRatherThanAGoodOne()
+    {
+        var path = ObfuscatedAssemblyBuilder.WriteTemp();
+
+        try
+        {
+            var report = await new Scanner().ScanAsync(path, ScanOptions.NoDependencyCheck);
+
+            Assert.False(report.Verdict.HasMeaningfulScore);
+            Assert.Equal(ScoreBand.InsufficientCoverage, report.Verdict.Band);
+
+            // Not a failing grade either. It could not be read, and that is all the report says.
+            Assert.False(report.Verdict.AdviseAgainstInstall);
+
+            // The reason is in the report rather than left to be inferred from a missing number.
+            Assert.Contains(report.Findings, f => f.RuleId == "VC-BIN-002");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     [Fact]
     public async Task NativeBinary_ScoresButReportsZeroCoverage()
     {

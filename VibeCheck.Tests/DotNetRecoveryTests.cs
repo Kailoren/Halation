@@ -1,3 +1,6 @@
+using System.Reflection;
+using System.Reflection.Emit;
+
 using VibeCheck.Core.Artifacts;
 using VibeCheck.Core.Model;
 using VibeCheck.Core.Recovery;
@@ -114,6 +117,43 @@ public class DotNetRecoveryTests
         Assert.DoesNotContain(result.Findings, f => f.RuleId == "VC-BIN-002");
     }
 
+    // ---- Obfuscation and what it does to coverage --------------------------
+
+    /// <summary>
+    /// The failure this closes. Decompiling a scrambled assembly succeeds: thousands of files
+    /// of <c>a.b(c)</c> come back, every one of them counted as recovered, and the application
+    /// scored like a legible one that happened to have no findings. Coverage now measures what
+    /// was understood rather than what was written out, so an unreadable application falls under
+    /// the meaningful-coverage floor and gets the "could not analyse" band instead of a number.
+    /// </summary>
+    [Fact]
+    public async Task ObfuscatedAssembly_DoesNotCountAsCovered()
+    {
+        var path = ObfuscatedAssemblyBuilder.WriteTemp();
+
+        try
+        {
+            var result = await new DotNetRecoveryBackend()
+                .RecoverAsync(ArtifactDetector.Detect(path), CancellationToken.None);
+
+            Assert.Contains(result.Findings, f => f.RuleId == "VC-BIN-002");
+            Assert.Equal(0, result.Coverage.Percent);
+
+            // The source is still there and still scanned. String literals survive an
+            // obfuscator, so a hardcoded wallet path is as findable in scrambled code as in
+            // readable code, and dropping the files would throw that away.
+            Assert.NotEmpty(result.Files);
+
+            // The number has to explain itself, or "0 of 30 types" reads as a decompiler that
+            // failed rather than one that worked on something nobody can read.
+            Assert.Contains("obfuscator", result.Coverage.Basis, StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     [Fact]
     public async Task NativeBinary_YieldsNoSourceRatherThanThrowing()
     {
@@ -134,5 +174,51 @@ public class DotNetRecoveryTests
 
         Assert.Empty(result.Files);
         Assert.Equal(0, result.Coverage.Percent);
+    }
+}
+
+/// <summary>
+/// Builds an assembly whose type names have been taken out, which is what an obfuscator leaves
+/// behind.
+/// </summary>
+/// <remarks>
+/// Emitted rather than checked in, for the reason the NSIS and asar builders give: this
+/// repository is public and carries no third-party binaries, and a real obfuscated sample would
+/// be somebody else's code.
+/// </remarks>
+internal static class ObfuscatedAssemblyBuilder
+{
+    public static byte[] Build()
+    {
+        var builder = new PersistedAssemblyBuilder(
+            new AssemblyName("Scrambled"), typeof(object).Assembly);
+
+        var module = builder.DefineDynamicModule("Scrambled.dll");
+
+        // Comfortably past the heuristic's floor of twenty types, all named the way an
+        // obfuscator names them.
+        foreach (var name in Enumerable.Range(0, 30).Select(i => $"{(char)('a' + (i % 26))}{i / 26}"))
+        {
+            var type = module.DefineType(name, TypeAttributes.Public);
+
+            type.DefineMethod("m", MethodAttributes.Public | MethodAttributes.Static)
+                .GetILGenerator()
+                .Emit(OpCodes.Ret);
+
+            type.CreateType();
+        }
+
+        using var stream = new MemoryStream();
+        builder.Save(stream);
+
+        return stream.ToArray();
+    }
+
+    public static string WriteTemp()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"vibecheck-obf-{Guid.NewGuid():N}.dll");
+        File.WriteAllBytes(path, Build());
+
+        return path;
     }
 }
