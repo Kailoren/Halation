@@ -1,4 +1,6 @@
 using System.IO.Compression;
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 
 using VibeCheck.Core.Artifacts;
 using VibeCheck.Core.Model;
@@ -59,10 +61,12 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
         ArgumentNullException.ThrowIfNull(artifact);
 
         var warnings = new List<string>();
+        var findings = new List<Finding>();
+        var budget = new DecompilationBudget();
 
         var (files, considered) = artifact.IsDirectory
             ? ReadDirectory(artifact.Path, warnings, cancellationToken)
-            : ReadArchive(artifact.Path, warnings, cancellationToken);
+            : ReadArchive(artifact.Path, findings, budget, warnings, cancellationToken);
 
         // Code present but unreadable still belongs in the denominator, or coverage measures
         // how well recovery went on the files it could see rather than how much of the
@@ -73,19 +77,25 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
 
         considered += unreadable;
 
+        // Types that decompiled into scrambled text are present but not legible, and coverage
+        // counts what was understood. Same rule as the .NET backends, applied here because an
+        // archive can now carry an assembly through this path too.
+        var readable = Math.Max(0, files.Count - budget.TypesUnreadable);
+
         return Task.FromResult(new RecoveryResult
         {
             Files = files,
+            Findings = AssemblyInspector.Collapse(findings),
             Coverage = new CoverageReport
             {
                 Percent = considered == 0
                     ? 0
-                    : Math.Clamp((int)Math.Round(files.Count / (double)considered * 100), 0, 100),
+                    : Math.Clamp((int)Math.Round(readable / (double)considered * 100), 0, 100),
                 Basis = considered == 0
                     ? "No readable text files were found."
                     : unreadable == 0
-                        ? $"Read {files.Count:N0} of {considered:N0} candidate text files."
-                        : $"Read {files.Count:N0} source files; {unreadable:N0} further modules "
+                        ? $"Read {readable:N0} of {considered:N0} candidate files."
+                        : $"Read {readable:N0} source files; {unreadable:N0} further modules "
                           + "are compiled and were not readable.",
                 RecoveredFileCount = files.Count,
                 RecoveredBytes = files.Sum(f => (long)f.Content.Length),
@@ -256,6 +266,8 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
 
     private static (List<RecoveredFile> Files, int Considered) ReadArchive(
         string path,
+        List<Finding> findings,
+        DecompilationBudget budget,
         List<string> warnings,
         CancellationToken cancellationToken)
     {
@@ -284,6 +296,13 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
                     Language = RecoveredFile.LanguageOf(entry.Path),
                 });
             }
+
+            var nested = ReadNestedApplications(
+                archive, files, findings, budget, warnings, cancellationToken);
+
+            // Both halves belong in the denominator: what an application inside the archive
+            // contributed, and what it would have contributed had it been readable.
+            considered += nested.Recovered + nested.Unread;
         }
         catch (InvalidDataException)
         {
@@ -296,6 +315,193 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
 
         return (files, considered);
     }
+
+    /// <summary>
+    /// Budgets for the second pass. An application is routinely larger than any source file,
+    /// so the default per-entry ceiling would reject exactly the thing worth reading.
+    /// </summary>
+    private static readonly ArchiveLimits NestedLimits = new()
+    {
+        MaxFileBytes = 192L * 1024 * 1024,
+        MaxTotalBytes = 512L * 1024 * 1024,
+    };
+
+    /// <summary>Cap on programs opened inside one archive, so a bundle of them cannot stall a scan.</summary>
+    private const int MaxNestedApplications = 20;
+
+    /// <summary>
+    /// Recovers applications packed inside the archive, and counts the ones that could not be.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the download shape. Almost nothing arrives as a bare executable and almost
+    /// everything arrives as a zip with a program inside it, and until this existed the reader
+    /// of that zip got a score computed from whatever loose text happened to be beside the
+    /// program. VibeCheck's own release archive scored 100 out of 100 on the strength of one
+    /// theme file while the 65 MB executable next to it went unopened and unmentioned, which is
+    /// the worst thing this tool can do and it did it to itself.
+    /// </para>
+    /// <para>
+    /// A second pass rather than a wider first one, so ordinary source archives keep the limits
+    /// and behaviour they already had. Everything stays in memory, as everywhere else in this
+    /// layer.
+    /// </para>
+    /// </remarks>
+    private static (int Recovered, int Unread) ReadNestedApplications(
+        ZipArchive archive,
+        List<RecoveredFile> files,
+        List<Finding> findings,
+        DecompilationBudget budget,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        var before = files.Count;
+        var unread = 0;
+        var opened = 0;
+        var ownership = AssemblyOwnership.VendorList;
+
+        foreach (var entry in SafeArchive.ReadEntries(
+                     archive, LooksExecutable, warnings, NestedLimits, cancellationToken))
+        {
+            if (budget.Exhausted || opened >= MaxNestedApplications)
+            {
+                break;
+            }
+
+            opened++;
+
+            switch (Recover(entry, files, findings, budget, ref ownership, warnings, cancellationToken))
+            {
+                case NestedOutcome.Recovered:
+                    break;
+
+                case NestedOutcome.NotTheApplication:
+                    // A framework or vendor assembly shipped beside the application. Not read
+                    // and not missing, so it belongs in neither half of the figure.
+                    break;
+
+                default:
+                    unread++;
+                    warnings.Add(
+                        $"{entry.Path} is a program this scanner cannot read "
+                        + $"({entry.Content.Length / (1024 * 1024)} MB). Nothing inside it was "
+                        + "analysed, and the coverage figure counts it as unexamined.");
+                    break;
+            }
+        }
+
+        return (files.Count - before, unread);
+    }
+
+    private enum NestedOutcome { Recovered, NotTheApplication, Unreadable }
+
+    /// <summary>
+    /// Sends one packed program to whichever recovery understands it. Deliberately the same
+    /// three shapes the installer backend handles, through the same helpers.
+    /// </summary>
+    private static NestedOutcome Recover(
+        SafeArchive.Entry entry,
+        List<RecoveredFile> files,
+        List<Finding> findings,
+        DecompilationBudget budget,
+        ref AssemblyOwnership ownership,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        var before = files.Count;
+
+        if (entry.Path.EndsWith(".asar", StringComparison.OrdinalIgnoreCase))
+        {
+            using var asar = new MemoryStream(entry.Content, writable: false);
+            ElectronRecoveryBackend.ReadAsarInto(asar, entry.Path, files, warnings, cancellationToken);
+
+            return files.Count > before ? NestedOutcome.Recovered : NestedOutcome.Unreadable;
+        }
+
+        using var payload = new MemoryStream(entry.Content, writable: false);
+
+        try
+        {
+            if (SingleFileBundle.IsBundle(payload))
+            {
+                payload.Position = 0;
+
+                ownership = SingleFileRecoveryBackend.RecoverBundle(
+                    SingleFileBundle.Read(payload, warnings, cancellationToken),
+                    resolverBasePath: null,
+                    ownership,
+                    budget,
+                    files,
+                    findings,
+                    warnings,
+                    cancellationToken);
+
+                return files.Count > before ? NestedOutcome.Recovered : NestedOutcome.Unreadable;
+            }
+
+            if (ManagedAssemblyName(payload) is not { } name)
+            {
+                return NestedOutcome.Unreadable;
+            }
+
+            if (!ownership.IsApplicationCode(name))
+            {
+                return NestedOutcome.NotTheApplication;
+            }
+
+            payload.Position = 0;
+
+            ManagedAssemblyDecompiler.Decompile(
+                name, payload, resolverBasePath: null, budget, files, findings, warnings,
+                cancellationToken);
+
+            return files.Count > before ? NestedOutcome.Recovered : NestedOutcome.Unreadable;
+        }
+        catch (BadImageFormatException)
+        {
+            return NestedOutcome.Unreadable;
+        }
+        catch (InvalidDataException)
+        {
+            return NestedOutcome.Unreadable;
+        }
+    }
+
+    /// <summary>The assembly's own name, or null when the payload carries no managed metadata.</summary>
+    private static string? ManagedAssemblyName(Stream payload)
+    {
+        try
+        {
+            payload.Position = 0;
+
+            using var reader = new PEReader(payload, PEStreamOptions.LeaveOpen);
+
+            if (!reader.HasMetadata)
+            {
+                return null;
+            }
+
+            var metadata = reader.GetMetadataReader();
+
+            return metadata.IsAssembly
+                ? metadata.GetString(metadata.GetAssemblyDefinition().Name) + ".dll"
+                : null;
+        }
+        catch (BadImageFormatException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Names worth opening as programs. Matched by extension rather than by content because
+    /// the alternative is decompressing every entry in the archive to look at its first bytes.
+    /// </summary>
+    private static bool LooksExecutable(string relativePath) =>
+        !IsVendored(relativePath)
+        && (relativePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+            || relativePath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+            || relativePath.EndsWith(".asar", StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Decides whether a path is worth reading. Vendored trees are skipped except for their

@@ -57,6 +57,46 @@ public static class Redaction
     }
 
     /// <summary>
+    /// Flattens text that came from a language model into a single line of plain prose.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The deep pass reads an application's own source and returns text derived from it, so
+    /// every field it fills is attacker-controlled by way of a prompt injection. The Markdown
+    /// export puts a finding's title into a heading, and a title carrying two newlines and a
+    /// <c>##</c> was enough to forge a whole verdict section reading "no known issues found,
+    /// safe to install" in a document the reader saves and forwards. Nothing was wrong with the
+    /// report on screen; the artifact people pass around said the opposite of what was found.
+    /// </para>
+    /// <para>
+    /// Line breaks are what carry the attack, because Markdown structure is decided at the
+    /// start of a line, so they are what goes. The composed description keeps its own paragraph
+    /// breaks: those are added by this codebase around the flattened pieces, and a caller
+    /// cannot be tricked into arranging its own text.
+    /// </para>
+    /// </remarks>
+    public static string? Flatten(string? text, int max = 400)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var flattened = Sanitise(text);
+
+        // Sanitise turns every control character into a space, so runs of them are what a
+        // stripped newline leaves behind.
+        while (flattened.Contains("  ", StringComparison.Ordinal))
+        {
+            flattened = flattened.Replace("  ", " ", StringComparison.Ordinal);
+        }
+
+        flattened = Scrub(flattened.Trim());
+
+        return flattened.Length <= max ? flattened : string.Concat(flattened.AsSpan(0, max), "…");
+    }
+
+    /// <summary>
     /// Removes anything shaped like the reader's own Anthropic key from a message they may
     /// publish.
     /// </summary>

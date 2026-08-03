@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 
 using VibeCheck.Core.Model;
+using VibeCheck.Core.Rules;
 
 namespace VibeCheck.Core.DeepPass;
 
@@ -218,16 +219,25 @@ public static class DeepPassPrompt
         && confidence.ValueKind == JsonValueKind.String
         && string.Equals(confidence.GetString(), "low", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Reads one finding out of the model's answer.
+    /// </summary>
+    /// <remarks>
+    /// Every string here is derived from the scanned application's own source and is therefore
+    /// attacker-controlled, so each one is flattened on the way in rather than trusted to be
+    /// prose. See <see cref="Redaction.Flatten"/> for what a title containing two newlines was
+    /// able to do to an exported report.
+    /// </remarks>
     private static Finding? ReadFinding(JsonElement element, TriagedFile triaged)
     {
         if (!element.TryGetProperty("title", out var title)
-            || title.GetString() is not { Length: > 0 } titleText)
+            || Redaction.Flatten(title.GetString(), max: 160) is not { Length: > 0 } titleText)
         {
             return null;
         }
 
-        string? Text(string name) =>
-            element.TryGetProperty(name, out var value) ? value.GetString() : null;
+        string? Text(string name) => Redaction.Flatten(
+            element.TryGetProperty(name, out var value) ? value.GetString() : null);
 
         var confidence = Text("confidence") ?? "medium";
 
@@ -252,9 +262,16 @@ public static class DeepPassPrompt
             UserDescription = Text("user_impact")
                 ?? "This was identified by the AI deep pass, which did not describe what it "
                    + "means for someone running the application.",
-            Evidence = Text("evidence"),
+            // Through the same masking every rule finding's evidence goes through, which caps
+            // the length and leaves nothing that could close the code fence it is printed in.
+            Evidence = Text("evidence") is { } quoted
+                ? Redaction.BuildEvidence(quoted)
+                : null,
             Remediation = Text("remediation"),
-            FilePath = Text("file") ?? triaged.File.RelativePath,
+
+            // A path, and only a path: it is printed as a location and a crafted one would
+            // otherwise be a second way into the same line of the report.
+            FilePath = Redaction.Flatten(Text("file"), max: 200) ?? triaged.File.RelativePath,
         };
     }
 

@@ -82,6 +82,9 @@ public sealed class OsvMirror(string directory)
         }
     }
 
+    /// <summary>Ceiling on one ecosystem's archive; npm, the largest, is around 203 MB.</summary>
+    private const long MaxArchiveBytes = 512L * 1024 * 1024;
+
     /// <summary>
     /// Downloads one ecosystem's advisories. Writes to a temporary file and moves it into
     /// place, so an interrupted download cannot leave a half-written mirror that would
@@ -101,6 +104,39 @@ public sealed class OsvMirror(string directory)
         var target = ArchivePath(ecosystem);
         var temporary = target + ".partial";
 
+        try
+        {
+            await CopyDownloadAsync(http, ecosystem, temporary, progress, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch
+        {
+            // A partial file left behind is a mirror that would answer with a fraction of the
+            // advisories it should, which is worse than having no mirror at all.
+            TryDelete(temporary);
+            throw;
+        }
+
+        File.Move(temporary, target, overwrite: true);
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            File.Delete(path);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private static async Task CopyDownloadAsync(
+        HttpClient http,
+        string ecosystem,
+        string temporary,
+        IProgress<long>? progress,
+        CancellationToken cancellationToken)
+    {
         using (var response = await http
                    .GetAsync($"{BucketBase}/{Uri.EscapeDataString(ecosystem)}/all.zip",
                        HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -128,10 +164,19 @@ public sealed class OsvMirror(string directory)
 
                 written += read;
                 progress?.Report(written);
+
+                // The largest published archive is npm at around 203 MB, so this leaves room
+                // for it to double before it trips. Without a ceiling the loop writes whatever
+                // arrives until the disk is full, which is a poor way to learn that a download
+                // went wrong.
+                if (written > MaxArchiveBytes)
+                {
+                    throw new InvalidDataException(
+                        $"The {ecosystem} advisory archive exceeded "
+                        + $"{MaxArchiveBytes / (1024 * 1024)} MB and was abandoned.");
+                }
             }
         }
-
-        File.Move(temporary, target, overwrite: true);
     }
 
     /// <summary>Builds a source that answers from whatever has been downloaded.</summary>

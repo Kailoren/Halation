@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
 
+using VibeCheck.Core.Rules;
+
 namespace VibeCheck.App;
 
 public partial class App : Application
@@ -55,6 +57,9 @@ public partial class App : Application
         });
     }
 
+    /// <summary>Ceiling on the crash log, past which it starts again rather than growing.</summary>
+    private const long MaxCrashLogBytes = 256 * 1024;
+
     private static void ReportCrash(Exception? exception)
     {
         if (exception is null)
@@ -67,16 +72,33 @@ public partial class App : Application
             "VibeCheck",
             "crash.log");
 
+        // Scrubbed and capped. This file is named in the dialog below, which is an invitation to
+        // attach it to a bug report, and an exception from a third-party SDK is text this
+        // codebase did not write. The same argument as everywhere else the reader's own key
+        // could travel; this path was the one that got missed. See Redaction.Scrub.
+        var entry = Redaction.Scrub($"{DateTimeOffset.Now:O}\n{exception}\n\n");
+
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(log)!);
-            File.AppendAllText(log, $"{DateTimeOffset.Now:O}\n{exception}\n\n");
+
+            // Kept to the last few crashes rather than appended to forever. A log nobody
+            // truncates is a slow leak of paths and stack traces from every scan ever run.
+            if (File.Exists(log) && new FileInfo(log).Length > MaxCrashLogBytes)
+            {
+                File.WriteAllText(log, entry);
+            }
+            else
+            {
+                File.AppendAllText(log, entry);
+            }
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
 
         MessageBox.Show(
-            $"{exception.GetType().Name}: {exception.Message}\n\nDetails written to:\n{log}",
+            $"{Redaction.Scrub($"{exception.GetType().Name}: {exception.Message}")}"
+            + $"\n\nDetails written to:\n{log}",
             "VibeCheck encountered a problem",
             MessageBoxButton.OK,
             MessageBoxImage.Error);

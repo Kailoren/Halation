@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 
 using VibeCheck.Core.Model;
+using VibeCheck.Core.Rules;
 using VibeCheck.Core.Scoring;
 
 namespace VibeCheck.Core.Reporting;
@@ -372,7 +373,11 @@ public static class MarkdownReportWriter
 
     private static void WriteFinding(StringBuilder output, Finding finding, Audience audience)
     {
-        output.AppendLine($"#### {finding.Title}");
+        // Flattened here as well as where the deep pass parses it. Belt and braces on purpose:
+        // the parse-time guard protects the one producer that exists today, and this makes the
+        // document structurally unable to carry a heading it was not asked for, whoever writes
+        // the next producer. A title spanning lines is never legitimate anyway.
+        output.AppendLine($"#### {Redaction.Flatten(finding.Title, max: 200)}");
         output.AppendLine();
 
         // The rule identifier is a support handle for whoever can act on it, and noise to
@@ -403,9 +408,14 @@ public static class MarkdownReportWriter
         // heading, instead of on every item until it stops being read.
         if (!string.IsNullOrWhiteSpace(finding.Evidence))
         {
-            output.AppendLine("```");
+            // A fence longer than anything in the quoted text, so evidence cannot close its own
+            // block and continue as document. Markdown allows this precisely because quoted
+            // code containing fences is normal.
+            var fence = finding.Evidence.Contains("```", StringComparison.Ordinal) ? "````" : "```";
+
+            output.AppendLine(fence);
             output.AppendLine(finding.Evidence);
-            output.AppendLine("```");
+            output.AppendLine(fence);
             output.AppendLine();
         }
 

@@ -174,6 +174,62 @@ public class RecoveryBackendTests : IDisposable
     }
 
     /// <summary>
+    /// The download shape, and the worst result this scanner ever produced.
+    /// </summary>
+    /// <remarks>
+    /// Archive recovery kept entries it recognised as text and coverage counted only those, so
+    /// an executable inside the archive was absent from the numerator and the denominator both.
+    /// VibeCheck's own release zip therefore scored 100 out of 100 with "no known issues found",
+    /// on the strength of the one theme file shipped beside a 65 MB program that was never
+    /// opened. The application inside an archive is now recovered like any other artifact.
+    /// </remarks>
+    [Fact]
+    public async Task Source_ZippedApplication_IsRecoveredRatherThanCountedAsClean()
+    {
+        var zip = At("app-release.zip");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        {
+            Write(archive, "README.md", "# App");
+            Write(archive, "Theme.xaml", "<ResourceDictionary/>");
+            WriteBytes(archive, "App.dll", File.ReadAllBytes(typeof(ScanReport).Assembly.Location));
+        }
+
+        var result = await RecoverAsync(new SourceRecoveryBackend(), zip);
+
+        Assert.Contains(
+            result.Files,
+            f => f.RelativePath.EndsWith("ScoreCalculator.cs", StringComparison.Ordinal));
+        Assert.Contains(result.Files, f => f.IsDecompiled);
+    }
+
+    /// <summary>
+    /// The backstop for the case above. Nothing can decompile a native binary, so the honest
+    /// answer is that the archive holds a program that was not examined, which has to show up
+    /// in the figure rather than only in prose.
+    /// </summary>
+    [Fact]
+    public async Task Source_ZippedNativeProgram_CountsAsUnexamined()
+    {
+        var zip = At("native-release.zip");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        {
+            Write(archive, "config.json", "{}");
+            WriteBytes(archive, "App.exe", NsisBuilder.MinimalPe());
+        }
+
+        var result = await RecoverAsync(new SourceRecoveryBackend(), zip);
+
+        Assert.True(
+            result.Coverage.Percent < 100,
+            $"an unreadable program must cost coverage, got {result.Coverage.Percent}%");
+
+        Assert.Contains(
+            result.Coverage.ChecksNotPossible,
+            w => w.Contains("App.exe", StringComparison.Ordinal)
+                 && w.Contains("cannot read", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     /// Entry names that traverse out of the archive root must never appear as recovered
     /// files, even though nothing is written to disk.
     /// </summary>
@@ -251,5 +307,11 @@ public class RecoveryBackendTests : IDisposable
         using var stream = archive.CreateEntry(path).Open();
         using var writer = new StreamWriter(stream);
         writer.Write(content);
+    }
+
+    private static void WriteBytes(ZipArchive archive, string path, byte[] content)
+    {
+        using var stream = archive.CreateEntry(path).Open();
+        stream.Write(content);
     }
 }

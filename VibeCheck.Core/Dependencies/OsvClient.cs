@@ -35,9 +35,26 @@ public sealed class OsvClient(HttpClient http) : IDisposable
 
     private readonly HttpClient _http = http;
 
+    /// <summary>
+    /// Ceiling on a single response. A batch of 1,000 package identifiers answers in well under
+    /// a megabyte, and one advisory in a few kilobytes, so this is generous by two orders of
+    /// magnitude and still finite.
+    /// </summary>
+    /// <remarks>
+    /// A trusted endpoint over TLS, so the realistic failure is a malformed or runaway reply
+    /// rather than an attack. It is bounded anyway, because "the other end is well behaved" is
+    /// the assumption this scanner exists to talk people out of making.
+    /// </remarks>
+    private const long MaxResponseBytes = 64L * 1024 * 1024;
+
     public static OsvClient Create(TimeSpan? timeout = null)
     {
-        var client = new HttpClient { Timeout = timeout ?? TimeSpan.FromSeconds(30) };
+        var client = new HttpClient
+        {
+            Timeout = timeout ?? TimeSpan.FromSeconds(30),
+            MaxResponseContentBufferSize = MaxResponseBytes,
+        };
+
         client.DefaultRequestHeaders.UserAgent.ParseAdd("VibeCheck/0.1 (+security scanner)");
 
         return new OsvClient(client);
