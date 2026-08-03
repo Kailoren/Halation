@@ -279,6 +279,20 @@ public sealed class Scanner
             : coverage with { ChecksNotPossible = limitations };
     }
 
+    /// <summary>
+    /// The build's own version, stamped into every report.
+    /// </summary>
+    /// <remarks>
+    /// Read from the informational version rather than the assembly version, because that is
+    /// the only one that carries a prerelease suffix: an assembly version is four numbers and
+    /// cannot say "beta". A report from a beta build should say which build produced it, and
+    /// the numeric version alone would have every prerelease claiming to be the release. The
+    /// build metadata after a "+" is dropped, being a commit hash nobody reading a report needs.
+    /// </remarks>
     public static string Version =>
-        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
+        Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            is { Length: > 0 } informational
+            ? informational.Split('+')[0]
+            : Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
 }

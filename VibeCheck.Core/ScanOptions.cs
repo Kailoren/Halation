@@ -13,8 +13,8 @@ public sealed record ScanOptions
     public bool CheckDependencies { get; init; } = true;
 
     /// <summary>
-    /// Supplies vulnerability data directly, bypassing the live lookup. For tests and for
-    /// hosting an ecosystem mirror.
+    /// Supplies vulnerability data directly, bypassing the live lookup. For tests, and for a
+    /// caller embedding this library that already has an advisory source of its own.
     /// </summary>
     public IVulnerabilitySource? VulnerabilitySource { get; init; }
 

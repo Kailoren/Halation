@@ -78,12 +78,14 @@ cite CVE identifiers and link through to the NVD entry.
 What is sent: the package names and versions the application declares, and nothing else. No
 source, no file contents, nothing identifying you or the artifact.
 
-For a machine that will never see a network, you can download a local mirror instead,
-choosing the ecosystems you care about: NuGet is around 2 MB, PyPI 31 MB, npm 203 MB.
+**This is the one part of a scan that needs a network.** With no connection, dependencies are
+not checked and the report says so rather than reporting no known vulnerabilities. There is no
+offline database to download: bundling one, or shipping a mirror to keep in sync, was tried and
+removed, because a vulnerability database is out of date the day it ships and a stale answer
+here is worse than an absent one.
 
-Every report states which of these it used and how old the data was. A result checked
-against a database three months old is a weaker claim than one checked a second ago, and
-you should not have to guess which you are reading.
+Every report states which source it used and when the data was current, so a check that could
+not run is never mistaken for one that came back clean.
 
 ## Optional deep pass (bring your own key)
 
