@@ -47,20 +47,21 @@ rules, never by the score alone.
 | Source folder, zip, or repository | read directly | full |
 | .NET executable or library | decompiled (ILSpy) | full, near-original C# |
 | Electron application or `.asar` | unpacked | full, often unminified |
-| NSIS installer | unpacked, Electron payloads read | full for Electron, nothing yet for other payloads |
+| NSIS installer | unpacked, then as above | full for Electron and .NET payloads |
 | Java archive | decompiled | good |
 | Native Windows binary | not possible | signing and hardening flags only |
 
 Installers matter more than that table makes them look, because almost nothing is downloaded
 as a bare executable. An installer is a native stub with the application attached, so reading
 only the stub writes off everything worth checking. VibeCheck unpacks NSIS installers, which
-is what `electron-builder` produces, and reads the Electron application inside.
+is what `electron-builder` produces, and hands each payload to the recovery it deserves: an
+asar to the Electron reader, a .NET assembly or single-file bundle to the decompiler.
 Nothing is executed and nothing is written to disk: the installer is read, never run.
 
-**Only Electron payloads are recovered from an installer so far.** A .NET application packed
-into one is reported as unreadable, even though the same file dropped in on its own is
-decompiled in full. Treat a low coverage figure on an installer as "this was not examined"
-rather than as a thin result, which is what the report says in those words.
+A payload that is a native binary still yields nothing, because nothing can decompile one.
+The report says that in those words rather than reporting an empty result, so a low coverage
+figure on an installer means "this was not examined" and never "this was examined and was
+clean".
 
 Installers built with Inno Setup, or NSIS installers using solid compression, cannot be
 unpacked yet. Those say so rather than reporting an empty result.

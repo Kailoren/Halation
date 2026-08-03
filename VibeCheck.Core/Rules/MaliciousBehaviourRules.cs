@@ -37,7 +37,44 @@ public static class MaliciousBehaviourRules
         ChatTokenHarvesting,
         ClipboardAddressSwapping,
         PersistenceMechanism,
+        DownloadsAndRuns,
+        LivesOffTheLand,
     ];
+
+    /// <summary>
+    /// A remote fetch of any kind. Half of what makes an execution call a dropper.
+    /// </summary>
+    private static readonly Regex Fetches = PatternRule.Compile(
+        """
+        https?://
+        |HttpClient|WebClient|HttpWebRequest|DownloadFile|DownloadData|DownloadString
+        |urlretrieve|requests\.(?:get|post)|urlopen
+        |fetch\s*\(|axios|node-fetch|https?\.get\s*\(
+        """,
+        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+
+    /// <summary>
+    /// The other half: the fetched bytes landing somewhere they can be run from. Temporary
+    /// directories are in here rather than in the execution pattern because writing to one is
+    /// what turns a download into a file on the machine.
+    /// </summary>
+    private static readonly Regex WritesAFile = PatternRule.Compile(
+        """
+        WriteAllBytes|FileStream|CopyToAsync|GetTempPath|GetTempFileName
+        |createWriteStream|writeFileSync|os\.tmpdir|app\.getPath\s*\(\s*["']temp
+        |copyfileobj|tempfile\.|NamedTemporaryFile
+        |open\s*\([^)\r\n]{0,80}["']wb["']
+        """,
+        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+
+    /// <summary>
+    /// Whether the file around a match shows the rest of a download-then-run sequence. Done in
+    /// code rather than as one regex spanning both halves: the two calls are routinely tens of
+    /// lines apart, and a pattern elastic enough to reach across that is both slow and prone to
+    /// matching a fetch in one method against an execution in an unrelated one.
+    /// </summary>
+    private static bool NoDownloadNearby(RuleContext context) =>
+        !Fetches.IsMatch(context.Content) || !WritesAFile.IsMatch(context.Content);
 
     private static PatternRule BrowserCredentialAccess { get; } = new()
     {
@@ -203,6 +240,118 @@ public static class MaliciousBehaviourRules
             (?:clipboard|Clipboard\.(?:GetText|SetText)|pyperclip|clipboardy)
             [^;\r\n]{0,120}?
             (?:0x\[a-fA-F0-9\]\{40\}|\[13\]\[a-km-zA-HJ-NP-Z1-9\]|bc1\[a-z0-9\]|\bbitcoin\b|\bethereum\b)
+            """,
+            RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace),
+    };
+
+    /// <summary>
+    /// The dropper shape: fetch something, put it on disk, run it.
+    /// </summary>
+    /// <remarks>
+    /// <b>Reported, never blocking</b>, and the distinction matters more here than anywhere
+    /// else in this file. An application that updates itself does exactly this, and so does
+    /// every installer that fetches a runtime. The sequence is worth surfacing because it is
+    /// also how a small clean-looking program becomes an arbitrary one after installation, and
+    /// because the reader can weigh it against whether this application has any business
+    /// updating itself. What it is not is proof, and telling somebody not to install their own
+    /// updater would spend the credibility the blocking rules depend on.
+    /// </remarks>
+    private static PatternRule DownloadsAndRuns { get; } = new()
+    {
+        Id = "VC-MAL-007",
+        Title = "Downloads a file and runs it",
+        Severity = Severity.High,
+        UserSeverity = Severity.High,
+        Category = FindingCategory.CodeSafety,
+        Description =
+            "This file fetches something over the network, writes it to disk, and executes a "
+            + "program. Self-updating applications do this legitimately. It is also the shape of "
+            + "a dropper: what the application does after installation is then decided by "
+            + "whatever the server sends, which is not what was reviewed and can change at any "
+            + "time. In a bundled or minified file the three calls may belong to three different "
+            + "libraries rather than to one sequence, because a bundle is the smallest unit "
+            + "there is to judge them in.",
+        Remediation =
+            "If this is an updater, verify the download before running it: check a signature "
+            + "against a key shipped in the application, not a hash served from the same place "
+            + "as the file. If it is not an updater, an application should not be fetching "
+            + "executable content at all.",
+        UserDescription =
+            "This application downloads a file and runs it. Updaters work this way, so it is not "
+            + "proof of anything on its own. It does mean what the application will do on your "
+            + "machine is decided by whatever it downloads, which is not something a scan of the "
+            + "application can tell you.",
+        UserRemediation =
+            "Judge it against whether this application has a reason to update itself. If it does "
+            + "not, treat downloading and running a program as the thing it looks like.",
+        // No bare "\.exec\s*\(": in JavaScript that is how you run a regular expression, and
+        // matching it reported a base64 data-URL check and a difficulty-band parser as programs
+        // being launched. Both were found by running this rule over applications known to be
+        // honest, which is the only way that class of mistake shows up. The named process calls
+        // below are unambiguous, and a file destructuring exec out of child_process still
+        // matches on the import.
+        Pattern = PatternRule.Compile(
+            """
+            (?:Process\.Start|ProcessStartInfo|ShellExecute(?:Ex)?|CreateProcess
+            |child_process|\bexecFile(?:Sync)?\s*\(|\bexecSync\s*\(|\bspawn(?:Sync)?\s*\(
+            |subprocess\.(?:Popen|call|run|check_output)|os\.system|os\.startfile
+            |Runtime\.getRuntime\(\)\.exec)
+            """,
+            RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace),
+        Ignore = (_, context) => NoDownloadNearby(context),
+    };
+
+    /// <summary>
+    /// Execution routed through a Windows binary that exists for something else.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Blocking, and held to the same bar as the credential rules above: each alternative is a
+    /// named technique rather than a capability. An application with its own HTTP client has no
+    /// reason to download through <c>certutil</c>, and nothing legitimate hands a URL to
+    /// <c>mshta</c> or pipes a web response into a shell. These appear in application code when
+    /// somebody wanted the download and the execution to happen somewhere a reviewer was not
+    /// looking.
+    /// </para>
+    /// <para>
+    /// Deliberately absent: <c>powershell -EncodedCommand</c> on its own. Real installers use it
+    /// to get around quoting, so it is a capability rather than a technique, and blocking on it
+    /// would put "do not install this application" on ordinary software.
+    /// </para>
+    /// </remarks>
+    private static PatternRule LivesOffTheLand { get; } = new()
+    {
+        Id = "VC-MAL-008",
+        Title = "Runs downloaded content through a Windows utility",
+        Severity = Severity.Critical,
+        UserSeverity = Severity.Critical,
+        Category = FindingCategory.CodeSafety,
+        IsBlocking = true,
+        Description =
+            "The application invokes a built-in Windows tool to fetch or execute remote content: "
+            + "downloading with certutil or bitsadmin, or handing a URL to mshta, regsvr32 or a "
+            + "shell. These are living-off-the-land techniques, used because the tools are "
+            + "already trusted on the machine and the traffic does not come from the "
+            + "application. Software that needs a file downloads it with its own HTTP client.",
+        Remediation =
+            "Do not ship this. Download with the application's own HTTP client over TLS and "
+            + "verify what arrives. If this code is not yours, treat the build as compromised.",
+        UserDescription =
+            "This application uses built-in Windows tools to pull code off the internet and run "
+            + "it. This is a technique for getting code onto a machine without it looking like a "
+            + "download, and ordinary software has no reason to work this way.",
+        UserRemediation =
+            "Do not run this application. If you already have, treat the machine as needing a "
+            + "proper malware scan by something built for it, and change passwords from a "
+            + "different device.",
+        Pattern = PatternRule.Compile(
+            """
+            (?:certutil[^\r\n]{0,60}?-(?:urlcache|decode)
+            |bitsadmin[^\r\n]{0,40}?/transfer
+            |mshta[^\r\n]{0,20}?https?:
+            |regsvr32[^\r\n]{0,40}?/i:\s*https?:
+            |(?:Invoke-Expression|\biex\b)[^\r\n]{0,80}?(?:DownloadString|Invoke-WebRequest|\birm\b|\bcurl\b|\bwget\b)
+            |(?:curl|wget)[^\r\n|]{0,120}?\|\s*(?:ba)?sh\b)
             """,
             RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace),
     };

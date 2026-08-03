@@ -76,7 +76,7 @@ public static class SingleFileBundle
             }
 
             using var stream = File.OpenRead(path);
-            return FindSignature(stream) >= 0;
+            return IsBundle(stream);
         }
         catch (IOException)
         {
@@ -86,6 +86,23 @@ public static class SingleFileBundle
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// True when the stream holds a .NET single-file bundle.
+    /// </summary>
+    /// <remarks>
+    /// The stream overloads exist because a bundle does not only arrive as a file on disk. An
+    /// installer carries the same launcher as one of its payloads, and reading it from there
+    /// means reading it from memory: writing it out first would break the promise that nothing
+    /// untrusted touches the filesystem. Seekable, so a decompressing stream has to be buffered
+    /// by the caller before it gets here.
+    /// </remarks>
+    public static bool IsBundle(Stream stream)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+
+        return stream.Length >= MinimumBundleSize && FindSignature(stream) >= 0;
     }
 
     /// <summary>
@@ -101,6 +118,19 @@ public static class SingleFileBundle
         ArgumentNullException.ThrowIfNull(warnings);
 
         using var stream = File.OpenRead(path);
+
+        return Read(stream, warnings, cancellationToken);
+    }
+
+    /// <inheritdoc cref="Read(string, IList{string}, CancellationToken)"/>
+    /// <remarks>See <see cref="IsBundle(Stream)"/> for why a stream overload exists.</remarks>
+    public static IReadOnlyList<BundleEntry> Read(
+        Stream stream,
+        IList<string> warnings,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(warnings);
 
         var signatureOffset = FindSignature(stream);
         if (signatureOffset < 0)

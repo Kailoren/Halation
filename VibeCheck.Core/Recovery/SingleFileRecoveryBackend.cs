@@ -58,43 +58,8 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
 
             bundlesRead++;
 
-            // The bundle carries its own dependency manifest, so read that before deciding
-            // which assemblies are the application's rather than guessing from names.
-            ownership = FindOwnership(entries) ?? ownership;
-
-            foreach (var entry in entries)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (budget.Exhausted)
-                {
-                    break;
-                }
-
-                switch (entry.Type)
-                {
-                    case BundleFileType.Assembly:
-                        DecompileEntry(
-                            entry, launcher, ownership, budget, files, findings, notes, cancellationToken);
-                        break;
-
-                    // The manifests are plain JSON and list every dependency with its exact
-                    // version, which is what the dependency checks need.
-                    case BundleFileType.DepsJson:
-                    case BundleFileType.RuntimeConfigJson:
-                        if (SafeArchive.DecodeText(entry.Content) is { } json)
-                        {
-                            files.Add(new RecoveredFile
-                            {
-                                RelativePath = entry.RelativePath,
-                                Content = json,
-                                Language = SourceLanguage.Json,
-                            });
-                        }
-
-                        break;
-                }
-            }
+            ownership = RecoverBundle(
+                entries, launcher, ownership, budget, files, findings, notes, cancellationToken);
         }
 
         if (bundlesRead == 0)
@@ -108,6 +73,85 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
             Findings = AssemblyInspector.Collapse(findings),
             Coverage = CoverageBuilder.Build(files, budget, notes, ownership),
         });
+    }
+
+    /// <summary>
+    /// Turns one bundle's entries into recovered source, and returns the ownership manifest it
+    /// judged them with.
+    /// </summary>
+    /// <remarks>
+    /// Public because a bundle does not only arrive as a file somebody dropped in. An installer
+    /// carries the same launcher as a payload, and it has to be read the same way rather than by
+    /// a second implementation that starts identical and drifts. The alternative was copying the
+    /// ownership lookup and the entry loop into the installer backend, where a later fix to
+    /// either would reach only one of them.
+    /// </remarks>
+    /// <param name="resolverBasePath">
+    /// Where to look for referenced assemblies, or null when there is nowhere to look. A
+    /// payload inside an installer has no path on disk, and decompilation still succeeds
+    /// without one.
+    /// </param>
+    /// <param name="fallbackOwnership">
+    /// Used when the bundle carries no dependency manifest, which is how a payload extracted
+    /// from an installer usually arrives.
+    /// </param>
+    public static AssemblyOwnership RecoverBundle(
+        IReadOnlyList<SingleFileBundle.BundleEntry> entries,
+        string? resolverBasePath,
+        AssemblyOwnership fallbackOwnership,
+        DecompilationBudget budget,
+        List<RecoveredFile> files,
+        List<Finding> findings,
+        List<string> notes,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        ArgumentNullException.ThrowIfNull(fallbackOwnership);
+        ArgumentNullException.ThrowIfNull(budget);
+        ArgumentNullException.ThrowIfNull(files);
+        ArgumentNullException.ThrowIfNull(findings);
+        ArgumentNullException.ThrowIfNull(notes);
+
+        // The bundle carries its own dependency manifest, so read that before deciding which
+        // assemblies are the application's rather than guessing from names.
+        var ownership = FindOwnership(entries) ?? fallbackOwnership;
+
+        foreach (var entry in entries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (budget.Exhausted)
+            {
+                break;
+            }
+
+            switch (entry.Type)
+            {
+                case BundleFileType.Assembly:
+                    DecompileEntry(
+                        entry, resolverBasePath, ownership, budget, files, findings, notes,
+                        cancellationToken);
+                    break;
+
+                // The manifests are plain JSON and list every dependency with its exact
+                // version, which is what the dependency checks need.
+                case BundleFileType.DepsJson:
+                case BundleFileType.RuntimeConfigJson:
+                    if (SafeArchive.DecodeText(entry.Content) is { } json)
+                    {
+                        files.Add(new RecoveredFile
+                        {
+                            RelativePath = entry.RelativePath,
+                            Content = json,
+                            Language = SourceLanguage.Json,
+                        });
+                    }
+
+                    break;
+            }
+        }
+
+        return ownership;
     }
 
     /// <summary>Reads the dependency manifest out of the bundle, if it carries one.</summary>
@@ -127,7 +171,7 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
 
     private static void DecompileEntry(
         SingleFileBundle.BundleEntry entry,
-        string launcher,
+        string? resolverBasePath,
         AssemblyOwnership ownership,
         DecompilationBudget budget,
         List<RecoveredFile> files,
@@ -149,7 +193,7 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
             ManagedAssemblyDecompiler.Decompile(
                 entry.RelativePath,
                 stream,
-                launcher,
+                resolverBasePath,
                 budget,
                 files,
                 findings,

