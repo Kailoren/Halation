@@ -9,6 +9,7 @@ using VibeCheck.Core.DeepPass;
 using VibeCheck.Core.Dependencies;
 using VibeCheck.Core.Model;
 using VibeCheck.Core.Reporting;
+using VibeCheck.Core.Rules;
 
 namespace VibeCheck.App;
 
@@ -574,10 +575,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
         set => Set(ref _isMinimised, value);
     }
 
+    /// <summary>
+    /// What went wrong, in words the reader can act on or repeat to somebody who can.
+    /// </summary>
+    /// <remarks>
+    /// Scrubbed on the way in, because most of what reaches here is an exception message from
+    /// somewhere else, and the reader is being shown it precisely so they can copy it into a
+    /// bug report. See <see cref="Redaction.Scrub"/>.
+    /// </remarks>
     public string? Error
     {
         get => _error;
-        private set => Set(ref _error, value);
+        private set => Set(ref _error, value is null ? null : Redaction.Scrub(value));
     }
 
     // ---- Progress ----------------------------------------------------------

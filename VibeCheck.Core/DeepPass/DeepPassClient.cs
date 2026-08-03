@@ -2,6 +2,7 @@ using Anthropic;
 using Anthropic.Models.Beta.Messages;
 
 using VibeCheck.Core.Model;
+using VibeCheck.Core.Rules;
 
 namespace VibeCheck.Core.DeepPass;
 
@@ -54,13 +55,25 @@ public sealed record TokenUsage
 /// <summary>What one file's review produced.</summary>
 public sealed record FileReview
 {
+    private readonly string? _limitation;
+
     public IReadOnlyList<Finding> Findings { get; init; } = [];
 
     /// <summary>Findings dropped for being low confidence, counted rather than hidden.</summary>
     public int LowConfidenceDiscarded { get; init; }
 
     /// <summary>Set when the file was not fully examined, and why.</summary>
-    public string? Limitation { get; init; }
+    /// <remarks>
+    /// Scrubbed on the way in rather than on the way out. Most of what lands here is an
+    /// exception message from the SDK or a line a locally installed agent printed, which is
+    /// text this codebase did not write, going into a report the reader exports and pastes
+    /// somewhere. See <see cref="Redaction.Scrub"/> for what that costs and why.
+    /// </remarks>
+    public string? Limitation
+    {
+        get => _limitation;
+        init => _limitation = value is null ? null : Redaction.Scrub(value);
+    }
 
     public TokenUsage Usage { get; init; } = new();
 
@@ -75,10 +88,20 @@ public sealed record FileReview
 /// <summary>What a deep pass produced, including the reasons it produced nothing.</summary>
 public sealed record DeepPassResult
 {
+    private readonly IReadOnlyList<string> _limitations = [];
+
     public IReadOnlyList<Finding> Findings { get; init; } = [];
 
     /// <summary>Stated in the report, so an empty deep pass is never mistaken for a clean one.</summary>
-    public IReadOnlyList<string> Limitations { get; init; } = [];
+    /// <remarks>
+    /// Scrubbed here as well as on <see cref="FileReview.Limitation"/>, because a backend that
+    /// never produced a <see cref="FileReview"/> at all still reports why through this list.
+    /// </remarks>
+    public IReadOnlyList<string> Limitations
+    {
+        get => _limitations;
+        init => _limitations = [.. value.Select(Redaction.Scrub)];
+    }
 
     public int FilesExamined { get; init; }
 

@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace VibeCheck.Core.Rules;
 
@@ -54,6 +55,42 @@ public static class Redaction
 
         return Truncate(Sanitise(text));
     }
+
+    /// <summary>
+    /// Removes anything shaped like the reader's own Anthropic key from a message they may
+    /// publish.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The rest of this class protects secrets found <i>in</i> a scanned application. This one
+    /// protects the reader's own credential, and it exists because two paths carry text this
+    /// codebase did not write into a report the reader can export: an exception message from
+    /// the Anthropic SDK, and whatever a locally installed Claude Code prints when it fails.
+    /// Neither is known to include a credential and neither is expected to. The point is that
+    /// the cost of being wrong is somebody's billing key pasted into a public issue tracker,
+    /// which is a poor thing to be shipped by a scanner whose own report warns other people
+    /// about leaked keys.
+    /// </para>
+    /// <para>
+    /// Applied where limitations and errors are constructed rather than where they are shown,
+    /// so a message added later cannot forget to ask for it.
+    /// </para>
+    /// </remarks>
+    public static string Scrub(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        return AnthropicKey.Replace(text, "sk-ant-[redacted]");
+    }
+
+    /// <summary>
+    /// Both live prefixes, and enough trailing characters to be a key rather than a mention of
+    /// one. Deliberately not a general "anything long and random" pattern: this runs over
+    /// diagnostic text whose whole value is being readable, and a broad pattern would eat the
+    /// file paths and model names that make a failure explicable.
+    /// </summary>
+    private static readonly Regex AnthropicKey =
+        PatternRule.Compile(@"sk-ant-[A-Za-z0-9_\-]{6,}", RegexOptions.IgnoreCase);
 
     /// <summary>
     /// Strips control characters from scanned content.

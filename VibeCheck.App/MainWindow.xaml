@@ -434,12 +434,14 @@
                     <!-- Coverage.
 
                          The first of the seven folding sections, and the first to start folded.
-                         Findings is the only one that opens with the report, because it is what
-                         a reader came for; the rest are the workings, and thirty eight check
-                         rows between the score and the findings is a scroll rather than a
-                         reading. Nothing is hidden by starting closed: every header states how
-                         much is inside it, which is the condition under which folding is a
-                         convenience rather than a way for the report to say less. -->
+                         Two open with the report: Findings, because it is what a reader came
+                         for, and what could not be checked, because it is what stops a short
+                         findings list being mistaken for a clean one. The other five are the
+                         workings, and thirty eight check rows between the score and the
+                         findings is a scroll rather than a reading. Nothing is hidden by
+                         starting closed: every header states how much is inside it, which is
+                         the condition under which folding is a convenience rather than a way
+                         for the report to say less. -->
                     <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0">
                         <StackPanel>
                             <ToggleButton x:Name="CoverageSection" Style="{StaticResource SectionHeader}"
@@ -758,13 +760,19 @@
                         </StackPanel>
                     </ContentControl>
 
-                    <!-- What could not be checked -->
+                    <!-- What could not be checked.
+
+                         Open with the report, like Findings and unlike the other five. This is
+                         the section that stops a short findings list reading as a clean bill of
+                         health, so it is the one section whose value depends on being read
+                         rather than being available. Somebody who has decided they do not want
+                         it can still fold it; it just does not start that way. -->
                     <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0"
                                     Visibility="{Binding Limitations.Count,
                                                  Converter={StaticResource CountToVisibility}}">
                         <StackPanel>
                             <ToggleButton x:Name="LimitationsSection" Style="{StaticResource SectionHeader}"
-                                          Content="What could not be checked" Tag="{Binding LimitationsCount}" IsChecked="False"/>
+                                          Content="What could not be checked" Tag="{Binding LimitationsCount}" IsChecked="True"/>
 
                             <StackPanel Margin="0,12,0,0"
                                         Visibility="{Binding IsChecked, ElementName=LimitationsSection,

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
+using VibeCheck.Core.DeepPass;
 using VibeCheck.Core.Model;
 using VibeCheck.Core.Recovery;
 using VibeCheck.Core.Rules;
@@ -71,6 +72,65 @@ public class RuleEngineTests
         Assert.Contains("****", finding.Evidence, StringComparison.Ordinal);
         // A short prefix survives so the developer can tell which key to rotate.
         Assert.Contains("AKIA", finding.Evidence, StringComparison.Ordinal);
+    }
+
+    // ---- The reader's own key ----------------------------------------------
+
+    /// <summary>
+    /// The other direction of the same promise. Everything above keeps somebody else's secret
+    /// out of a report; this keeps the reader's own billing key out of one, because the text
+    /// that carries it is an exception message they are being shown in order to paste it
+    /// somewhere public.
+    /// </summary>
+    [Fact]
+    public void Scrub_RemovesTheReadersOwnApiKey()
+    {
+        const string key = "sk-ant-api03-AbCdEf0123456789_xyz-QWERTY";
+
+        var scrubbed = Redaction.Scrub($"The deep pass failed: 401 unauthorised for {key}.");
+
+        Assert.DoesNotContain(key, scrubbed, StringComparison.Ordinal);
+        Assert.DoesNotContain("AbCdEf", scrubbed, StringComparison.Ordinal);
+        Assert.Contains("[redacted]", scrubbed, StringComparison.Ordinal);
+
+        // The rest of the message survives, or the redaction has cost the reader the only
+        // thing the message was for.
+        Assert.Contains("401 unauthorised", scrubbed, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A failure explains itself with paths, model names and status codes. A pattern broad
+    /// enough to eat those would make every diagnostic message useless to protect against a
+    /// credential that is not in it.
+    /// </summary>
+    [Theory]
+    [InlineData("The deep pass failed: 529 overloaded_error from claude-opus-5.")]
+    [InlineData("Could not write the report: access denied to C:\\Users\\x\\Desktop\\report.md.")]
+    [InlineData("No Claude Code installation was found on this machine.")]
+    public void Scrub_LeavesAnOrdinaryFailureIntact(string message) =>
+        Assert.Equal(message, Redaction.Scrub(message));
+
+    /// <summary>
+    /// Applied where the text is built, not where it is shown, so a message added later
+    /// inherits it rather than having to remember to ask.
+    /// </summary>
+    [Fact]
+    public void ADeepPassLimitation_IsScrubbedOnItsWayIn()
+    {
+        var review = new FileReview
+        {
+            Limitation = "The deep pass failed: bad key sk-ant-api03-LiveKeyMaterial123.",
+        };
+
+        Assert.NotNull(review.Limitation);
+        Assert.DoesNotContain("LiveKeyMaterial", review.Limitation, StringComparison.Ordinal);
+
+        var result = new DeepPassResult
+        {
+            Limitations = ["Answered by sk-ant-api03-AnotherLiveKey456 somehow."],
+        };
+
+        Assert.DoesNotContain("AnotherLiveKey", result.Limitations[0], StringComparison.Ordinal);
     }
 
     // ---- Secrets: false positives -----------------------------------------
