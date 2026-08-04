@@ -27,6 +27,25 @@ public sealed record ScanReport
 
     public required IReadOnlyList<Finding> Findings { get; init; }
 
+    /// <summary>
+    /// What the application can do, as opposed to what it does wrong.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A separate list rather than a section of the one above, and the separation is the point:
+    /// nothing here reaches the score. Auto-updating and starting with Windows are how a great
+    /// many correct programs work, and rating them as defects charged a working application a
+    /// whole band for having a feature.
+    /// </para>
+    /// <para>
+    /// Not hidden either. For somebody deciding whether to run a download this can be the most
+    /// useful part of the report: an application that replaces its own code is one whose future
+    /// behaviour no scan of it describes, and that is worth saying plainly rather than pricing
+    /// into a number. See <see cref="Finding.IsCapability"/>.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<Finding> Capabilities { get; init; } = [];
+
     /// <summary>Per-category subscores, on the same 0-100 scale as the overall score.</summary>
     public required IReadOnlyDictionary<FindingCategory, int> CategoryScores { get; init; }
 
@@ -86,6 +105,48 @@ public sealed record ScanReport
 
     public int CountOf(Severity severity) =>
         Findings.Count(f => f.SeverityFor(Audience) == severity);
+
+    /// <summary>
+    /// What was found, counted at this reader's severities.
+    /// </summary>
+    /// <remarks>
+    /// Phrased here rather than in either caller, so the window and the exported report cannot
+    /// disagree. The case worth the length is the last one: the score is the worse of both
+    /// readings, so it can sit in the critical band on the strength of findings that are all
+    /// informational for whoever is reading. "No issues were found" printed beneath that number
+    /// would be the report contradicting itself two lines apart.
+    /// </remarks>
+    public string SummaryLine
+    {
+        get
+        {
+            var counts = new[] { Severity.Critical, Severity.High, Severity.Medium, Severity.Low }
+                .Select(severity => (Severity: severity, Count: CountOf(severity)))
+                .Where(found => found.Count > 0)
+                .Select(found => $"{found.Count} {found.Severity.ToString().ToLowerInvariant()}")
+                .ToList();
+
+            if (counts.Count > 0)
+            {
+                return $"Found {string.Join(", ", counts)}.";
+            }
+
+            var informational = CountOf(Severity.Info);
+
+            if (informational == 0)
+            {
+                return "No issues were found by the checks that ran.";
+            }
+
+            var listed = informational == 1 ? "finding is" : "findings are";
+
+            return Audience == Audience.EndUser
+                ? $"Nothing was found that reaches you. {informational} {listed} listed below, "
+                  + "marked as the developer's rather than yours."
+                : $"No issues were found that count against the score. {informational} "
+                  + $"informational {listed} listed below.";
+        }
+    }
 
     /// <summary>
     /// Findings that do not bear on this reader at all. Counted rather than listed alongside

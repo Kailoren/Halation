@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 
 namespace VibeCheck.Core.DeepPass;
@@ -399,20 +400,44 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
     /// for the platform. That matters more than usual here: two of the arguments are a JSON
     /// schema and a multi-line system prompt, and hand-built command lines mangle both.
     /// </remarks>
-    private static async Task<(string Output, string Error, int ExitCode)> RunAsync(
-        ClaudeCodeCli cli,
-        string workingDirectory,
-        IReadOnlyList<string> arguments,
-        string? stdin,
-        TimeSpan timeout,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// UTF-8 with no byte order mark, on every stream to and from the agent.
+    /// </summary>
+    /// <remarks>
+    /// Without this the pipes are decoded with the console's own code page, which on a British
+    /// or American Windows install is Windows-1252. The agent emits UTF-8, so every character
+    /// outside ASCII arrived as its bytes read one at a time: an em dash in a finding's prose
+    /// reached the report as <c>â€"</c>. It was visible in the interface for as long as the deep
+    /// pass has existed, in exactly the text a reader is meant to trust most.
+    ///
+    /// <para>
+    /// No byte order mark, deliberately. The input stream carries a JSON document, and a mark
+    /// at the front of it is three bytes the parser at the other end is not expecting.
+    /// </para>
+    /// </remarks>
+    private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
+
+    /// <summary>
+    /// Builds the process description, apart from the arguments.
+    /// </summary>
+    /// <remarks>
+    /// Separated so the encodings can be asserted directly. They are invisible in behaviour
+    /// until somebody scans a file whose findings contain a character outside ASCII, which is
+    /// how they came to be missing in the first place.
+    /// </remarks>
+    internal static ProcessStartInfo BuildStartInfo(ClaudeCodeCli cli, string workingDirectory)
     {
+        ArgumentNullException.ThrowIfNull(cli);
+
         var startInfo = new ProcessStartInfo
         {
             WorkingDirectory = workingDirectory,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            StandardInputEncoding = Utf8,
+            StandardOutputEncoding = Utf8,
+            StandardErrorEncoding = Utf8,
             UseShellExecute = false,
             CreateNoWindow = true,
         };
@@ -430,6 +455,19 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
         {
             startInfo.FileName = cli.Path;
         }
+
+        return startInfo;
+    }
+
+    private static async Task<(string Output, string Error, int ExitCode)> RunAsync(
+        ClaudeCodeCli cli,
+        string workingDirectory,
+        IReadOnlyList<string> arguments,
+        string? stdin,
+        TimeSpan timeout,
+        CancellationToken cancellationToken)
+    {
+        var startInfo = BuildStartInfo(cli, workingDirectory);
 
         foreach (var argument in arguments)
         {

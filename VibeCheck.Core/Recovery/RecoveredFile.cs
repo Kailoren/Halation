@@ -17,6 +17,18 @@ public enum SourceLanguage
     Config,
     Markup,
     Shell,
+
+    /// <summary>
+    /// Program text in a language with no rules written specifically for it.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="Unknown"/>, which means "not source at all" and is what stops a
+    /// scanner reading every icon and font in an archive. This says the opposite: read it. Most
+    /// of the catalogue carries no language filter, so a Go or Rust file admitted here still
+    /// gets every secret, configuration and malicious-behaviour check. Being unable to name a
+    /// language is a poor reason to decline to look at it.
+    /// </remarks>
+    Other,
 }
 
 /// <summary>
@@ -66,6 +78,23 @@ public sealed record RecoveredFile
             ".yml" or ".yaml" or ".toml" or ".ini" or ".config" or ".xml" => SourceLanguage.Config,
             ".html" or ".htm" or ".vue" or ".svelte" or ".xaml" => SourceLanguage.Markup,
             ".sh" or ".bash" or ".ps1" or ".bat" or ".cmd" => SourceLanguage.Shell,
+
+            // Read, but with no rules written for their idioms. Before this they were not read
+            // at all, and a project written in any of them reported "no readable text files
+            // were found" and declined to score: a Go service with a live key in it was
+            // invisible, not clean. Most of the catalogue carries no language filter, so
+            // admitting them buys every secret, configuration and malicious-behaviour check
+            // immediately. Injection rules keyed to C# and JavaScript syntax still will not
+            // fire here, which is a reason to write more patterns rather than to keep the door
+            // shut.
+            ".go" or ".rs" or ".rb" or ".php" or ".swift" or ".dart" or ".scala" or ".ex"
+                or ".exs" or ".lua" or ".pl" or ".r" or ".jl" or ".zig" or ".groovy" or ".m"
+                or ".mm" or ".c" or ".h" or ".cpp" or ".cc" or ".hpp" or ".cxx"
+                or ".sql" or ".graphql" or ".gql" or ".proto"
+                or ".razor" or ".cshtml" or ".astro" or ".erb" or ".ejs" or ".hbs" or ".twig"
+                or ".vb" or ".fs" or ".fsx" or ".clj" or ".cljs" or ".elm" or ".hs"
+                => SourceLanguage.Other,
+
             _ => SourceLanguage.Unknown,
         };
     }

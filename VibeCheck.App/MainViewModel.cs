@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -115,10 +116,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 _deepPassEnabled = false;
                 Notify(nameof(DeepPassEnabled));
                 Notify(nameof(PrivacyLine));
+                Notify(nameof(NetworkSummary));
             }
 
-            // The score is a different number for the other reader, not the same number
-            // relabelled, so everything downstream of it has to be rebuilt.
+            // The number itself will not move, being the worse of both readings either way,
+            // but every finding's severity, wording and position does, and the account under
+            // the score names whichever reading governed. All of that is rebuilt from the
+            // report already in hand rather than rescanned.
             if (Report is not null)
             {
                 Report = Scanner.Rescore(Report, value);
@@ -212,6 +216,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
 
             Notify(nameof(PrivacyLine));
+            Notify(nameof(NetworkSummary));
             Notify(nameof(CanChooseApiKey));
             Notify(nameof(CanChooseLocalCli));
         }
@@ -249,6 +254,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             Notify(nameof(DeepPassUsesApiKey));
             Notify(nameof(PrivacyLine));
+            Notify(nameof(NetworkSummary));
             Notify(nameof(DeepPassCostLine));
 
             if (_deepPassEnabled && !DeepPassSourceReady)
@@ -256,6 +262,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 _deepPassEnabled = false;
                 Notify(nameof(DeepPassEnabled));
                 Notify(nameof(PrivacyLine));
+                Notify(nameof(NetworkSummary));
             }
         }
     }
@@ -430,6 +437,20 @@ public sealed class MainViewModel : INotifyPropertyChanged
                          + "key. Everything else runs on this machine.",
     };
 
+    /// <summary>
+    /// What leaves this machine, in one line, for the status bar.
+    /// </summary>
+    /// <remarks>
+    /// The compact form of <see cref="PrivacyLine"/>, which is the claim this application is
+    /// built around and which until now vanished the moment a scan finished: it appears on the
+    /// drop screen and nowhere else, so the reader was told what was uploaded only while there
+    /// was nothing to upload. Kept true rather than reassuring, so switching the deep pass on
+    /// changes it.
+    /// </remarks>
+    public string NetworkSummary => DeepPassEnabled && DeepPassSourceReady
+        ? "Runs on this machine  ·  package names and the deep pass's files leave it"
+        : "Runs on this machine  ·  only package names leave it";
+
     public string ApiKeyStatus => ApiKeyStore.Describe(ApiKeyStore.Load());
 
     /// <summary>Stores or clears the key, then refreshes everything that depends on it.</summary>
@@ -448,6 +469,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Notify(nameof(CanChooseApiKey));
         Notify(nameof(DeepPassEnabled));
         Notify(nameof(PrivacyLine));
+        Notify(nameof(NetworkSummary));
     }
 
     /// <summary>
@@ -516,6 +538,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// the DataContext instance and would silently find nothing on a static.</remarks>
     public string Version => Scanner.Version;
 
+    /// <summary>
+    /// Whether a newer build has been published, and what can be done about it.
+    /// </summary>
+    /// <remarks>
+    /// Separate from everything above it because none of it concerns a scan. It is exposed here
+    /// only because the window binds to one object.
+    /// </remarks>
+    public UpdateViewModel Update { get; } = new();
+
     // ---- State -------------------------------------------------------------
 
     public AppState State
@@ -529,6 +560,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 Notify(nameof(IsWaiting));
                 Notify(nameof(IsScanning));
                 Notify(nameof(HasResults));
+
+                // Installing an update closes the window, so it must not be offered while a
+                // scan is running: the report being built would go with it.
+                Update.ApplicationBusy = value == AppState.Scanning;
+
                 CommandManager.InvalidateRequerySuggested();
             }
         }
@@ -616,6 +652,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public ObservableCollection<FindingCard> Findings { get; } = [];
 
+    /// <summary>
+    /// What the application can do, which is a different question from what is wrong with it.
+    /// </summary>
+    /// <remarks>
+    /// Kept out of <see cref="Findings"/> so nothing here can be counted, coloured by severity,
+    /// or read as an accusation. See <see cref="Finding.IsCapability"/>.
+    /// </remarks>
+    public ObservableCollection<FindingCard> Capabilities { get; } = [];
+
     public ObservableCollection<CategoryScore> CategoryScores { get; } = [];
 
     public ObservableCollection<string> Limitations { get; } = [];
@@ -639,11 +684,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string BandLabel => Report?.Verdict.BandLabel ?? string.Empty;
 
     /// <summary>
-    /// Which question the score answered. Shown under the number without exception: the same
-    /// artifact scores differently for the two readers, and a number that changes with a
-    /// setting and does not say so is worse than either number alone.
+    /// What the number is. Shown under it without exception: it is the worse of the two
+    /// readings rather than an answer to whichever question this reader happens to be asking,
+    /// and a number that does not say what it is invites being read as the other one.
     /// </summary>
-    public string ScoreCaption => Report?.Verdict.ScoreCaption ?? Audience.ScoreCaption();
+    public string ScoreCaption => Report?.Verdict.ScoreCaption ?? Verdict.SharedScoreCaption;
 
     public ScoreBand Band => Report?.Verdict.Band ?? ScoreBand.InsufficientCoverage;
 
@@ -662,26 +707,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// <summary>Drives the caveat shown under the coverage meter.</summary>
     public bool CoverageIsLow => Report is not null && Report.Coverage.Percent < 50;
 
-    public string SummaryLine
-    {
-        get
-        {
-            if (Report is null)
-            {
-                return string.Empty;
-            }
-
-            var counts = new[] { Severity.Critical, Severity.High, Severity.Medium, Severity.Low }
-                .Select(s => (Severity: s, Count: Report.CountOf(s)))
-                .Where(x => x.Count > 0)
-                .Select(x => $"{x.Count} {x.Severity.ToString().ToLowerInvariant()}")
-                .ToList();
-
-            return counts.Count == 0
-                ? "No issues were found by the checks that ran."
-                : $"Found {string.Join(", ", counts)}.";
-        }
-    }
+    /// <summary>Phrased in the report itself, so this window and the export cannot disagree.</summary>
+    public string SummaryLine => Report?.SummaryLine ?? string.Empty;
 
     public string VulnerabilitySummary => Report is null
         ? string.Empty
@@ -715,12 +742,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         _cancellation = new CancellationTokenSource();
 
-        var progress = new Progress<ScanProgress>(p =>
-        {
-            ProgressMessage = p.Message;
-            ProgressPercent = p.Percent ?? ProgressPercent;
-        });
-
         var options = new ScanOptions
         {
             Audience = Audience,
@@ -733,11 +754,29 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         try
         {
+            // Measured before the clock starts, because how long the readout runs depends on
+            // how much there was to look at. Off the UI thread: a large source tree is a lot
+            // of directory entries.
+            var bytes = await Task.Run(() => ScanPacing.Measure(path), _cancellation.Token);
+
+            var pacer = new ScanPacer(ScanPacing.TargetFor(bytes));
+
+            // Constructed here rather than inside the scan, so its callbacks come back to this
+            // thread and the pacer is only ever touched from one place.
+            var progress = new Progress<ScanProgress>(pacer.Record);
+
+            var clock = Stopwatch.StartNew();
+
             // The rule pass is CPU-bound and parallel, so it must not run on the UI thread.
-            var report = await Task.Run(
+            var scan = Task.Run(
                 () => _scanner.ScanAsync(path, options, progress, _cancellation.Token),
                 _cancellation.Token);
 
+            await ShowProgressAsync(pacer, clock, scan);
+
+            var report = await scan;
+
+            ProgressPercent = 100;
             Report = report;
             State = AppState.Results;
         }
@@ -754,6 +793,51 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             _cancellation?.Dispose();
             _cancellation = null;
+        }
+    }
+
+    /// <summary>How often the readout is redrawn while a scan runs.</summary>
+    private static readonly TimeSpan Tick = TimeSpan.FromMilliseconds(50);
+
+    /// <summary>
+    /// Drives the progress readout until both the scan has finished and it has had its time.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Returns the moment the scan fails or is cancelled, without waiting out the rest of the
+    /// pacing. Somebody who has pressed Cancel, or handed over a file that cannot be read, is
+    /// owed the answer now; making them watch a bar fill up first would be the point at which
+    /// pacing turned into wasting their time.
+    /// </para>
+    /// <para>
+    /// The bar cannot run ahead of the work regardless of what happens here. See
+    /// <see cref="ScanPacer"/>, which caps what it reports by what the scanner has said.
+    /// </para>
+    /// </remarks>
+    private async Task ShowProgressAsync(ScanPacer pacer, Stopwatch clock, Task scan)
+    {
+        while (true)
+        {
+            var sample = pacer.Sample(clock.Elapsed);
+
+            ProgressPercent = sample.Percent;
+
+            if (sample.Message.Length > 0)
+            {
+                ProgressMessage = sample.Message;
+            }
+
+            if (scan.IsFaulted || scan.IsCanceled)
+            {
+                return;
+            }
+
+            if (scan.IsCompleted && pacer.Finished(clock.Elapsed))
+            {
+                return;
+            }
+
+            await Task.Delay(Tick, _cancellation?.Token ?? CancellationToken.None);
         }
     }
 
@@ -794,6 +878,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public string ChecksCount => Counted(Checks.Count, "check");
 
+    public string CapabilitiesCount => Counted(Capabilities.Count, "capability", "capabilities");
+
     public string CategoriesCount => Counted(CategoryScores.Count, "category", "categories");
 
     /// <summary>
@@ -817,6 +903,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private void RebuildCollections()
     {
         Findings.Clear();
+        Capabilities.Clear();
         CategoryScores.Clear();
         Limitations.Clear();
         Effort.Clear();
@@ -866,6 +953,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Findings.Add(new FindingCard(finding, Audience));
         }
 
+        foreach (var capability in Report.Capabilities)
+        {
+            Capabilities.Add(new FindingCard(capability, Audience));
+        }
+
         Notify(nameof(HasAssistedFindings));
 
         foreach (var (category, score) in Report.CategoryScores
@@ -893,7 +985,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         foreach (var name in new[]
                  {
                      nameof(FindingsCount), nameof(ChecksCount), nameof(CategoriesCount),
-                     nameof(LimitationsCount), nameof(CoverageCount),
+                     nameof(LimitationsCount), nameof(CoverageCount), nameof(CapabilitiesCount),
                  })
         {
             Notify(name);
@@ -1001,6 +1093,17 @@ public sealed class FindingCard(Finding finding, Audience audience) : INotifyPro
     /// </remarks>
     public string SourceTag => IsAssisted ? "AI" : Finding.RuleId;
 
+    /// <summary>
+    /// What the identifier means, on hover.
+    /// </summary>
+    /// <remarks>
+    /// A code like VC-MAL-003 asks the reader to take the filing system on trust. It is worth
+    /// showing, being the thing to quote in a bug report, but only once it can be read. The
+    /// deep pass tag is described by its own family rather than by the rule it did not come
+    /// from.
+    /// </remarks>
+    public string FamilyTooltip => RuleFamily.Tooltip(IsAssisted ? "VC-AI-001" : Finding.RuleId);
+
     public string Description => Finding.DescriptionFor(audience);
 
     public string? Evidence => Finding.Evidence;
@@ -1055,6 +1158,9 @@ public sealed class CheckCard(CheckOutcome check, Audience audience)
     public string Id => audience == Audience.Developer ? check.Id : string.Empty;
 
     public bool ShowId => audience == Audience.Developer;
+
+    /// <summary>What this check's family covers, on hover, as in the findings list.</summary>
+    public string FamilyTooltip => RuleFamily.Tooltip(check.Id);
 
     public bool Passed => check.State == CheckState.Passed;
 

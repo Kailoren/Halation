@@ -20,6 +20,16 @@ public sealed record RuleEngineResult
     public IReadOnlyList<CheckOutcome> Checks { get; init; } = [];
 
     public int FilesAnalysed { get; init; }
+
+    /// <summary>
+    /// Matches dropped as pattern definitions rather than uses.
+    /// </summary>
+    /// <remarks>
+    /// Reported rather than merely applied. See <see cref="Heuristics.IsPatternDefinition"/>:
+    /// this is the count of times the scanner decided a match was a rule table entry rather
+    /// than code, and a reader is entitled to know it made that decision at all.
+    /// </remarks>
+    public int MatchesDiscounted { get; init; }
 }
 
 /// <summary>
@@ -66,6 +76,7 @@ public sealed class RuleEngine
         // file and a check that examined four hundred are not the same reassurance.
         var examined = new ConcurrentDictionary<string, int>(StringComparer.Ordinal);
         var fired = new ConcurrentDictionary<string, byte>(StringComparer.Ordinal);
+        var discounted = 0;
 
         var options = new ParallelOptions
         {
@@ -110,6 +121,11 @@ public sealed class RuleEngine
                 }
             }
 
+            if (context.DiscountedMatches > 0)
+            {
+                Interlocked.Add(ref discounted, context.DiscountedMatches);
+            }
+
             progress?.Report(Interlocked.Increment(ref completed));
         });
 
@@ -118,6 +134,7 @@ public sealed class RuleEngine
             Findings = Deduplicate(findings),
             Limitations = [.. limitations.Keys.Order(StringComparer.Ordinal)],
             FilesAnalysed = files.Count,
+            MatchesDiscounted = discounted,
             Checks =
             [
                 .. _rules.Select(rule =>

@@ -6,10 +6,21 @@ namespace VibeCheck.Core.Scoring;
 /// Turns a set of findings into the headline score, band, and install verdict.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The design point is the cap. Averaging across checks rewards breadth of passing trivia: an
 /// app can pass fifty of them, ship a live API key, and score in the nineties, which is worse
 /// than no number at all. Deductions accumulate normally and the score is then hard-capped by
 /// the single worst finding, so any critical caps at 39 whatever else passed.
+/// </para>
+/// <para>
+/// <b>Both readings are computed and the lower one is the score, for both readers.</b> Findings
+/// carry a severity per audience, so the same artifact genuinely reads differently for whoever
+/// ships it and whoever runs it, and the report still says both. What it will not do is let the
+/// kinder of the two be the headline: an author who scans their own work, switches to the end
+/// user view and screenshots the higher number would be publishing a number this tool produced
+/// for a different question. The findings, the wording and the remediation still change with
+/// the reader. Only the number does not.
+/// </para>
 /// </remarks>
 public static class ScoreCalculator
 {
@@ -71,10 +82,9 @@ public static class ScoreCalculator
     /// read nothing has found nothing for reasons that say nothing about the application.
     /// </param>
     /// <param name="audience">
-    /// Which question the score answers. Findings carry a severity per audience, so the same
-    /// artifact legitimately scores differently for the person shipping it and the person
-    /// running it. The verdict records which one it answered; every display path must show
-    /// that alongside the number.
+    /// Which report is being rendered. It decides the findings' severities, their wording and
+    /// their order, and it breaks a tie over which reading the account beneath the score
+    /// describes. It does <b>not</b> decide the number: see the remarks on this class.
     /// </param>
     public static Verdict Calculate(
         IReadOnlyList<Finding> findings,
@@ -83,7 +93,19 @@ public static class ScoreCalculator
     {
         ArgumentNullException.ThrowIfNull(findings);
 
-        var score = ScoreFor(findings, audience);
+        var developer = ScoreFor(findings, Audience.Developer);
+        var endUser = ScoreFor(findings, Audience.EndUser);
+
+        var score = Math.Min(developer, endUser);
+
+        // Which reading produced the number, so the account below it describes arithmetic that
+        // really ran rather than the reader's own. Where the two agree it is attributed to
+        // whoever is reading, whose finding list then matches it exactly.
+        var governing = developer == endUser
+            ? audience
+            : developer < endUser
+                ? Audience.Developer
+                : Audience.EndUser;
 
         // Findings can still exist at zero coverage: a native binary yields signing and
         // hardening observations without a line of source. Those are reported, but they do
@@ -123,7 +145,7 @@ public static class ScoreCalculator
             Band = BandFor(score),
             AdviseAgainstInstall = blocking.Count > 0,
             Audience = audience,
-            Explanation = Explain(findings, audience),
+            Explanation = Explain(findings, governing, developer, endUser),
             BlockingReasons = blocking
                 .Select(f => f.Title)
                 .Distinct(StringComparer.Ordinal)
@@ -132,11 +154,21 @@ public static class ScoreCalculator
     }
 
     /// <summary>Records what drove the number, so the report can account for it.</summary>
-    private static ScoreExplanation Explain(IReadOnlyList<Finding> findings, Audience audience)
+    /// <remarks>
+    /// Built from the reading that governed rather than from the reader's own, or the account
+    /// would describe a band and a count that do not add up to the number printed above them.
+    /// Both readings travel with it so the difference can be named instead of looking like a
+    /// glitch when somebody switches reader and the number stays put.
+    /// </remarks>
+    private static ScoreExplanation Explain(
+        IReadOnlyList<Finding> findings,
+        Audience governing,
+        int developerReading,
+        int endUserReading)
     {
         var worst = findings.Count == 0
             ? Severity.Info
-            : findings.Max(f => f.SeverityFor(audience));
+            : findings.Max(f => f.SeverityFor(governing));
 
         var (floor, ceiling) = RangeFor(worst);
 
@@ -145,8 +177,11 @@ public static class ScoreCalculator
             Worst = worst,
             Floor = floor,
             Ceiling = ceiling,
-            Counted = findings.Count(f => WeightFor(f.SeverityFor(audience)) > 0),
-            Informational = findings.Count(f => WeightFor(f.SeverityFor(audience)) == 0),
+            Counted = findings.Count(f => WeightFor(f.SeverityFor(governing)) > 0),
+            Informational = findings.Count(f => WeightFor(f.SeverityFor(governing)) == 0),
+            GovernedBy = governing,
+            DeveloperReading = developerReading,
+            EndUserReading = endUserReading,
         };
     }
 
@@ -155,17 +190,27 @@ public static class ScoreCalculator
     /// findings score 100; that means "nothing found here", which the report states plainly
     /// alongside the coverage meter rather than implying the category is clean.
     /// </summary>
+    /// <remarks>
+    /// The lower of the two readings, per category, for the same reason the headline is: a
+    /// breakdown that softened when the reader changed would let the same screenshot be taken
+    /// one card further down.
+    /// </remarks>
     public static IReadOnlyDictionary<FindingCategory, int> CategoryScores(
-        IReadOnlyList<Finding> findings,
-        Audience audience = Audience.Developer)
+        IReadOnlyList<Finding> findings)
     {
         ArgumentNullException.ThrowIfNull(findings);
 
         return Enum.GetValues<FindingCategory>()
             .ToDictionary(
                 category => category,
-                category => ScoreFor(
-                    findings.Where(f => f.Category == category).ToList(), audience));
+                category =>
+                {
+                    var inCategory = findings.Where(f => f.Category == category).ToList();
+
+                    return Math.Min(
+                        ScoreFor(inCategory, Audience.Developer),
+                        ScoreFor(inCategory, Audience.EndUser));
+                });
     }
 
     /// <summary>

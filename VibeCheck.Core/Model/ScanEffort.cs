@@ -35,6 +35,17 @@ public sealed record ScanEffort
     public required VulnerabilityDataProvenance VulnerabilityData { get; init; }
 
     /// <summary>
+    /// Matches the scanner decided were rule table entries rather than code.
+    /// </summary>
+    /// <remarks>
+    /// On the receipt rather than swallowed. A tool that quietly removes its own findings is
+    /// asking to be trusted about the one thing nobody can check, so the count is stated and
+    /// the reason with it. Normally zero; it is other detection tools, and this one, that
+    /// carry every string they search for in quotation marks.
+    /// </remarks>
+    public int MatchesDiscounted { get; init; }
+
+    /// <summary>
     /// The receipt, as lines to render. Anything that did not happen is omitted rather than
     /// reported as a zero, so the list never pads itself out with work that was not done.
     /// </summary>
@@ -58,6 +69,15 @@ public sealed record ScanEffort
             lines.Add(
                 $"Ran {ChecksRun:N0} checks against {FilesChecked:N0} "
                 + $"file{(FilesChecked == 1 ? "" : "s")}.");
+        }
+
+        if (MatchesDiscounted > 0)
+        {
+            lines.Add(
+                $"Discounted {MatchesDiscounted:N0} match{(MatchesDiscounted == 1 ? "" : "es")} "
+                + "that sat inside search patterns rather than in code that runs. This "
+                + "application appears to contain a table of detection rules, and a scanner "
+                + "reading one finds every string it is looking for.");
         }
 
         if (PackagesChecked > 0)

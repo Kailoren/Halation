@@ -108,6 +108,20 @@ public static class JsonReportWriter
                 remediation = f.Remediation,
                 reference = f.Reference,
             }),
+
+            // A separate key rather than a flag on the list above, so anything consuming this
+            // cannot count a capability as a finding by forgetting to filter. Nothing here
+            // reaches the score.
+            capabilities = report.Capabilities.Select(f => new
+            {
+                ruleId = f.RuleId,
+                title = f.Title,
+                file = f.FilePath,
+                line = f.Line,
+                description = f.Description,
+                evidence = f.Evidence,
+                note = f.Remediation,
+            }),
         }, Format);
     }
 }

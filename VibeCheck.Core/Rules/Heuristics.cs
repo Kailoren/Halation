@@ -188,6 +188,181 @@ public static class Heuristics
     }
 
     /// <summary>
+    /// Calls that turn a string into a search pattern, in the languages this scanner reads.
+    /// </summary>
+    private static readonly Regex PatternConstruction = PatternRule.Compile(
+        """
+        new\s+Regex|new\s+RegExp|Regex\.(?:IsMatch|Match|Matches|Replace|Split)|
+        \bre\.compile|\.Compile\s*\(
+        """,
+        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+
+    /// <summary>How many pattern definitions make a file a catalogue of them rather than code.</summary>
+    private const int PatternCatalogueThreshold = 4;
+
+    /// <summary>
+    /// Average line length past which a file is a bundle rather than something written by hand.
+    /// </summary>
+    /// <remarks>
+    /// The line is the unit every test below works in, and a minified bundle does not have
+    /// them: a megabyte of JavaScript arrives as one line, so "is this inside a string" and
+    /// "what precedes it on this line" stop meaning anything. Measured on a real Electron
+    /// application, that made four <c>require("child_process")</c> imports look like pattern
+    /// definitions. Bundles are excluded rather than guessed at.
+    /// </remarks>
+    private const int MaxAverageLineLength = 200;
+
+    /// <summary>How far back to look for the call that turns this string into a pattern.</summary>
+    /// <remarks>
+    /// Bounded, for the same reason. Without a bound the search runs to the start of the line,
+    /// which in bundled code is the start of the file, and finds a regex somewhere in the
+    /// bundle every time.
+    /// </remarks>
+    private const int PatternConstructionLookback = 400;
+
+    /// <summary>Whether a file holds enough pattern definitions to be a catalogue of them.</summary>
+    public static bool CountsAsPatternCatalogue(string content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+
+        if (content.Length == 0 || !HasLineStructure(content))
+        {
+            return false;
+        }
+
+        var found = 0;
+
+        foreach (Match _ in PatternConstruction.Matches(content))
+        {
+            if (++found >= PatternCatalogueThreshold)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Whether a file is laid out in lines, rather than being one long bundle.</summary>
+    private static bool HasLineStructure(string content)
+    {
+        var lines = 1;
+
+        foreach (var c in content)
+        {
+            if (c == '\n')
+            {
+                lines++;
+            }
+        }
+
+        return content.Length / lines <= MaxAverageLineLength;
+    }
+
+    /// <summary>
+    /// True when the offset falls inside a quoted string on its own line.
+    /// </summary>
+    /// <remarks>
+    /// Line-scoped and deliberately simple. Escapes are honoured so that a pattern full of
+    /// <c>\\</c> does not read as the string ending early, which is exactly the text this is
+    /// used on. Both quote characters count, because the languages here disagree about which
+    /// one makes a string.
+    /// </remarks>
+    public static bool IsInsideStringLiteral(RuleContext context, int offset)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var line = context.LineText(context.LineAt(offset));
+        var target = context.OffsetInLine(offset);
+
+        if (target <= 0 || target >= line.Length)
+        {
+            return false;
+        }
+
+        var quote = '\0';
+
+        for (var i = 0; i < target; i++)
+        {
+            var c = line[i];
+
+            if (c == '\\' && quote != '\0')
+            {
+                // Consumes whatever it escapes, so an escaped quote does not close the string.
+                i++;
+                continue;
+            }
+
+            if (c is not ('"' or '\''))
+            {
+                continue;
+            }
+
+            if (quote == '\0')
+            {
+                quote = c;
+            }
+            else if (quote == c)
+            {
+                quote = '\0';
+            }
+        }
+
+        return quote != '\0';
+    }
+
+    /// <summary>
+    /// True when a match is a pattern being defined rather than code being run.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A security scanner is a program whose source contains, in quotation marks, every string
+    /// it looks for. Pointed at itself or at any other detection tool it reports its own rule
+    /// table as the thing the rules detect: VibeCheck's published build scored 16/100 on nine
+    /// findings, none of them real, including a "do not install" for reading cryptocurrency
+    /// wallets. Antivirus signatures, WAF rules and linter configurations all have this shape.
+    /// </para>
+    /// <para>
+    /// Two conditions, both required. The match sits inside a string literal, so it cannot be
+    /// a call to the thing it names, and either that string is being handed to a regex
+    /// constructor or the file around it holds enough pattern definitions to be a catalogue of
+    /// them. Ordinary code satisfies neither: a real <c>new BinaryFormatter()</c> is not in
+    /// quotes, and a real registry path in quotes does not sit in a file of forty regexes.
+    /// </para>
+    /// <para>
+    /// What this gives up, stated plainly: an application that hides its behaviour by keeping
+    /// it in regular expressions inside a file dressed as a rule table would be discounted
+    /// here. That is a deliberate act of evasion rather than the accident this guards against,
+    /// and the report says how many matches it discounted rather than dropping them in silence.
+    /// Secrets are exempt, because a key in quotes is a leaked key wherever it lives.
+    /// </para>
+    /// </remarks>
+    public static bool IsPatternDefinition(RuleContext context, int offset)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (!IsInsideStringLiteral(context, offset))
+        {
+            return false;
+        }
+
+        if (context.IsPatternCatalogue)
+        {
+            return true;
+        }
+
+        // A single pattern in an otherwise ordinary file still counts, provided the string the
+        // match sits in is the argument being compiled. Searched within a bounded window rather
+        // than back to the start of the line, so that bundled code, where the line is the whole
+        // file, cannot satisfy this by containing a regex anywhere at all.
+        var line = context.LineText(context.LineAt(offset));
+        var end = Math.Min(context.OffsetInLine(offset), line.Length);
+        var start = Math.Max(0, end - PatternConstructionLookback);
+
+        return PatternConstruction.IsMatch(line[start..end]);
+    }
+
+    /// <summary>
     /// True for files whose contents are examples rather than shipped code.
     /// </summary>
     /// <remarks>

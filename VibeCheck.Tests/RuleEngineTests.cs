@@ -304,6 +304,11 @@ public class RuleEngineTests
     /// The whole sequence, which is the only thing worth reporting. Each of the three calls is
     /// unremarkable on its own and every application makes at least one of them.
     /// </summary>
+    /// <remarks>
+    /// Reported as a capability rather than a defect. This is how every self-updating
+    /// application works, and rated High it cost one of them a band of score and the label
+    /// "serious issues" for having an update button.
+    /// </remarks>
     [Fact]
     public void DownloadThenExecute_IsReported()
     {
@@ -318,7 +323,12 @@ public class RuleEngineTests
                 "Updater.cs"),
             f => f.RuleId == "VC-MAL-007");
 
-        Assert.Equal(Severity.High, finding.Severity);
+        Assert.True(finding.IsCapability);
+
+        // Weightless on both ladders, so it cannot move a score even if something downstream
+        // forgot to keep capabilities out of the arithmetic.
+        Assert.Equal(Severity.Info, finding.Severity);
+        Assert.Equal(Severity.Info, finding.UserSeverity);
 
         // An updater is this shape. Telling somebody not to install their own updater would
         // spend the credibility the blocking rules run on.

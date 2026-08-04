@@ -24,9 +24,19 @@
     </WindowChrome.WindowChrome>
 
     <Grid>
+        <!-- The top row holds the title bar and, when there is one to show, the update strip
+             underneath it. Auto rather than a fixed 36 so the strip can appear and disappear
+             without the caption area moving: the title bar keeps its own explicit height, which
+             is the number WindowChrome above was given for the drag region. -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="36"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+
+            <!-- The status bar. Closes the window at the bottom the way the title bar does at
+                 the top: without it the content simply stopped and the near-black background
+                 ran to the edge of the screen, so on a dark desktop there was nothing to say
+                 where the window ended. -->
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ============ Theme decoration ============
@@ -38,12 +48,14 @@
 
              Neither is hit-testable, so nothing a theme adds can intercept a drop or swallow a
              click no matter how large it draws itself. -->
-        <ContentControl Grid.Row="0" Grid.RowSpan="2" Panel.ZIndex="-1"
+        <ContentControl Grid.Row="0" Grid.RowSpan="3" Panel.ZIndex="-1"
                         Template="{DynamicResource WindowBackdrop}"
                         IsHitTestVisible="False" Focusable="False"/>
 
+        <StackPanel Grid.Row="0">
+
         <!-- ============ Title bar ============ -->
-        <Border Grid.Row="0" Background="{StaticResource Panel}"
+        <Border Height="36" Background="{StaticResource Panel}"
                 BorderBrush="{StaticResource Edge}" BorderThickness="0,0,0,1">
             <Grid>
                 <StackPanel Orientation="Horizontal" Margin="14,0" VerticalAlignment="Center">
@@ -75,6 +87,74 @@
                 </StackPanel>
             </Grid>
         </Border>
+
+        <!-- ============ A newer build exists ============
+             A strip rather than a dialog, and only ever for two things: a version this one is
+             not, and an attempt to fetch it that did not work. A check that could not reach
+             GitHub shows nothing at all, because being unable to ask is not news.
+
+             Which buttons appear is the honest part. "Update and restart" is offered only when
+             the download could actually be verified against the publisher who signed this
+             build; when it cannot be, the strip says why in the line underneath and offers the
+             release page instead. See UpdateInstall.Assess. -->
+        <Border Background="{StaticResource PanelRaised}"
+                BorderBrush="{StaticResource Edge}" BorderThickness="0,0,0,1"
+                Padding="16,10"
+                Visibility="{Binding Update.IsVisible, Converter={StaticResource BoolToVisibility}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="&#xE896;" FontFamily="{DynamicResource IconFont}"
+                           FontSize="15" VerticalAlignment="Center"
+                           Foreground="{StaticResource Accent}"
+                           Visibility="{Binding Update.IsFailure,
+                                        Converter={StaticResource InverseBoolToVisibility}}"/>
+                <TextBlock Grid.Column="0" Text="&#xE7BA;" FontFamily="{DynamicResource IconFont}"
+                           FontSize="15" VerticalAlignment="Center"
+                           Foreground="{StaticResource High}"
+                           Visibility="{Binding Update.IsFailure,
+                                        Converter={StaticResource BoolToVisibility}}"/>
+
+                <StackPanel Grid.Column="1" Margin="12,0,16,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Update.Headline}" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding Update.Detail}" Style="{StaticResource Caption}"
+                               TextWrapping="Wrap" Margin="0,2,0,0"/>
+
+                    <ProgressBar Height="4" Margin="0,8,0,2" Minimum="0" Maximum="100"
+                                 Value="{Binding Update.Progress, Mode=OneWay}"
+                                 Background="{StaticResource Panel}"
+                                 Foreground="{StaticResource Accent}" BorderThickness="0"
+                                 Visibility="{Binding Update.ShowProgress,
+                                              Converter={StaticResource BoolToVisibility}}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Update and restart" Style="{StaticResource Btn}"
+                            Command="{Binding Update.InstallCommand}"
+                            Visibility="{Binding Update.ShowInstall,
+                                         Converter={StaticResource BoolToVisibility}}"/>
+                    <Button Content="{Binding Update.ReleasePageLabel}" Style="{StaticResource Btn}"
+                            Margin="8,0,0,0"
+                            Command="{Binding Update.OpenReleasePageCommand}"
+                            Visibility="{Binding Update.ShowReleasePage,
+                                         Converter={StaticResource BoolToVisibility}}"/>
+                    <Button Content="Cancel" Style="{StaticResource Btn}" Margin="8,0,0,0"
+                            Command="{Binding Update.CancelCommand}"
+                            Visibility="{Binding Update.IsWorking,
+                                         Converter={StaticResource BoolToVisibility}}"/>
+                    <Button Content="Later" Style="{StaticResource Btn}" Margin="8,0,0,0"
+                            Command="{Binding Update.DismissCommand}"
+                            Visibility="{Binding Update.ShowDismiss,
+                                         Converter={StaticResource BoolToVisibility}}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        </StackPanel>
 
         <!-- ============ Who is reading ============
              Asked once, before any scan. The answer changes which question the score answers,
@@ -280,6 +360,19 @@
                 <TextBlock Style="{StaticResource Caption}" Margin="0,18,0,0" TextWrapping="Wrap"
                            TextAlignment="Center"
                            Text="{Binding PrivacyLine}"/>
+
+                <!-- Beside the promise above rather than buried in a settings screen, because
+                     it is the same kind of statement: this is the other connection the
+                     application makes, and one that could not be turned off would be an
+                     exception to a claim made in the sentence above it. -->
+                <CheckBox Content="Ask GitHub for new versions when VibeCheck starts"
+                          IsChecked="{Binding Update.CheckOnStartup}"
+                          Foreground="{StaticResource Muted}"
+                          FontSize="{DynamicResource CaptionSize}"
+                          HorizontalAlignment="Center" Margin="0,12,0,0"/>
+                <TextBlock Style="{StaticResource Caption}" Margin="0,4,0,0" TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           Text="A request for the public release list, and nothing about you or this machine. Which version is newer is worked out here."/>
             </StackPanel>
             </Grid>
           </ScrollViewer>
@@ -342,8 +435,11 @@
                 </Grid>
             </Border>
 
+            <!-- Centred, like every other screen. Pinned left, a wide window left the report in
+                 a column against one edge with an empty half beside it, which reads as a layout
+                 that failed rather than one that chose a measure. -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16">
-                <StackPanel MaxWidth="900" HorizontalAlignment="Left">
+                <StackPanel MaxWidth="900" HorizontalAlignment="Center">
 
                     <!-- Do-not-install banner. Only appears when a blocking rule fired, never
                          merely because the score is low. -->
@@ -377,8 +473,9 @@
                                            Foreground="{Binding Band, Converter={StaticResource BandBrush}}"/>
                             </StackPanel>
 
-                            <!-- Which question the number answered. Never omitted: the same
-                                 artifact scores differently for the two readers. -->
+                            <!-- What the number is. Never omitted: it is the worse of the two
+                                 readings rather than an answer to this reader's own question,
+                                 and unlabelled it would be taken for the latter. -->
                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                 <TextBlock Text="{Binding ScoreCaption}"
                                            Style="{StaticResource Caption}"
@@ -529,8 +626,17 @@
                                                     <TextBlock Text="{Binding Id}" Style="{StaticResource Caption}"
                                                                FontFamily="{DynamicResource MonoFont}"
                                                                VerticalAlignment="Center" Margin="0,0,8,0"
+                                                               ToolTipService.ShowDuration="60000"
+                                                               ToolTipService.InitialShowDelay="350"
                                                                Visibility="{Binding ShowId,
-                                                                            Converter={StaticResource BoolToVisibility}}"/>
+                                                                            Converter={StaticResource BoolToVisibility}}">
+                                                        <TextBlock.ToolTip>
+                                                            <ToolTip MaxWidth="420">
+                                                                <TextBlock Text="{Binding FamilyTooltip}"
+                                                                           TextWrapping="Wrap"/>
+                                                            </ToolTip>
+                                                        </TextBlock.ToolTip>
+                                                    </TextBlock>
                                                     <TextBlock Text="{Binding Title}" FontSize="13"
                                                                TextTrimming="CharacterEllipsis"
                                                                VerticalAlignment="Center"/>
@@ -659,11 +765,22 @@
                                                             <StackPanel Grid.Column="2">
                                                                 <TextBlock Text="{Binding Title}" TextWrapping="Wrap"/>
                                                                 <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                                    <!-- The code is worth showing and worthless
+                                                                         unread, so it explains itself on hover. -->
                                                                     <TextBlock Text="{Binding SourceTag}"
                                                                                Style="{StaticResource Caption}"
                                                                                FontFamily="{DynamicResource MonoFont}"
+                                                                               ToolTipService.ShowDuration="60000"
+                                                                               ToolTipService.InitialShowDelay="350"
                                                                                Visibility="{Binding ShowRuleId,
-                                                                                            Converter={StaticResource BoolToVisibility}}"/>
+                                                                                            Converter={StaticResource BoolToVisibility}}">
+                                                                        <TextBlock.ToolTip>
+                                                                            <ToolTip MaxWidth="420">
+                                                                                <TextBlock Text="{Binding FamilyTooltip}"
+                                                                                           TextWrapping="Wrap"/>
+                                                                            </ToolTip>
+                                                                        </TextBlock.ToolTip>
+                                                                    </TextBlock>
                                                                     <TextBlock Text="  ·  " Style="{StaticResource Caption}"
                                                                                Visibility="{Binding ShowRuleId,
                                                                                             Converter={StaticResource BoolToVisibility}}"/>
@@ -732,6 +849,66 @@
                         </StackPanel>
                     </ContentControl>
 
+                    <!-- What this application can do.
+
+                         Not findings, and deliberately not coloured, counted or scored like
+                         them. Auto-updating and starting with Windows are how a great many
+                         correct programs work; rated as defects they cost a working application
+                         a whole band of score for having a feature, which is how a scanner
+                         teaches people to stop reading it.
+
+                         Open by default for the reader who downloaded this and closed for the
+                         one who wrote it, because only one of them is learning something. The
+                         binding is one-way: switching reader re-folds it, which is the intent
+                         rather than a limitation. -->
+                    <ContentControl Style="{StaticResource Card}" Margin="0,14,0,0"
+                                    Visibility="{Binding Capabilities.Count,
+                                                 Converter={StaticResource CountToVisibility}}">
+                        <StackPanel>
+                            <ToggleButton x:Name="CapabilitiesSection" Style="{StaticResource SectionHeader}"
+                                          Content="What this application can do"
+                                          Tag="{Binding CapabilitiesCount}"
+                                          IsChecked="{Binding IsEndUser, Mode=OneWay}"/>
+
+                            <StackPanel Margin="0,12,0,0"
+                                        Visibility="{Binding IsChecked, ElementName=CapabilitiesSection,
+                                                     Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Margin="0,0,0,10"
+                                           Text="Not problems, and none of this affects the score. These are things the application is built to do that are worth knowing before you run it."/>
+
+                                <ItemsControl ItemsSource="{Binding Capabilities}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Margin="0,0,0,8" Padding="12,10"
+                                                    CornerRadius="{DynamicResource ButtonRadius}"
+                                                    Background="{StaticResource PanelRaised}"
+                                                    BorderThickness="1"
+                                                    BorderBrush="{StaticResource Edge}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{Binding Description}"
+                                                               Style="{StaticResource Caption}"
+                                                               TextWrapping="Wrap" Margin="0,5,0,0"/>
+                                                    <TextBlock Text="{Binding Location}"
+                                                               Style="{StaticResource Caption}"
+                                                               FontFamily="{DynamicResource MonoFont}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Margin="0,5,0,0"/>
+                                                    <TextBlock Text="{Binding Remediation}"
+                                                               Style="{StaticResource Caption}"
+                                                               TextWrapping="Wrap" Margin="0,5,0,0"
+                                                               Visibility="{Binding Remediation,
+                                                                            Converter={StaticResource NullToVisibility}}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </StackPanel>
+                    </ContentControl>
+
                     <!-- What this scan did. The counterpart to the limitations card below: a
                          result that lands in under two seconds reads as skipped unless the work
                          behind it is stated, and the honest way to answer that is to show the
@@ -753,8 +930,13 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <!-- Says the quiet part, for the reader who noticed that the bar
+                                     ran for longer than this number and wondered which of the
+                                     two was lying. Neither: the work is genuinely this fast,
+                                     and the readout is paced so its stages can be read. It
+                                     never reports progress that has not happened. -->
                                 <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Style="{StaticResource Caption}">
-                                    <Run Text="All of it in"/><Run Text=" "/><Run Text="{Binding DurationLabel, Mode=OneWay}"/><Run Text=". Static analysis is fast; a quick result is not a shallow one, and the figures above are what it covered."/>
+                                    <Run Text="All of it in"/><Run Text=" "/><Run Text="{Binding DurationLabel, Mode=OneWay}"/><Run Text=". Static analysis is fast; a quick result is not a shallow one, and the figures above are what it covered. The progress bar is paced so that each stage can be read, so it runs for longer than the work it reports, and never ahead of it."/>
                                 </TextBlock>
                             </StackPanel>
                         </StackPanel>
@@ -818,9 +1000,34 @@
             </ScrollViewer>
         </Grid>
 
+        <!-- ============ Status bar ============
+             It closes the window at the bottom, and while it is there it may as well carry the
+             one claim this application is built around. What leaves the machine used to appear
+             on the drop screen and nowhere else, so the reader was told what was uploaded only
+             while there was nothing to upload; here it is in view during a scan and while
+             reading the report, and it changes when the deep pass is switched on. The version
+             that used to sit here is already in the title bar. -->
+        <Border Grid.Row="2" Background="{StaticResource Panel}"
+                BorderBrush="{StaticResource Edge}" BorderThickness="0,1,0,0"
+                Padding="16,6">
+            <Grid>
+                <TextBlock Text="{Binding NetworkSummary}"
+                           Style="{StaticResource Caption}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+
+                <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Style="{StaticResource Caption}"
+                           FontFamily="{DynamicResource MonoFont}" FontSize="11"
+                           TextTrimming="CharacterEllipsis"
+                           Text="{Binding Sha256, StringFormat=SHA-256 {0}}"
+                           Visibility="{Binding HasResults,
+                                        Converter={StaticResource BoolToVisibility}}"/>
+            </Grid>
+        </Border>
+
         <!-- Last child, so it is the topmost thing in the window. Empty in the default
              theme. -->
-        <ContentControl Grid.Row="0" Grid.RowSpan="2"
+        <ContentControl Grid.Row="0" Grid.RowSpan="3"
                         Template="{DynamicResource WindowOverlay}"
                         IsHitTestVisible="False" Focusable="False"/>
     </Grid>

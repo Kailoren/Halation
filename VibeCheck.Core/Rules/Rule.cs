@@ -45,6 +45,38 @@ public sealed class RuleContext
         return (index >= 0 ? index : ~index - 1) + 1;
     }
 
+    /// <summary>Where a file offset sits within its own line, for line-scoped analysis.</summary>
+    public int OffsetInLine(int offset)
+    {
+        var index = LineAt(offset) - 1;
+
+        return index >= 0 && index < _lineStarts.Length ? offset - _lineStarts[index] : 0;
+    }
+
+    private bool? _patternCatalogue;
+
+    /// <summary>
+    /// Whether this file reads as a catalogue of detection patterns rather than code.
+    /// </summary>
+    /// <remarks>
+    /// Computed once and reused by every rule, because it is a property of the file and the
+    /// whole catalog asks about it. Safe to cache without a lock: one context serves one file
+    /// on one thread. See <see cref="Heuristics.IsPatternDefinition"/> for what it is for.
+    /// </remarks>
+    public bool IsPatternCatalogue =>
+        _patternCatalogue ??= Heuristics.CountsAsPatternCatalogue(Content);
+
+    /// <summary>
+    /// Matches dropped as pattern definitions rather than uses.
+    /// </summary>
+    /// <remarks>
+    /// Counted rather than merely dropped, so the scan can say it discounted them. Silently
+    /// removing findings is the one thing a tool built on saying what it did must not do.
+    /// </remarks>
+    public int DiscountedMatches { get; private set; }
+
+    internal void Discount() => DiscountedMatches++;
+
     /// <summary>The full text of a 1-indexed line, without its terminator.</summary>
     public string LineText(int lineNumber)
     {
@@ -151,6 +183,12 @@ public sealed class PatternRule : IRule
     /// </summary>
     public bool IsBlocking { get; init; }
 
+    /// <summary>
+    /// Whether this rule reports a capability rather than a defect. See
+    /// <see cref="Finding.IsCapability"/>.
+    /// </summary>
+    public bool IsCapability { get; init; }
+
     public string? Reference { get; init; }
 
     /// <summary>Cap per rule per file, so one pathological file cannot flood the report.</summary>
@@ -194,6 +232,17 @@ public sealed class PatternRule : IRule
                 break;
             }
 
+            // Ahead of the rule's own Ignore, because this is not a false positive the rule
+            // could have anticipated: it is the scanner reading a table of detection patterns
+            // and taking each entry for the thing it detects. Secrets are exempt, as everywhere
+            // else, because a credential in quotation marks is a leaked credential.
+            if (Category != FindingCategory.Secrets
+                && Heuristics.IsPatternDefinition(context, match.Index))
+            {
+                context.Discount();
+                continue;
+            }
+
             if (Ignore?.Invoke(match, context) == true)
             {
                 continue;
@@ -227,6 +276,7 @@ public sealed class PatternRule : IRule
                 Line = line,
                 Evidence = Redaction.BuildEvidence(context.LineText(line), secret),
                 IsBlocking = IsBlocking,
+                IsCapability = IsCapability,
                 Reference = Reference,
                 Source = FindingSource.Rule,
             });

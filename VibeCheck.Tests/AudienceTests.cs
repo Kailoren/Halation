@@ -1,4 +1,5 @@
 using VibeCheck.Core;
+using VibeCheck.Core.Dependencies;
 using VibeCheck.Core.Model;
 using VibeCheck.Core.Reporting;
 using VibeCheck.Core.Rules;
@@ -32,55 +33,175 @@ public class AudienceTests
     };
 
     /// <summary>
-    /// The case the whole feature exists for. A leaked key is the worst thing in the report
-    /// for the person shipping it and nothing at all for the person running it, so a single
-    /// number cannot serve both.
+    /// The readings still disagree, and the harsher one is the score in both reports.
     /// </summary>
+    /// <remarks>
+    /// A leaked key is the worst thing in the report for whoever ships it and nothing at all
+    /// for whoever runs it, so the two readings are genuinely different numbers. Publishing the
+    /// kinder one to the reader it flatters is what this forbids: an author could otherwise
+    /// scan their own work, switch reader, and screenshot a number produced for a question
+    /// they were not asking.
+    /// </remarks>
     [Fact]
-    public void The_same_finding_can_score_differently_for_each_reader()
+    public void The_harsher_reading_is_the_score_in_both_reports()
     {
         var findings = new[] { Make(Severity.Critical, Severity.Info) };
 
         var developer = ScoreCalculator.Calculate(findings, 100, Audience.Developer);
         var endUser = ScoreCalculator.Calculate(findings, 100, Audience.EndUser);
 
-        Assert.Equal(ScoreBand.CriticalIssues, developer.Band);
+        Assert.Equal(developer.Score, endUser.Score);
         Assert.True(developer.Score <= 39);
+        Assert.Equal(ScoreBand.CriticalIssues, developer.Band);
+        Assert.Equal(ScoreBand.CriticalIssues, endUser.Band);
 
-        Assert.Equal(ScoreBand.NoKnownIssues, endUser.Band);
-        Assert.Equal(100, endUser.Score);
-    }
+        // Both readings survive in the account, so the difference is stated rather than lost.
+        var explanation = Assert.IsType<ScoreExplanation>(endUser.Explanation);
 
-    /// <summary>The promotion direction matters as much as the demotion.</summary>
-    [Fact]
-    public void A_finding_can_be_worse_for_the_end_user_than_for_the_developer()
-    {
-        var findings = new[] { Make(Severity.Medium, Severity.High) };
-
-        Assert.True(
-            ScoreCalculator.Calculate(findings, 100, Audience.EndUser).Score
-            < ScoreCalculator.Calculate(findings, 100, Audience.Developer).Score);
+        Assert.Equal(100, explanation.EndUserReading);
+        Assert.True(explanation.DeveloperReading <= 39);
+        Assert.Equal(Audience.Developer, explanation.GovernedBy);
+        Assert.Contains(
+            explanation.Describe(),
+            line => line.Contains("switching reader", StringComparison.Ordinal));
     }
 
     /// <summary>
-    /// Two numbers are only honest if each says what it answered. An unlabelled score that
-    /// changes with a setting is worse than either score on its own.
+    /// The promotion direction matters as much as the demotion: the end user's reading governs
+    /// whenever it is the worse of the two.
     /// </summary>
     [Fact]
-    public void Every_verdict_states_which_question_it_answered()
+    public void A_finding_worse_for_the_end_user_governs_the_developers_score_too()
+    {
+        var findings = new[] { Make(Severity.Medium, Severity.High) };
+
+        var developer = ScoreCalculator.Calculate(findings, 100, Audience.Developer);
+        var endUser = ScoreCalculator.Calculate(findings, 100, Audience.EndUser);
+
+        Assert.Equal(developer.Score, endUser.Score);
+        Assert.Equal(ScoreBand.SeriousIssues, developer.Band);
+
+        // The account under the developer's number describes the reading that produced it.
+        var explanation = Assert.IsType<ScoreExplanation>(developer.Explanation);
+
+        Assert.Equal(Audience.EndUser, explanation.GovernedBy);
+        Assert.Equal(Severity.High, explanation.Worst);
+    }
+
+    /// <summary>
+    /// One number is only honest if it says what it is. Left captioned as an answer to the
+    /// reader's own question, a score taken from the other reading would be a plain lie about
+    /// which question it answered.
+    /// </summary>
+    [Fact]
+    public void Every_verdict_says_what_its_number_is()
     {
         foreach (var audience in Enum.GetValues<Audience>())
         {
             var caption = ScoreCalculator.Calculate([], 100, audience).ScoreCaption;
 
             Assert.False(string.IsNullOrWhiteSpace(caption));
-            Assert.Contains("Risk", caption, StringComparison.Ordinal);
+            Assert.Contains("shipping", caption, StringComparison.Ordinal);
+            Assert.Contains("running", caption, StringComparison.Ordinal);
         }
 
-        Assert.NotEqual(
+        // The same caption in both reports, because it is the same number.
+        Assert.Equal(
             ScoreCalculator.Calculate([], 100, Audience.Developer).ScoreCaption,
             ScoreCalculator.Calculate([], 100, Audience.EndUser).ScoreCaption);
     }
+
+    /// <summary>
+    /// The findings still differ, which is the half of the split that survives. Only the number
+    /// is shared.
+    /// </summary>
+    [Fact]
+    public void The_reports_still_disagree_about_what_the_findings_mean()
+    {
+        var findings = new[] { Make(Severity.Critical, Severity.Info) };
+
+        Assert.Equal(Severity.Critical, findings[0].SeverityFor(Audience.Developer));
+        Assert.Equal(Severity.Info, findings[0].SeverityFor(Audience.EndUser));
+
+        Assert.NotEqual(
+            findings[0].DescriptionFor(Audience.Developer),
+            findings[0].DescriptionFor(Audience.EndUser));
+    }
+
+    /// <summary>
+    /// The category breakdown takes the same rule as the headline, or the same screenshot
+    /// could be taken one card further down the report.
+    /// </summary>
+    [Fact]
+    public void The_category_breakdown_cannot_be_softened_by_switching_reader()
+    {
+        var findings = new[] { Make(Severity.Critical, Severity.Info) };
+
+        var scores = ScoreCalculator.CategoryScores(findings);
+
+        Assert.True(scores[FindingCategory.Secrets] <= 39);
+    }
+
+    /// <summary>
+    /// The consequence of a shared number that has to be said out loud rather than left for a
+    /// reader to trip over: the score can be in the critical band on findings that are all
+    /// informational for whoever is reading, and the line under it must not then claim nothing
+    /// was found.
+    /// </summary>
+    [Fact]
+    public void A_report_with_nothing_for_this_reader_does_not_claim_nothing_was_found()
+    {
+        var report = Report([Make(Severity.Critical, Severity.Info)], Audience.EndUser);
+
+        Assert.Equal(ScoreBand.CriticalIssues, report.Verdict.Band);
+        Assert.Equal(0, report.CountOf(Severity.Critical));
+
+        Assert.DoesNotContain("No issues were found", report.SummaryLine, StringComparison.Ordinal);
+        Assert.Contains("1 finding", report.SummaryLine, StringComparison.Ordinal);
+
+        // And the same sentence reaches the exported copy, rather than the two drifting apart.
+        Assert.Contains(report.SummaryLine, MarkdownReportWriter.Write(report), StringComparison.Ordinal);
+    }
+
+    /// <summary>A scan that really found nothing still says so plainly.</summary>
+    [Fact]
+    public void A_report_with_no_findings_at_all_still_says_so()
+    {
+        foreach (var audience in Enum.GetValues<Audience>())
+        {
+            Assert.Equal(
+                "No issues were found by the checks that ran.",
+                Report([], audience).SummaryLine);
+        }
+    }
+
+    private static ScanReport Report(IReadOnlyList<Finding> findings, Audience audience) => new()
+    {
+        ArtifactName = "test",
+        Kind = ArtifactKind.SourceTree,
+        ArtifactBytes = 1,
+        Sha256 = new string('0', 64),
+        ScannedAt = DateTimeOffset.UnixEpoch,
+        Verdict = ScoreCalculator.Calculate(findings, 100, audience),
+        Coverage = new CoverageReport { Percent = 100, Basis = "test" },
+        Findings = findings,
+        CategoryScores = ScoreCalculator.CategoryScores(findings),
+        VulnerabilityData = VulnerabilityDataProvenance.Unavailable,
+        Effort = new ScanEffort
+        {
+            RecoveryMethod = "test",
+            FilesRecovered = 1,
+            BytesRecovered = 1,
+            ChecksRun = 1,
+            FilesChecked = 1,
+            PackagesResolved = 0,
+            PackagesChecked = 0,
+            VulnerabilityData = VulnerabilityDataProvenance.Unavailable,
+        },
+        Checks = new CheckSummary(),
+        ScannerVersion = "test",
+        Duration = TimeSpan.FromSeconds(1),
+    };
 
     /// <summary>
     /// Blocking is about danger to the person installing, so it must not weaken just because
@@ -201,8 +322,12 @@ public class AudienceTests
             Assert.DoesNotContain("VC-SEC-", endUserText, StringComparison.Ordinal);
 
             Assert.Contains("How to fix", developerText, StringComparison.Ordinal);
-            Assert.Contains("Risk to you in running this", endUserText, StringComparison.Ordinal);
             Assert.Contains("not your problem", endUserText, StringComparison.OrdinalIgnoreCase);
+
+            // One number, and both reports say so in the same words.
+            Assert.Equal(developer.Verdict.Score, endUser.Verdict.Score);
+            Assert.Contains(Verdict.SharedScoreCaption, developerText, StringComparison.Ordinal);
+            Assert.Contains(Verdict.SharedScoreCaption, endUserText, StringComparison.Ordinal);
         }
         finally
         {

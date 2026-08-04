@@ -39,6 +39,7 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
         "package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
         "requirements.txt", "pyproject.toml", "poetry.lock", "gemfile.lock",
         "pom.xml", "build.gradle", "composer.lock", "cargo.lock", "go.sum",
+        "gradle.lockfile", "pipfile.lock",
     ];
 
     public bool CanHandle(ArtifactKind kind) =>

@@ -17,6 +17,13 @@ public enum ScanStage
     Recovering,
     Analysing,
     CheckingDependencies,
+
+    /// <summary>
+    /// The optional reasoning pass. Its own stage rather than more of <see cref="Analysing"/>,
+    /// because it counts through its own files from zero: sharing a stage made the progress
+    /// bar rewind to the middle of the scan every time the deep pass started.
+    /// </summary>
+    DeepPass,
     Scoring,
     Complete,
 }
@@ -122,7 +129,7 @@ public sealed class Scanner
         // at different depths: packaging looks at which files ship, recovery at the binary,
         // the rule pass at recovered source, the dependency check at published advisories, and
         // the redundancy pass at how much of the source repeats itself.
-        var findings = PackagingChecks.Run(artifact)
+        var observed = PackagingChecks.Run(artifact)
             .Concat(recovery.Findings)
             .Concat(analysis.Findings)
             .Concat(VulnerabilityFindings.Build(lookup))
@@ -136,6 +143,12 @@ public sealed class Scanner
             .ThenBy(f => f.Category)
             .ThenBy(f => f.RuleId, StringComparer.Ordinal)
             .ToList();
+
+        // Split here, once, so that nothing downstream has to remember to exclude capabilities
+        // from the arithmetic. What an application can do is reported; only what it does wrong
+        // is scored. See Finding.IsCapability.
+        var capabilities = observed.Where(f => f.IsCapability).ToList();
+        var findings = observed.Where(f => !f.IsCapability).ToList();
 
         var coverage = MergeCoverage(
             recovery.Coverage, analysis, dependencies, lookup, deepPass, redundancy);
@@ -153,7 +166,8 @@ public sealed class Scanner
             Verdict = ScoreCalculator.Calculate(findings, coverage.Percent, options.Audience),
             Coverage = coverage,
             Findings = findings,
-            CategoryScores = ScoreCalculator.CategoryScores(findings, options.Audience),
+            Capabilities = capabilities,
+            CategoryScores = ScoreCalculator.CategoryScores(findings),
             VulnerabilityData = lookup.Provenance,
             Effort = new ScanEffort
             {
@@ -171,6 +185,7 @@ public sealed class Scanner
                     ? 0
                     : dependencies.Dependencies.Count,
                 VulnerabilityData = lookup.Provenance,
+                MatchesDiscounted = analysis.MatchesDiscounted,
             },
             Checks = new CheckSummary { Checks = analysis.Checks },
             DeepPassRan = options.DeepPassEnabled,
@@ -210,7 +225,7 @@ public sealed class Scanner
         return report with
         {
             Verdict = ScoreCalculator.Calculate(report.Findings, report.Coverage.Percent, audience),
-            CategoryScores = ScoreCalculator.CategoryScores(report.Findings, audience),
+            CategoryScores = ScoreCalculator.CategoryScores(report.Findings),
         };
     }
 

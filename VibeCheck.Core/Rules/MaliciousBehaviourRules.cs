@@ -265,41 +265,47 @@ public static class MaliciousBehaviourRules
     };
 
     /// <summary>
-    /// The dropper shape: fetch something, put it on disk, run it.
+    /// Fetch something, put it on disk, run it.
     /// </summary>
     /// <remarks>
-    /// <b>Reported, never blocking.</b> An updater is this shape, so the sequence is worth
-    /// surfacing but is not proof, and telling somebody not to install their own updater would
-    /// spend the credibility the blocking rules depend on.
+    /// <b>A capability, not a defect.</b> This is how every self-updating application works,
+    /// and it was rated High: one of those caps the score at 69 and relabels a correct program
+    /// as having serious issues, which is how a scanner teaches people to stop reading it. It
+    /// is still worth reporting, and to somebody deciding whether to run a download it may be
+    /// the most useful line in the report, so it is listed and explained rather than scored.
+    /// The unambiguous version of this shape is VC-MAL-008, which stays a finding and blocks.
     /// </remarks>
     private static PatternRule DownloadsAndRuns { get; } = new()
     {
         Id = "VC-MAL-007",
-        Title = "Downloads a file and runs it",
-        Severity = Severity.High,
-        UserSeverity = Severity.High,
+        Title = "Can download and run a program",
+        IsCapability = true,
+
+        // Info on both, so that even if this were ever counted it could not move a number.
+        // The section it lives in is kept out of the arithmetic; this is the second lock.
+        Severity = Severity.Info,
+        UserSeverity = Severity.Info,
         Category = FindingCategory.CodeSafety,
         Description =
             "This file fetches something over the network, writes it to disk, and executes a "
-            + "program. Self-updating applications do this legitimately. It is also the shape of "
-            + "a dropper: what the application does after installation is then decided by "
-            + "whatever the server sends, which is not what was reviewed and can change at any "
-            + "time. In a bundled or minified file the three calls may belong to three different "
+            + "program, which is how a self-updating application works. Worth knowing rather "
+            + "than worth fixing: what the application does after installation is decided by "
+            + "whatever the server sends, so it is not fully described by a scan of what shipped. "
+            + "In a bundled or minified file the three calls may belong to three different "
             + "libraries rather than to one sequence, because a bundle is the smallest unit "
             + "there is to judge them in.",
         Remediation =
-            "If this is an updater, verify the download before running it: check a signature "
-            + "against a key shipped in the application, not a hash served from the same place "
-            + "as the file. If it is not an updater, an application should not be fetching "
-            + "executable content at all.",
+            "Nothing to fix if this is your updater. Worth confirming it verifies what it "
+            + "downloaded before running it: a signature checked against a key shipped in the "
+            + "application, rather than a hash served from the same place as the file.",
         UserDescription =
-            "This application downloads a file and runs it. Updaters work this way, so it is not "
-            + "proof of anything on its own. It does mean what the application will do on your "
-            + "machine is decided by whatever it downloads, which is not something a scan of the "
-            + "application can tell you.",
+            "This application can download a program and run it. That is how anything which "
+            + "updates itself works, so it is normal rather than alarming. It does mean what "
+            + "this application will do on your machine tomorrow is decided by whatever it "
+            + "downloads, which is not something a scan of it today can tell you.",
         UserRemediation =
-            "Judge it against whether this application has a reason to update itself. If it does "
-            + "not, treat downloading and running a program as the thing it looks like.",
+            "Judge it against whether this application has a reason to update itself. If it has "
+            + "no such reason, downloading and running a program is worth asking about.",
         // No bare "\.exec\s*\(": in JavaScript that is how you run a regular expression, and
         // matching it reported a base64 data-URL check and a difficulty-band parser as programs
         // being launched. Both were found by running this rule over applications known to be
@@ -367,15 +373,21 @@ public static class MaliciousBehaviourRules
     };
 
     /// <summary>
-    /// Auto-start persistence. Reported but not blocking: ordinary installers legitimately
-    /// register startup entries, so on its own this is context rather than proof.
+    /// Auto-start persistence.
     /// </summary>
+    /// <remarks>
+    /// <b>A capability, not a defect.</b> Ordinary installers register startup entries and so
+    /// does malware, which makes this context rather than evidence. Charging a Medium for it
+    /// meant every background utility lost a band of score for working the way background
+    /// utilities work.
+    /// </remarks>
     private static PatternRule PersistenceMechanism { get; } = new()
     {
         Id = "VC-MAL-006",
-        Title = "Application configures itself to run at startup",
-        Severity = Severity.Medium,
-        UserSeverity = Severity.Medium,
+        Title = "Can start itself when you sign in",
+        IsCapability = true,
+        Severity = Severity.Info,
+        UserSeverity = Severity.Info,
         Category = FindingCategory.CodeSafety,
         Description =
             "The application writes an auto-start entry, so it runs every time the user signs in. "

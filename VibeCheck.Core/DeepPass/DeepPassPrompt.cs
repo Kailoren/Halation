@@ -236,8 +236,12 @@ public static class DeepPassPrompt
             return null;
         }
 
-        string? Text(string name) => Redaction.Flatten(
-            element.TryGetProperty(name, out var value) ? value.GetString() : null);
+        // Prose by default. Everything read here except the title and the path is an
+        // explanation the reader is meant to finish, and the old 400-character default was a
+        // label's budget: it stopped each one mid-sentence, in the part of the report that
+        // exists precisely because a pattern match could not say this much.
+        string? Text(string name, int max = Redaction.MaxProse) => Redaction.Flatten(
+            element.TryGetProperty(name, out var value) ? value.GetString() : null, max);
 
         var confidence = Text("confidence") ?? "medium";
 
@@ -271,7 +275,7 @@ public static class DeepPassPrompt
 
             // A path, and only a path: it is printed as a location and a crafted one would
             // otherwise be a second way into the same line of the report.
-            FilePath = Redaction.Flatten(Text("file"), max: 200) ?? triaged.File.RelativePath,
+            FilePath = Text("file", max: 200) ?? triaged.File.RelativePath,
         };
     }
 

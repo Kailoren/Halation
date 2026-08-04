@@ -105,7 +105,7 @@ public static class DeepPassRunner
             // bound, so anything the label cannot fit comes off the end of the path rather
             // than off the progress.
             progress?.Report(new ScanProgress(
-                ScanStage.Analysing,
+                ScanStage.DeepPass,
                 $"Deep pass {examined + 1} of {triaged.Count}: {ForProgress(file.File.RelativePath)}",
                 (int)((examined + 1) / (double)triaged.Count * 100)));
 

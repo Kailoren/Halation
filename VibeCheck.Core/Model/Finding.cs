@@ -81,6 +81,26 @@ public sealed record Finding
     /// </summary>
     public bool IsBlocking { get; init; }
 
+    /// <summary>
+    /// Whether this describes something the application <i>can do</i> rather than something it
+    /// does wrong.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Auto-updating and starting with Windows are how a great many correct programs work. Rated
+    /// as defects they were charging a working application a band of score for having a feature,
+    /// and one High is enough to relabel it as having serious issues, which is how a scanner
+    /// teaches people to stop reading it.
+    /// </para>
+    /// <para>
+    /// They are still worth reporting, and to somebody deciding whether to run a download they
+    /// may be the most useful part: an application that replaces its own code is one whose future
+    /// behaviour no scan of it can describe. So they are listed and explained, in their own
+    /// section, and kept out of the arithmetic entirely.
+    /// </para>
+    /// </remarks>
+    public bool IsCapability { get; init; }
+
     /// <summary>Reference URL, e.g. a CVE or vendor advisory.</summary>
     public string? Reference { get; init; }
 

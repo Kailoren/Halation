@@ -29,23 +29,51 @@ public sealed record ScoreExplanation
     /// assuming everything in the list dragged the number down.</summary>
     public required int Informational { get; init; }
 
+    /// <summary>
+    /// Which of the two readings produced the score, and therefore which reader's severities
+    /// the counts above were taken from.
+    /// </summary>
+    public required Audience GovernedBy { get; init; }
+
+    /// <summary>What this artifact scores as a question about shipping it.</summary>
+    public required int DeveloperReading { get; init; }
+
+    /// <summary>What it scores as a question about running it.</summary>
+    public required int EndUserReading { get; init; }
+
     /// <summary>Phrased once here so the exported report and the window cannot disagree.</summary>
     public IReadOnlyList<string> Describe()
     {
         var lines = new List<string>();
 
+        // Named when the two readings disagree, because then the counts below are taken from
+        // the governing one and will not match the list the reader is looking at. An end user
+        // told "2 findings count" while one of theirs is marked informational is owed the
+        // reason in the same breath.
+        var reading = DeveloperReading == EndUserReading
+            ? string.Empty
+            : $"Read {GovernedBy.Reading()}, ";
+
         if (Counted == 0)
         {
-            lines.Add("Nothing found that affects the score.");
+            lines.Add(reading.Length == 0
+                ? "Nothing found that affects the score."
+                : $"{reading}nothing found affects the score.");
         }
         else
         {
+            var worst = reading.Length == 0
+                ? $"The worst finding is {Worst}"
+                : $"{reading}the worst finding is {Worst}";
+
             lines.Add(Floor == Ceiling
-                ? $"The worst finding is {Worst}, which does not move the score."
-                : $"The worst finding is {Worst}, which places this between {Floor} and "
-                  + $"{Ceiling}. Where it sits in that range is decided by all "
-                  + $"{Counted} finding{(Counted == 1 ? "" : "s")} that count, with each "
-                  + "further one moving it less than the last.");
+                ? $"{worst}, which does not move the score."
+                : $"{worst}, which places this between {Floor} and "
+                  + $"{Ceiling}. Where it sits in that range is decided by "
+                  + (Counted == 1
+                      ? "the one finding that counts."
+                      : $"all {Counted} findings that count, with each further one moving it "
+                        + "less than the last."));
         }
 
         if (Informational > 0)
@@ -53,6 +81,20 @@ public sealed record ScoreExplanation
             lines.Add($"{Informational} informational finding"
                       + $"{(Informational == 1 ? " is" : "s are")} listed but "
                       + "did not affect the score.");
+        }
+
+        // Named rather than left to be noticed. Somebody who switches reader and sees the
+        // number stay put deserves to know it is deliberate, and somebody who wondered why
+        // this artifact scores what it does deserves to see both answers.
+        if (DeveloperReading != EndUserReading)
+        {
+            var other = GovernedBy == Audience.Developer ? Audience.EndUser : Audience.Developer;
+            var otherScore = GovernedBy == Audience.Developer ? EndUserReading : DeveloperReading;
+
+            lines.Add(
+                $"That reading scores {Math.Min(DeveloperReading, EndUserReading)}; read "
+                + $"{other.Reading()}, {otherScore}. The lower of the two is shown to both "
+                + "readers, so no report can be made to look better by switching reader.");
         }
 
         return lines;
@@ -76,9 +118,13 @@ public sealed record Verdict
     public IReadOnlyList<string> BlockingReasons { get; init; } = [];
 
     /// <summary>
-    /// Which reader this verdict was calculated for, and therefore which question
-    /// <see cref="Score"/> answers.
+    /// Which report this verdict was rendered for.
     /// </summary>
+    /// <remarks>
+    /// Which findings are shown, how they are worded and what order they come in. Not which
+    /// question <see cref="Score"/> answers: the score is the lower of both readings and is the
+    /// same in either report. See <see cref="Scoring.ScoreCalculator"/>.
+    /// </remarks>
     public required Audience Audience { get; init; }
 
     /// <summary>
@@ -93,16 +139,21 @@ public sealed record Verdict
     public ScoreExplanation? Explanation { get; init; }
 
     /// <summary>
-    /// The question the number answers, for display immediately beneath it.
+    /// What the number is, for display immediately beneath it.
     /// </summary>
     /// <remarks>
-    /// Not optional furniture. The same artifact scores differently for the person shipping
-    /// it and the person running it, because a leaked key ruins the first reader's day and
-    /// none of the second's. An unlabelled number that changes with a setting is worse than
-    /// either number on its own, so no display path should render <see cref="ScoreDisplay"/>
-    /// without this beside it.
+    /// Not optional furniture, and no longer a per-reader caption. The artifact reads
+    /// differently for the person shipping it and the person running it, and the score is the
+    /// worse of those two readings so that neither report flatters the artifact relative to
+    /// the other. A number that did not say that would look like it answered whichever question
+    /// the reader happened to be asking. No display path should render
+    /// <see cref="ScoreDisplay"/> without this beside it.
     /// </remarks>
-    public string ScoreCaption => Audience.ScoreCaption();
+    public string ScoreCaption => SharedScoreCaption;
+
+    /// <summary>Phrased once, because the exported report and the window must not differ.</summary>
+    public const string SharedScoreCaption =
+        "Whichever is worse: the risk in shipping this, or the risk in running it";
 
     /// <summary>
     /// Whether a numeric score is meaningful for this result. False when too little of the

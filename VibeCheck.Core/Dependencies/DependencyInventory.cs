@@ -141,8 +141,470 @@ public static class DependencyInventory
             "package-lock.json" => ReadNpmLock(file),
             "package.json" => ReadVendoredPackage(file),
             "requirements.txt" => ReadRequirements(file),
+
+            // Lock files from the other ecosystems OSV already answers for. Each records what
+            // was actually installed rather than what was asked for, which is the whole
+            // difference between a dependency that can be checked and one that cannot.
+            "pipfile.lock" => ReadPipfileLock(file),
+            "yarn.lock" => ReadYarnLock(file),
+            "pnpm-lock.yaml" => ReadPnpmLock(file),
+            "go.sum" => ReadGoSum(file),
+            "cargo.lock" => ReadTomlPackages(file, "crates.io"),
+            "poetry.lock" => ReadTomlPackages(file, "PyPI"),
+            "composer.lock" => ReadComposerLock(file),
+            "gemfile.lock" => ReadGemfileLock(file),
+            "gradle.lockfile" => ReadGradleLock(file),
             _ => [],
         };
+
+    /// <summary>
+    /// Strips the leading <c>v</c> some ecosystems carry and OSV does not want.
+    /// </summary>
+    /// <remarks>
+    /// Go and Packagist both write <c>v1.2.3</c> in their lock files while OSV indexes them as
+    /// <c>1.2.3</c>. Sent unstripped, every query returns nothing and the report says the
+    /// packages are clean, which is the worst way for this to fail.
+    /// </remarks>
+    private static string NormaliseVersion(string version)
+    {
+        var trimmed = version.Trim().Trim('"');
+
+        return trimmed.Length > 1 && trimmed[0] is 'v' or 'V' && char.IsDigit(trimmed[1])
+            ? trimmed[1..]
+            : trimmed;
+    }
+
+    /// <summary>
+    /// Reads a Pipenv lock file.
+    /// </summary>
+    /// <remarks>
+    /// Both sections, since a development dependency still ships in a great many projects.
+    /// Versions are written as requirement specifiers, so an exact pin arrives as
+    /// <c>"==2.25.1"</c>; anything looser, and any package pinned to a git reference rather
+    /// than a release, names no version that can be checked and is skipped rather than guessed
+    /// at. The <c>_meta</c> section is not a package list and is passed over by name.
+    /// </remarks>
+    private static IEnumerable<DependencyRef> ReadPipfileLock(RecoveredFile file)
+    {
+        using var document = JsonDocument.Parse(file.Content);
+
+        foreach (var section in new[] { "default", "develop" })
+        {
+            if (!document.RootElement.TryGetProperty(section, out var packages)
+                || packages.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            foreach (var package in packages.EnumerateObject())
+            {
+                if (package.Value.ValueKind != JsonValueKind.Object
+                    || !package.Value.TryGetProperty("version", out var version)
+                    || version.GetString() is not { Length: > 0 } specifier)
+                {
+                    continue;
+                }
+
+                var pinned = specifier.Trim();
+
+                if (!pinned.StartsWith("==", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                pinned = pinned[2..].Trim();
+
+                if (pinned.Length == 0)
+                {
+                    continue;
+                }
+
+                yield return new DependencyRef
+                {
+                    Ecosystem = "PyPI",
+                    Name = package.Name,
+                    Version = pinned,
+                    DeclaredIn = file.RelativePath,
+                };
+            }
+        }
+    }
+
+    /// <summary>
+    /// Splits an npm specifier into its package name and the rest.
+    /// </summary>
+    /// <remarks>
+    /// The separator is the last <c>@</c> rather than the first, because a scoped package
+    /// begins with one: <c>@babel/core@^7.0.0</c> is the package <c>@babel/core</c>. Splitting
+    /// on the first would query OSV for a package called nothing at version
+    /// <c>babel/core@^7.0.0</c>.
+    /// </remarks>
+    private static string? NpmNameOf(string specifier)
+    {
+        var trimmed = specifier.Trim().Trim('"', '\'');
+        var separator = trimmed.LastIndexOf('@');
+
+        return separator > 0 ? trimmed[..separator] : null;
+    }
+
+    /// <summary>
+    /// Reads a Yarn lock file, both the classic format and the Berry one.
+    /// </summary>
+    /// <remarks>
+    /// The two differ in punctuation rather than in shape: classic writes
+    /// <c>version "4.17.21"</c> and Berry writes <c>version: 4.17.21</c>, both indented under a
+    /// header naming one or more specifiers. Taking the name from the header rather than from
+    /// the resolution line keeps one reader for both.
+    /// </remarks>
+    private static IEnumerable<DependencyRef> ReadYarnLock(RecoveredFile file)
+    {
+        string? name = null;
+
+        foreach (var raw in file.Content.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+
+            if (line.Length == 0 || line.TrimStart().StartsWith('#'))
+            {
+                continue;
+            }
+
+            // A header sits at the left margin and ends the previous entry.
+            if (!char.IsWhiteSpace(line[0]))
+            {
+                // Several specifiers can share one entry; they resolve to the same package, so
+                // the first names it.
+                name = line.TrimEnd(':').Split(',')[0] is { Length: > 0 } specifier
+                    ? NpmNameOf(specifier)
+                    : null;
+
+                continue;
+            }
+
+            var indented = line.Trim();
+
+            if (name is null || !indented.StartsWith("version", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var version = indented["version".Length..].TrimStart(':', ' ').Trim().Trim('"');
+
+            if (version.Length == 0 || !char.IsDigit(version[0]))
+            {
+                continue;
+            }
+
+            yield return new DependencyRef
+            {
+                Ecosystem = "npm",
+                Name = name,
+                Version = version,
+                DeclaredIn = file.RelativePath,
+            };
+
+            name = null;
+        }
+    }
+
+    /// <summary>
+    /// Reads a pnpm lock file.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The package list is keyed by the package itself, so there is no version line to find:
+    /// the key is the whole record. Its spelling has changed across versions, from
+    /// <c>/lodash/4.17.21</c> through <c>/lodash@4.17.21</c> to a bare <c>lodash@4.17.21</c>,
+    /// and a key can carry the peers it was built against in brackets. All four shapes are
+    /// accepted, since a lock file in a project is whichever pnpm wrote it.
+    /// </para>
+    /// <para>
+    /// Only the <c>packages</c> section is read. Later versions repeat everything under
+    /// <c>snapshots</c>, which would double the list.
+    /// </para>
+    /// </remarks>
+    private static IEnumerable<DependencyRef> ReadPnpmLock(RecoveredFile file)
+    {
+        var inPackages = false;
+
+        foreach (var raw in file.Content.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+
+            if (line.Length == 0 || line.TrimStart().StartsWith('#'))
+            {
+                continue;
+            }
+
+            if (!char.IsWhiteSpace(line[0]))
+            {
+                inPackages = line.StartsWith("packages:", StringComparison.Ordinal);
+                continue;
+            }
+
+            // Only the section's own keys, which sit one level in. Anything deeper is a
+            // property of the package rather than another package.
+            if (!inPackages || !line.EndsWith(':') || line.Length - line.TrimStart().Length != 2)
+            {
+                continue;
+            }
+
+            var key = line.Trim().TrimEnd(':').Trim('\'', '"');
+
+            // Peer suffixes describe how it was built, not what it is.
+            var bracket = key.IndexOf('(');
+            if (bracket > 0)
+            {
+                key = key[..bracket];
+            }
+
+            key = key.TrimStart('/');
+
+            // The v5 spelling separates with a slash; everything later uses an @.
+            var separator = key.LastIndexOf('@');
+            var name = separator > 0 ? key[..separator] : null;
+            var version = separator > 0 ? key[(separator + 1)..] : null;
+
+            if (name is null || version is null || version.Length == 0 || !char.IsDigit(version[0]))
+            {
+                var slash = key.LastIndexOf('/');
+
+                if (slash <= 0 || slash == key.Length - 1 || !char.IsDigit(key[slash + 1]))
+                {
+                    continue;
+                }
+
+                name = key[..slash];
+                version = key[(slash + 1)..];
+            }
+
+            yield return new DependencyRef
+            {
+                Ecosystem = "npm",
+                Name = name,
+                Version = version,
+                DeclaredIn = file.RelativePath,
+            };
+        }
+    }
+
+    /// <summary>
+    /// Reads a Go checksum file.
+    /// </summary>
+    /// <remarks>
+    /// Lines are <c>module version hash</c>, with a second line per module ending
+    /// <c>/go.mod</c> that hashes the manifest rather than the code. Only the first names a
+    /// version that was built into the binary. go.sum rather than go.mod because it lists the
+    /// full transitive set, which is where the vulnerable package usually is.
+    /// </remarks>
+    private static IEnumerable<DependencyRef> ReadGoSum(RecoveredFile file)
+    {
+        foreach (var raw in file.Content.Split('\n'))
+        {
+            var parts = raw.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            // Three fields is not enough to call something a checksum line: any sentence has
+            // three words. The version has to look like one and the hash has to be labelled,
+            // or a line of prose in the middle of the file becomes a package named "not"
+            // at version "a".
+            if (parts.Length < 3
+                || parts[1].EndsWith("/go.mod", StringComparison.Ordinal)
+                || parts[1].Length < 2
+                || parts[1][0] != 'v'
+                || !char.IsDigit(parts[1][1])
+                || !parts[2].StartsWith("h1:", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            yield return new DependencyRef
+            {
+                Ecosystem = "Go",
+                Name = parts[0],
+                Version = NormaliseVersion(parts[1]),
+                DeclaredIn = file.RelativePath,
+            };
+        }
+    }
+
+    /// <summary>
+    /// Reads the <c>[[package]]</c> tables that Cargo and Poetry both use.
+    /// </summary>
+    /// <remarks>
+    /// One reader for two ecosystems because the file shape is identical: a repeated table with
+    /// a name and a version. Parsed by hand rather than with a TOML library, since this is the
+    /// only TOML either of them needs and a dependency added to read a dependency list is a
+    /// poor trade.
+    /// </remarks>
+    private static IEnumerable<DependencyRef> ReadTomlPackages(RecoveredFile file, string ecosystem)
+    {
+        string? name = null;
+
+        foreach (var raw in file.Content.Split('\n'))
+        {
+            var line = raw.Trim();
+
+            if (line.StartsWith("[[", StringComparison.Ordinal))
+            {
+                // A new table starts, so anything half-read belongs to the previous one.
+                name = null;
+                continue;
+            }
+
+            if (line.StartsWith("name", StringComparison.Ordinal) && Value(line) is { } read)
+            {
+                name = read;
+                continue;
+            }
+
+            if (name is null
+                || !line.StartsWith("version", StringComparison.Ordinal)
+                || Value(line) is not { Length: > 0 } version)
+            {
+                continue;
+            }
+
+            yield return new DependencyRef
+            {
+                Ecosystem = ecosystem,
+                Name = name,
+                Version = NormaliseVersion(version),
+                DeclaredIn = file.RelativePath,
+            };
+
+            name = null;
+        }
+
+        static string? Value(string line)
+        {
+            var separator = line.IndexOf('=');
+
+            return separator < 0 ? null : line[(separator + 1)..].Trim().Trim('"');
+        }
+    }
+
+    /// <summary>Reads a Composer lock file, both the runtime and development sets.</summary>
+    private static IEnumerable<DependencyRef> ReadComposerLock(RecoveredFile file)
+    {
+        using var document = JsonDocument.Parse(file.Content);
+
+        foreach (var section in new[] { "packages", "packages-dev" })
+        {
+            if (!document.RootElement.TryGetProperty(section, out var packages)
+                || packages.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (var package in packages.EnumerateArray())
+            {
+                if (package.ValueKind != JsonValueKind.Object
+                    || package.TryGetProperty("name", out var name) is false
+                    || package.TryGetProperty("version", out var version) is false
+                    || name.GetString() is not { Length: > 0 } packageName
+                    || version.GetString() is not { Length: > 0 } packageVersion)
+                {
+                    continue;
+                }
+
+                yield return new DependencyRef
+                {
+                    Ecosystem = "Packagist",
+                    Name = packageName,
+                    Version = NormaliseVersion(packageVersion),
+                    DeclaredIn = file.RelativePath,
+                };
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads a Bundler lock file.
+    /// </summary>
+    /// <remarks>
+    /// Indentation carries the meaning here. Under <c>specs:</c>, a gem installed at an exact
+    /// version sits at four spaces; its own requirements are listed under it at six, as ranges.
+    /// Reading both would report <c>rspec-core (~&gt; 3.10.0)</c> as an installed version.
+    /// </remarks>
+    private static IEnumerable<DependencyRef> ReadGemfileLock(RecoveredFile file)
+    {
+        var inSpecs = false;
+
+        foreach (var raw in file.Content.Split('\n'))
+        {
+            var line = raw.TrimEnd('\r');
+
+            if (line.TrimEnd().EndsWith("specs:", StringComparison.Ordinal))
+            {
+                inSpecs = true;
+                continue;
+            }
+
+            // Any line back at the left margin ends the section.
+            if (line.Length > 0 && !char.IsWhiteSpace(line[0]))
+            {
+                inSpecs = false;
+                continue;
+            }
+
+            if (!inSpecs)
+            {
+                continue;
+            }
+
+            var match = GemSpec.Match(line);
+
+            if (match.Success)
+            {
+                yield return new DependencyRef
+                {
+                    Ecosystem = "RubyGems",
+                    Name = match.Groups["name"].Value,
+                    Version = NormaliseVersion(match.Groups["version"].Value),
+                    DeclaredIn = file.RelativePath,
+                };
+            }
+        }
+    }
+
+    /// <summary>Exactly four spaces, so a gem's own requirements at six are not read as installs.</summary>
+    private static readonly Regex GemSpec = new(
+        @"^ {4}(?<name>[A-Za-z0-9_.\-]+) \((?<version>\d[^)~><=,]*)\)\s*$",
+        RegexOptions.Compiled,
+        TimeSpan.FromSeconds(2));
+
+    /// <summary>
+    /// Reads a Gradle lock file: <c>group:artifact:version=configurations</c> per line.
+    /// </summary>
+    private static IEnumerable<DependencyRef> ReadGradleLock(RecoveredFile file)
+    {
+        foreach (var raw in file.Content.Split('\n'))
+        {
+            var line = raw.Trim();
+
+            if (line.Length == 0 || line.StartsWith('#'))
+            {
+                continue;
+            }
+
+            var coordinate = line.Split('=')[0];
+            var parts = coordinate.Split(':');
+
+            if (parts.Length < 3 || parts[2].Length == 0 || !char.IsDigit(parts[2][0]))
+            {
+                continue;
+            }
+
+            yield return new DependencyRef
+            {
+                // OSV names a Maven package by its group and artifact together.
+                Ecosystem = "Maven",
+                Name = $"{parts[0]}:{parts[1]}",
+                Version = NormaliseVersion(parts[2]),
+                DeclaredIn = file.RelativePath,
+            };
+        }
+    }
 
     /// <summary>Reads an installed package's own manifest.</summary>
     /// <remarks>

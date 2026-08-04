@@ -6,9 +6,15 @@ namespace VibeCheck.Core.Model;
 /// <remarks>
 /// Two questions with two honest answers rather than one result in two voices: a private key in
 /// the bundle is the worst thing in the report for whoever ships it and nearly irrelevant to
-/// whoever runs it. The condition attached is that the headline must say which question it
-/// answered, because a number that silently changes meaning with a setting is worse than either
-/// number alone.
+/// whoever runs it. That governs which findings are shown, how they are worded, what can be done
+/// about them and what order they come in.
+///
+/// <para>
+/// It does not govern the headline number, which is the worse of the two readings and the same
+/// in both reports. Two numbers on one artifact invited the report to be shopped: scan your own
+/// work, switch to the reader it treats more kindly, screenshot that. See
+/// <see cref="Scoring.ScoreCalculator"/>.
+/// </para>
 /// </remarks>
 public enum Audience
 {
@@ -29,14 +35,13 @@ public enum Audience
 public static class AudienceText
 {
     /// <summary>
-    /// The question the score answers, shown directly beneath it. Without this the same
-    /// artifact showing two different numbers reads as a bug rather than as two answers.
+    /// How a reading is named where both are quoted, as in the account under the score.
     /// </summary>
-    public static string ScoreCaption(this Audience audience) => audience switch
+    public static string Reading(this Audience audience) => audience switch
     {
-        Audience.Developer => "Risk in shipping this application",
-        Audience.EndUser => "Risk to you in running this application",
-        _ => "Risk",
+        Audience.Developer => "as a question about shipping this",
+        Audience.EndUser => "as a question about running it",
+        _ => "as asked",
     };
 
     public static string Label(this Audience audience) => audience switch

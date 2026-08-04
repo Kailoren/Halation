@@ -31,11 +31,100 @@ public static class MarkdownReportWriter
         WriteCategoryScores(output, report);
         WriteChecks(output, report);
         WriteFindings(output, report);
+        WriteCapabilities(output, report);
+        WriteRuleFamilies(output, report);
         WriteEffort(output, report);
         WriteLimitations(output, report);
         WriteFooter(output, report);
 
         return output.ToString();
+    }
+
+    /// <summary>
+    /// What the application can do, kept away from the score.
+    /// </summary>
+    /// <remarks>
+    /// After the findings rather than before, because these are not problems. Present at all
+    /// because for somebody deciding whether to run a download they can matter more than
+    /// anything above: an application that replaces its own code is one this report does not
+    /// describe the future of.
+    /// </remarks>
+    private static void WriteCapabilities(StringBuilder output, ScanReport report)
+    {
+        if (report.Capabilities.Count == 0)
+        {
+            return;
+        }
+
+        output.AppendLine("## What this application can do");
+        output.AppendLine();
+        output.AppendLine(
+            "*Not problems, and none of this affects the score. These are things the "
+            + "application is built to do that are worth knowing before you run it.*");
+        output.AppendLine();
+
+        foreach (var capability in report.Capabilities)
+        {
+            output.AppendLine($"### {capability.Title}");
+            output.AppendLine();
+            output.AppendLine(capability.DescriptionFor(report.Audience));
+            output.AppendLine();
+
+            if (capability.Location.Length > 0)
+            {
+                output.AppendLine($"`{capability.Location}`");
+                output.AppendLine();
+            }
+
+            if (capability.RemediationFor(report.Audience) is { Length: > 0 } advice)
+            {
+                output.AppendLine($"**Worth checking:** {advice}");
+                output.AppendLine();
+            }
+        }
+    }
+
+    /// <summary>
+    /// What the letters in the identifiers mean.
+    /// </summary>
+    /// <remarks>
+    /// Only the families this report actually used, so a scan that found two secrets does not
+    /// come with a glossary of eight things it did not find. The window shows the same text on
+    /// hover; an exported file has nowhere to hover, which is why it is written out here.
+    /// Skipped for the end user, whose copy carries no identifiers to explain.
+    /// </remarks>
+    private static void WriteRuleFamilies(StringBuilder output, ScanReport report)
+    {
+        if (report.Audience != Audience.Developer)
+        {
+            return;
+        }
+
+        var used = report.Findings
+            .Concat(report.Capabilities)
+            .Select(f => RuleFamily.PrefixOf(f.RuleId))
+            .Where(prefix => prefix is not null)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        if (used.Count == 0)
+        {
+            return;
+        }
+
+        output.AppendLine("## What the identifiers mean");
+        output.AppendLine();
+
+        foreach (var prefix in used)
+        {
+            var id = $"VC-{prefix}";
+
+            output.AppendLine($"**`{id}-*` · {RuleFamily.NameOf(id)}**");
+            output.AppendLine();
+            output.AppendLine(RuleFamily.DescribeOf(id));
+            output.AppendLine();
+        }
     }
 
     /// <summary>
@@ -90,9 +179,10 @@ public static class MarkdownReportWriter
             : $"### {verdict.BandLabel}");
         output.AppendLine();
 
-        // Which question the number answered. The same artifact scores differently for the
-        // person shipping it and the person running it, so a bare number is ambiguous rather
-        // than merely terse.
+        // What the number is. The artifact reads differently for the person shipping it and
+        // the person running it, and this is the worse of those two readings rather than an
+        // answer to whichever question the reader was asking, so a bare number would be read
+        // as the wrong one.
         output.AppendLine($"*{verdict.ScoreCaption}.*");
         output.AppendLine();
 
@@ -136,15 +226,7 @@ public static class MarkdownReportWriter
             output.AppendLine();
         }
 
-        var counts = new[] { Severity.Critical, Severity.High, Severity.Medium, Severity.Low }
-            .Select(s => (Severity: s, Count: report.CountOf(s)))
-            .Where(x => x.Count > 0)
-            .Select(x => $"{x.Count} {x.Severity.ToString().ToLowerInvariant()}")
-            .ToList();
-
-        output.AppendLine(counts.Count == 0
-            ? "No issues were found by the checks that ran."
-            : $"Found {string.Join(", ", counts)}.");
+        output.AppendLine(report.SummaryLine);
         output.AppendLine();
 
         // The single most important sentence in the document.

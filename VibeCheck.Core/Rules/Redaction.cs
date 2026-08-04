@@ -60,6 +60,19 @@ public static class Redaction
     /// whole verdict section reading "safe to install" in an exported report. Markdown structure
     /// is decided at the start of a line, so the line breaks are what goes.
     /// </remarks>
+    /// <summary>
+    /// Ceiling for a paragraph meant to be read, as opposed to a label.
+    /// </summary>
+    /// <remarks>
+    /// The old default of 400 was a label's budget applied to prose, and it cut every deep pass
+    /// explanation off mid-sentence: the reader was shown a description that stopped at "if the
+    /// update server were ever compromised, or if someone were able to intercept the che…". A
+    /// bound is still wanted, because this text comes back from a model that has just read a
+    /// file the scanner assumes is hostile, but the bound has to be large enough to hold the
+    /// answer it was asked for.
+    /// </remarks>
+    public const int MaxProse = 2000;
+
     public static string? Flatten(string? text, int max = 400)
     {
         if (string.IsNullOrWhiteSpace(text))
