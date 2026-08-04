@@ -10,6 +10,8 @@ All analysis happens on your machine. The only thing that ever leaves it is the 
 package names and versions the application declares, sent to check them against published
 advisories, and that can be turned off entirely. Your code is never uploaded.
 
+<img width="1116" height="815" alt="mainscreen" src="https://github.com/user-attachments/assets/c418a6d9-0c95-49c2-92fd-b0e18dbf6ecb" />
+
 ## Who it is for
 
 **Before you ship.** Run your own app through it as a final check. AI-generated code has been
@@ -41,6 +43,8 @@ So VibeCheck does not print a verdict of "safe". It reports:
 
 An explicit "do not install" is triggered only by specific, high-confidence deterministic
 rules, never by the score alone.
+
+<img width="1114" height="1038" alt="scanresults" src="https://github.com/user-attachments/assets/194d0b7d-7bd6-423d-b2d1-c5d0ffc90ad5" />
 
 ## Recovery depth by artifact type
 
@@ -89,8 +93,10 @@ not run is never mistaken for one that came back clean.
 
 ## Optional deep pass
 
-The scan above is free, needs no account, and sends nothing but package names. Optionally, a
-second pass reads the code and reasons about it, which is what catches the things a pattern
+<img width="1117" height="819" alt="deepscan" src="https://github.com/user-attachments/assets/2591fb74-a535-4a77-93fb-085d3fd7156b" />
+
+The main scan is free, needs no account, and sends nothing but package names. Optionally, a
+second deep pass reads the code and reasons about it, which is what catches the things a pattern
 cannot express: a guard that exists but is incomplete, whether untrusted input can actually
 reach a dangerous operation, two individually harmless pieces of code that are unsafe together.
 
