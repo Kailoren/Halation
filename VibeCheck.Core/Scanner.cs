@@ -186,6 +186,7 @@ public sealed class Scanner
                     : dependencies.Dependencies.Count,
                 VulnerabilityData = lookup.Provenance,
                 MatchesDiscounted = analysis.MatchesDiscounted,
+                ManifestsUnresolved = dependencies.Unresolved.Count,
             },
             Checks = new CheckSummary { Checks = analysis.Checks },
             DeepPassRan = options.DeepPassEnabled,

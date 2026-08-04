@@ -32,6 +32,16 @@ public sealed record ScanEffort
     /// <summary>Of those, how many an advisory database actually answered for.</summary>
     public required int PackagesChecked { get; init; }
 
+    /// <summary>
+    /// Manifests that named dependencies without pinning them.
+    /// </summary>
+    /// <remarks>
+    /// The difference between an application with no dependencies and one whose dependencies
+    /// cannot be read. Both resolve nothing; only the second has a gap worth telling the
+    /// reader about. See <see cref="ScanReport.DependencyCaveat"/>.
+    /// </remarks>
+    public int ManifestsUnresolved { get; init; }
+
     public required VulnerabilityDataProvenance VulnerabilityData { get; init; }
 
     /// <summary>

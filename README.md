@@ -47,7 +47,11 @@ So VibeCheck does not print a verdict of "safe". It reports:
   out: an obfuscated application decompiles into thousands of files of `a.b(c)`, none of which
   count, so it gets no score at all rather than a good one.
 - **What could not be checked**, listed explicitly, so a short findings list is never
-  mistaken for a clean bill of health.
+  mistaken for a clean bill of health. When a whole class of check could not run at all, such
+  as dependencies in an application that ships no lock file, that is said beside the score
+  rather than four sections below it: a shipped application can otherwise score 100 under "no
+  known issues found", beside a coverage meter reading 100% readable, while nothing whatever
+  is known about the packages inside it.
 - **What the application can do**, listed separately and scored nowhere. Updating itself and
   starting with Windows are how a great many correct programs work, so charging them a band of
   score was a scanner calling a feature a fault. They are still reported, and for somebody

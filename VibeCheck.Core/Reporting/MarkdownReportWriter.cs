@@ -229,6 +229,15 @@ public static class MarkdownReportWriter
         output.AppendLine(report.SummaryLine);
         output.AppendLine();
 
+        // Beside the number, for the same reason the window puts it there: a class of check
+        // that could not run is not visible in a score, and stating it four sections later is
+        // stating it after the reader has decided.
+        if (report.DependencyCaveat is { Length: > 0 } caveat)
+        {
+            output.AppendLine($"> **Not everything could be checked.** {caveat}");
+            output.AppendLine();
+        }
+
         // The single most important sentence in the document.
         output.AppendLine("*A clean result is not proof that an application is safe. Static "
                           + "analysis can show that problems are present; it cannot show that "

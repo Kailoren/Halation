@@ -175,6 +175,70 @@ public class AudienceTests
         }
     }
 
+    /// <summary>
+    /// The case this exists for: a shipped application with no lock file scores 100 under "no
+    /// known issues found", beside a coverage meter reading 100% readable, while nothing at all
+    /// is known about the packages inside it.
+    /// </summary>
+    [Fact]
+    public void A_class_of_check_that_could_not_run_is_said_beside_the_score()
+    {
+        var report = Report([], Audience.EndUser) with
+        {
+            Effort = Effort(resolved: 0, checkedCount: 0, unresolved: 1),
+        };
+
+        Assert.Equal(100, report.Verdict.Score);
+        Assert.NotNull(report.DependencyCaveat);
+        Assert.Contains("Nothing is known", report.DependencyCaveat, StringComparison.Ordinal);
+
+        // And it reaches the exported copy, next to the number rather than four sections later.
+        var markdown = MarkdownReportWriter.Write(report);
+        var verdict = markdown.IndexOf("100/100", StringComparison.Ordinal);
+        var caveat = markdown.IndexOf("Not everything could be checked", StringComparison.Ordinal);
+
+        Assert.True(caveat > verdict, "the caveat must follow the score");
+        Assert.True(caveat - verdict < 600, $"and sit beside it, not {caveat - verdict} characters later");
+    }
+
+    /// <summary>Resolved but unanswered is a different sentence from never resolved.</summary>
+    [Fact]
+    public void Dependencies_resolved_but_never_looked_up_say_so()
+    {
+        var report = Report([], Audience.Developer) with
+        {
+            Effort = Effort(resolved: 12, checkedCount: 0, unresolved: 0),
+        };
+
+        Assert.Contains("12 dependencies", report.DependencyCaveat!, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Silent when nothing was skipped. An application that declares no dependencies has no gap
+    /// to warn about, and one whose dependencies were checked has nothing to apologise for.
+    /// </summary>
+    [Theory]
+    [InlineData(0, 0, 0)]
+    [InlineData(9, 9, 0)]
+    public void No_caveat_when_nothing_was_missed(int resolved, int checkedCount, int unresolved) =>
+        Assert.Null((Report([], Audience.Developer) with
+        {
+            Effort = Effort(resolved, checkedCount, unresolved),
+        }).DependencyCaveat);
+
+    private static ScanEffort Effort(int resolved, int checkedCount, int unresolved) => new()
+    {
+        RecoveryMethod = "test",
+        FilesRecovered = 1,
+        BytesRecovered = 1,
+        ChecksRun = 1,
+        FilesChecked = 1,
+        PackagesResolved = resolved,
+        PackagesChecked = checkedCount,
+        ManifestsUnresolved = unresolved,
+        VulnerabilityData = VulnerabilityDataProvenance.Unavailable,
+    };
+
     private static ScanReport Report(IReadOnlyList<Finding> findings, Audience audience) => new()
     {
         ArtifactName = "test",

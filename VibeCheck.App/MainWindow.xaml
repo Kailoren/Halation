@@ -523,6 +523,22 @@
                                            Text="No score is given, because too little of this artifact could be read for one to mean anything. This is not a pass and not a failure: the application was not examined. See coverage below."/>
                             </Border>
 
+                            <!-- The same treatment for a class of check that could not run at
+                                 all. A shipped application with no lock file scores 100 under
+                                 "no known issues found" beside a coverage meter reading 100%
+                                 readable, while nothing whatever is known about the packages
+                                 inside it. That was already in the report, four cards down,
+                                 which is three further than anybody scrolls before deciding. -->
+                            <Border Margin="0,12,0,0" Padding="12"
+                                    CornerRadius="{DynamicResource ButtonRadius}"
+                                    Background="{StaticResource PanelRaised}"
+                                    BorderBrush="{StaticResource Medium}" BorderThickness="1"
+                                    Visibility="{Binding DependencyCaveat,
+                                                         Converter={StaticResource NullToVisibility}}">
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource Caption}"
+                                           Text="{Binding DependencyCaveat}"/>
+                            </Border>
+
                             <TextBlock Margin="0,12,0,0" TextWrapping="Wrap" Style="{StaticResource Caption}"
                                        Text="A clean result is not proof that an application is safe. Static analysis can show that problems are present; it cannot show that none are."/>
                         </StackPanel>

@@ -116,6 +116,54 @@ public sealed record ScanReport
     /// informational for whoever is reading. "No issues were found" printed beneath that number
     /// would be the report contradicting itself two lines apart.
     /// </remarks>
+    /// <summary>
+    /// Said beside the score when a whole class of check could not run, or null when none was
+    /// missed.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A shipped application with no lock file scores 100/100 under a heading of "no known
+    /// issues found" and a coverage meter reading 100% readable, while nothing whatever is
+    /// known about the packages inside it. Every word of that is true and the combination
+    /// reads as an all-clear. The fact was already in the report, four cards down, which is
+    /// three cards further than anybody scrolls before deciding.
+    /// </para>
+    /// <para>
+    /// Deliberately not folded into the score. Coverage is kept separate from the number by
+    /// design, and an application whose dependencies are unreadable has not been shown to be
+    /// worse, only to be less known. What was wrong was where the caveat sat, not what the
+    /// arithmetic did.
+    /// </para>
+    /// <para>
+    /// Silent when an application genuinely declares no dependencies, which is why
+    /// <see cref="ScanEffort.ManifestsUnresolved"/> is counted: nothing was skipped there, so
+    /// there is nothing to warn about.
+    /// </para>
+    /// </remarks>
+    public string? DependencyCaveat
+    {
+        get
+        {
+            if (Effort.PackagesChecked > 0)
+            {
+                return null;
+            }
+
+            if (Effort.PackagesResolved > 0)
+            {
+                return $"The {Effort.PackagesResolved:N0} dependencies this application declares "
+                       + "were not checked against published advisories, so nothing above "
+                       + "accounts for them.";
+            }
+
+            return Effort.ManifestsUnresolved > 0
+                ? "This application declares dependencies but pins none of them, and ships no "
+                  + "lock file saying what it actually installed. Nothing is known about the "
+                  + "packages inside it, and nothing above accounts for them."
+                : null;
+        }
+    }
+
     public string SummaryLine
     {
         get

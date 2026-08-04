@@ -639,6 +639,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                              nameof(AdviseAgainstInstall), nameof(BlockingReasons),
                              nameof(CoveragePercent), nameof(CoverageBasis), nameof(CoverageIsLow),
                              nameof(SummaryLine), nameof(VulnerabilitySummary), nameof(Sha256),
+                             nameof(DependencyCaveat),
                              nameof(DurationLabel), nameof(ScoreCaption),
                          })
                 {
@@ -709,6 +710,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     /// <summary>Phrased in the report itself, so this window and the export cannot disagree.</summary>
     public string SummaryLine => Report?.SummaryLine ?? string.Empty;
+
+    /// <summary>
+    /// Shown beside the score when a class of check could not run. Null hides the panel, which
+    /// is why it is bound rather than being made an empty string.
+    /// </summary>
+    public string? DependencyCaveat => Report?.DependencyCaveat;
 
     public string VulnerabilitySummary => Report is null
         ? string.Empty
