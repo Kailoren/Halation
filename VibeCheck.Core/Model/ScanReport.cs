@@ -88,6 +88,17 @@ public sealed record ScanReport
     public decimal? DeepPassCost { get; init; }
 
     /// <summary>
+    /// Tokens the deep pass spent, or null when it did not run.
+    /// </summary>
+    /// <remarks>
+    /// Carried because <see cref="DeepPassCost"/> cannot always be filled in. A pass answered
+    /// through an endpoint the reader nominated has no knowable price, and a report that
+    /// therefore said nothing at all about what the pass consumed would be quieter than the
+    /// truth. Tokens are the measure every backend can honestly report.
+    /// </remarks>
+    public long? DeepPassTokens { get; init; }
+
+    /// <summary>
     /// What answered the deep pass, or null when it did not run. Named in the report because
     /// two backends run different models under different settings, so a reader comparing two
     /// scans of the same application needs to know whether the tool changed or the application

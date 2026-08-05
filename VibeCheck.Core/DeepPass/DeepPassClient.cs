@@ -119,8 +119,16 @@ public sealed record DeepPassResult
     /// </remarks>
     public bool Billed { get; init; } = true;
 
-    /// <summary>What these tokens are worth at published API rates, whoever ends up paying.</summary>
-    public decimal EstimatedCost => Usage.EstimatedCost;
+    /// <summary>
+    /// What these tokens are worth, whoever ends up paying, or null when nothing can price
+    /// them.
+    /// </summary>
+    /// <remarks>
+    /// Supplied by whichever backend answered rather than derived here. A configurable endpoint
+    /// cannot know its own rates, and pricing an unknown model at Anthropic's would put a
+    /// specific dollar figure in a report on no evidence at all.
+    /// </remarks>
+    public decimal? EstimatedCost { get; init; }
 
     /// <summary>
     /// What the reader was actually charged, or null when they were not charged at all.
@@ -172,6 +180,17 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
 
     /// <summary>True. Every token here is charged to the key the reader supplied.</summary>
     public bool BillsTheReader => true;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// This backend knows exactly what it is talking to, so it can say. The rates live on
+    /// <see cref="TokenUsage.EstimatedCost"/> and are this model's published ones.
+    /// </remarks>
+    public decimal? PriceOf(TokenUsage usage)
+    {
+        ArgumentNullException.ThrowIfNull(usage);
+        return usage.EstimatedCost;
+    }
 
     /// <summary>
     /// Reviews one file. Returns an empty result rather than throwing, so a single failure

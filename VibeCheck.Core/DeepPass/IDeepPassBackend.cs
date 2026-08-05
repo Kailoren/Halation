@@ -33,6 +33,19 @@ public interface IDeepPassBackend : IDisposable
     bool BillsTheReader { get; }
 
     /// <summary>
+    /// What this many tokens are worth in US dollars, or null when the backend cannot know.
+    /// </summary>
+    /// <remarks>
+    /// Asked of the backend rather than computed from a table here, because only the backend
+    /// knows what it is talking to. A configurable endpoint might be a frontier model at
+    /// fifteen dollars a million tokens or a model on the reader's own machine at nothing, and
+    /// the difference is not inferable from the request. Null means the honest report says how
+    /// many tokens were spent and declines to say what they cost, which is a better answer than
+    /// a confident number arrived at by pricing someone else's model at Anthropic's rates.
+    /// </remarks>
+    decimal? PriceOf(TokenUsage usage);
+
+    /// <summary>
     /// Reviews one file. Returns a result carrying a limitation rather than throwing, so a
     /// single failure costs one file's coverage instead of the whole pass.
     /// </summary>

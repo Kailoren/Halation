@@ -511,6 +511,8 @@ public class DeepPassBackendSelectionTests
 
         public bool BillsTheReader => bills;
 
+        public decimal? PriceOf(TokenUsage usage) => usage.EstimatedCost;
+
         public int Reviewed { get; private set; }
 
         public bool Disposed { get; private set; }

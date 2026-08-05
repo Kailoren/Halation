@@ -259,6 +259,8 @@ public class DeepPassTests
 
         public bool BillsTheReader => false;
 
+        public decimal? PriceOf(TokenUsage usage) => usage.EstimatedCost;
+
         public Task<FileReview> ReviewAsync(TriagedFile triaged, CancellationToken ct = default) =>
             Task.FromResult(new FileReview());
 
@@ -349,15 +351,56 @@ public class DeepPassTests
 
     // ---- Cost --------------------------------------------------------------
 
+    /// <summary>
+    /// A backend that knows what it is talking to prices its own tokens at that model's rates.
+    /// </summary>
     [Fact]
     public void Estimates_cost_at_the_published_rates()
     {
-        var result = new DeepPassResult
+        using var backend = new DeepPassClient("sk-test");
+
+        Assert.Equal(
+            30.00m,
+            backend.PriceOf(new TokenUsage { Input = 1_000_000, Output = 1_000_000 }));
+    }
+
+    /// <summary>
+    /// And one pointed at an endpoint it did not choose says nothing at all.
+    /// </summary>
+    /// <remarks>
+    /// The model behind a configurable base URL might cost fifteen dollars a million tokens or
+    /// nothing, and there is no way to tell from here. Pricing it at Anthropic's rates would
+    /// put a specific, confident, wrong number in a report whose value is that it does not do
+    /// that. The report says tokens instead.
+    /// </remarks>
+    [Fact]
+    public void A_configurable_endpoint_refuses_to_price_its_own_tokens()
+    {
+        using var backend = new OpenAiCompatibleBackend(
+            new Uri("http://localhost:11434/v1/chat/completions"), apiKey: null, model: "qwen");
+
+        Assert.Null(backend.PriceOf(new TokenUsage { Input = 1_000_000, Output = 1_000_000 }));
+        Assert.False(backend.BillsTheReader);
+    }
+
+    /// <summary>
+    /// What the result carries is whatever answered it, rather than a figure computed here from
+    /// rates that only apply to one vendor.
+    /// </summary>
+    [Fact]
+    public void The_result_reports_what_the_backend_priced()
+    {
+        Assert.Null(new DeepPassResult
+        {
+            Usage = new TokenUsage { Input = 1_000_000 },
+        }.BilledCost);
+
+        Assert.Equal(30.00m, new DeepPassResult
         {
             Usage = new TokenUsage { Input = 1_000_000, Output = 1_000_000 },
-        };
-
-        Assert.Equal(30.00m, result.EstimatedCost);
+            EstimatedCost = 30.00m,
+            Billed = true,
+        }.BilledCost);
     }
 
     /// <summary>

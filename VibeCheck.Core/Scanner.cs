@@ -199,6 +199,12 @@ public sealed class Scanner
             // and a bill of nothing; reporting the former as the latter would tell somebody
             // their card was charged when it was not.
             DeepPassCost = deepPass.Backend is not null ? deepPass.BilledCost : null,
+
+            // Always available where a cost may not be, so a pass answered by an endpoint
+            // nobody can price still says what it consumed.
+            DeepPassTokens = deepPass.Backend is null
+                ? null
+                : deepPass.Usage.TotalInput + deepPass.Usage.Output,
             DeepPassBackend = deepPass.Backend,
             ScannerVersion = Version,
             Duration = stopwatch.Elapsed,

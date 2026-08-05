@@ -189,6 +189,11 @@ public static class DeepPassRunner
             Usage = usage,
             Backend = client.Description,
             Billed = client.BillsTheReader,
+
+            // Asked of whatever answered. A backend pointed at an endpoint it did not choose
+            // returns null here, and the report then says how many tokens were spent rather
+            // than inventing what they were worth.
+            EstimatedCost = client.PriceOf(usage),
         };
     }
 
@@ -235,6 +240,30 @@ public static class DeepPassRunner
         ScanOptions options,
         CancellationToken cancellationToken)
     {
+        // An endpoint the reader nominated wins over everything else, because nominating one is
+        // a more specific instruction than holding a key. Checked before the CLI so that
+        // somebody who configured a local model is not quietly answered by a subscription.
+        if (options.DeepPassEndpoint is { } endpoint)
+        {
+            if (OpenAiCompatibleBackend.RejectEndpoint(endpoint) is { } problem)
+            {
+                return new BackendChoice(null, $"The deep pass did not run. {problem}");
+            }
+
+            if (string.IsNullOrWhiteSpace(options.DeepPassModel))
+            {
+                return new BackendChoice(
+                    null,
+                    "The deep pass did not run: an endpoint was configured but no model was "
+                    + "named, and a chat-completions request has to say which model to use.");
+            }
+
+            return new BackendChoice(
+                new OpenAiCompatibleBackend(
+                    endpoint, options.DeepPassEndpointKey, options.DeepPassModel),
+                null);
+        }
+
         if (!options.DeepPassUseLocalCli)
         {
             return new BackendChoice(

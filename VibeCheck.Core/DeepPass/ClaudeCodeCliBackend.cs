@@ -84,6 +84,19 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
     /// </remarks>
     public bool BillsTheReader => false;
 
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Priced even though nothing is charged. It runs a known Anthropic model, so what the
+    /// tokens are worth is a true statement about them; whether the reader paid it is the
+    /// separate question <see cref="BillsTheReader"/> answers, and keeping the two apart is
+    /// what stops a subscription run being reported as a bill.
+    /// </remarks>
+    public decimal? PriceOf(TokenUsage usage)
+    {
+        ArgumentNullException.ThrowIfNull(usage);
+        return usage.EstimatedCost;
+    }
+
     /// <summary>
     /// Asks the CLI whether it can authenticate, before a scan starts spending time on files.
     /// </summary>

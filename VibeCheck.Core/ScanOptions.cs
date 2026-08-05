@@ -39,6 +39,31 @@ public sealed record ScanOptions
     /// </remarks>
     public bool DeepPassUseLocalCli { get; init; }
 
+    /// <summary>
+    /// A chat-completions endpoint to answer the deep pass through, instead of Anthropic.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The answer to being tied to one vendor. Every hosted provider of consequence exposes the
+    /// OpenAI chat-completions shape, and so do Ollama and LM Studio on the reader's own
+    /// machine, so one endpoint setting covers both the bring-your-own-key case and the case
+    /// where nothing may leave the machine at all.
+    /// </para>
+    /// <para>
+    /// The full URL including the path, for example <c>https://api.openai.com/v1/chat/completions</c>
+    /// or <c>http://localhost:11434/v1/chat/completions</c>. Validated by
+    /// <see cref="DeepPass.OpenAiCompatibleBackend.RejectEndpoint"/>, which insists on TLS for
+    /// anything not on this machine.
+    /// </para>
+    /// </remarks>
+    public Uri? DeepPassEndpoint { get; init; }
+
+    /// <summary>
+    /// The key for <see cref="DeepPassEndpoint"/>, sent as a bearer token. Null is correct for
+    /// a local model, which has nothing to authenticate.
+    /// </summary>
+    public string? DeepPassEndpointKey { get; init; }
+
     /// <summary>Ceiling on files the deep pass sends, since the key holder pays per file.</summary>
     public int DeepPassMaxFiles { get; init; } = DeepPass.DeepPassTriage.DefaultMaxFiles;
 
@@ -47,7 +72,9 @@ public sealed record ScanOptions
 
     /// <summary>True when a deep pass should run: something was chosen to answer it.</summary>
     public bool DeepPassEnabled =>
-        !string.IsNullOrWhiteSpace(DeepPassApiKey) || DeepPassUseLocalCli;
+        !string.IsNullOrWhiteSpace(DeepPassApiKey)
+        || DeepPassUseLocalCli
+        || DeepPassEndpoint is not null;
 
     /// <summary>
     /// Who the report is being written for. Findings carry a severity per audience, so this
