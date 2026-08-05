@@ -67,7 +67,8 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
 
         _ownsClient = handler is null;
         _http = handler is null
-            ? new HttpClient(Transport(), disposeHandler: true)
+            ? new HttpClient(
+                new SocketsHttpHandler { ConnectCallback = ConnectAsync }, disposeHandler: true)
             : new HttpClient(handler, disposeHandler: false);
 
         _http.Timeout = TimeSpan.FromMinutes(5);
@@ -88,7 +89,8 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
     /// is a choice rather than a constant. A report that said only "an OpenAI-compatible
     /// endpoint" would be describing the one fact about this run that nobody can infer.
     /// </remarks>
-    public string Description => $"an OpenAI-compatible endpoint at {_endpoint.Host} ({_model})";
+    public string Description =>
+        $"an OpenAI-compatible endpoint at {_endpoint.Host} ({_model}){SecurityNote}";
 
     /// <summary>
     /// False. Some endpoints are free and some are local, and none of them can be priced from
@@ -130,6 +132,91 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
         {
             EnabledSslProtocols = Protocols,
         },
+    };
+
+    /// <summary>
+    /// What was actually negotiated on the connection that carried the source code, or null
+    /// when nothing has been sent yet or the endpoint was local and unencrypted.
+    /// </summary>
+    private System.Security.Authentication.SslProtocols? _negotiated;
+
+    /// <summary>
+    /// Establishes the connection by hand so the negotiated protocol can be read back.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The handshake is performed here rather than left to the handler, because the version
+    /// that was agreed is not otherwise observable from a completed request, and a report
+    /// claiming the code went out over TLS 1.3 has to be reporting something it saw rather than
+    /// something it configured. Returning an <see cref="System.Net.Security.SslStream"/> tells
+    /// <see cref="SocketsHttpHandler"/> the transport is already secured, so it does not
+    /// negotiate a second time.
+    /// </para>
+    /// <para>
+    /// The plaintext branch is reachable only for loopback, which
+    /// <see cref="RejectEndpoint"/> has already established is the sole case where a local
+    /// model may be reached without TLS. Nothing else gets here unencrypted.
+    /// </para>
+    /// </remarks>
+    private async ValueTask<Stream> ConnectAsync(
+        SocketsHttpConnectionContext context,
+        CancellationToken cancellationToken)
+    {
+        var socket = new System.Net.Sockets.Socket(
+            System.Net.Sockets.SocketType.Stream,
+            System.Net.Sockets.ProtocolType.Tcp)
+        {
+            NoDelay = true,
+        };
+
+        try
+        {
+            await socket.ConnectAsync(context.DnsEndPoint, cancellationToken).ConfigureAwait(false);
+
+            var network = new System.Net.Sockets.NetworkStream(socket, ownsSocket: true);
+
+            if (!string.Equals(_endpoint.Scheme, "https", StringComparison.OrdinalIgnoreCase))
+            {
+                return network;
+            }
+
+            var secured = new System.Net.Security.SslStream(network, leaveInnerStreamOpen: false);
+
+            try
+            {
+                await secured.AuthenticateAsClientAsync(
+                    new System.Net.Security.SslClientAuthenticationOptions
+                    {
+                        TargetHost = context.DnsEndPoint.Host,
+                        EnabledSslProtocols = Protocols,
+                    },
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                await secured.DisposeAsync().ConfigureAwait(false);
+                throw;
+            }
+
+            _negotiated = secured.SslProtocol;
+
+            return secured;
+        }
+        catch
+        {
+            socket.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>How the connection is named in the report, or empty before one has been made.</summary>
+    private string SecurityNote => _negotiated switch
+    {
+        System.Security.Authentication.SslProtocols.Tls13 => ", over TLS 1.3",
+        System.Security.Authentication.SslProtocols.Tls12 => ", over TLS 1.2",
+        null when _endpoint.IsLoopback => ", on this machine",
+        null => string.Empty,
+        var other => $", over {other}",
     };
 
     /// <summary>

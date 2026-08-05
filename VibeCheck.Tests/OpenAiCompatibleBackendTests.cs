@@ -223,6 +223,30 @@ public sealed class OpenAiCompatibleBackendTests : IDisposable
         Assert.NotEqual(SslProtocols.None, enabled);
     }
 
+    /// <summary>
+    /// The connection is described from what was negotiated, not from what was configured.
+    /// </summary>
+    /// <remarks>
+    /// Before anything has been sent there is nothing to claim, so it claims nothing. A local
+    /// endpoint says where it is instead, since "over TLS" would be false there and silence
+    /// would hide that the code never left the machine, which is the best thing about it.
+    /// Verified against live endpoints separately: both return ", over TLS 1.3" once a request
+    /// has been made.
+    /// </remarks>
+    [Fact]
+    public void The_connection_is_described_only_once_one_has_been_made()
+    {
+        using var remote = new OpenAiCompatibleBackend(
+            new Uri("https://api.openai.com/v1/chat/completions"), "k", "m");
+
+        Assert.DoesNotContain("TLS", remote.Description, StringComparison.Ordinal);
+
+        using var local = new OpenAiCompatibleBackend(
+            new Uri("http://localhost:11434/v1/chat/completions"), null, "qwen");
+
+        Assert.Contains("on this machine", local.Description, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void The_reader_is_told_which_host_their_code_went_to()
     {
