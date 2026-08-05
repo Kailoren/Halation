@@ -1,3 +1,5 @@
+using System.Text;
+
 using VibeCheck.Core.Model;
 using VibeCheck.Core.Recovery;
 using VibeCheck.Core.Rules;
@@ -117,6 +119,61 @@ public class PatternDefinitionTests
         var result = Scan(bundle, "dist/main.js");
 
         Assert.Equal(0, result.MatchesDiscounted);
+    }
+
+    /// <summary>
+    /// The case a real application exposed, and the reason the test is density rather than a
+    /// count.
+    /// </summary>
+    /// <remarks>
+    /// A bundled Electron cleaner carried eighteen regular expressions across twenty-nine
+    /// thousand lines. That cleared an absolute threshold of four, every string literal in the
+    /// file was exempted as a consequence, and six references to a browser cookie database were
+    /// found and discounted in silence. The application scored 100/100 with no findings. Any
+    /// bundle is long enough to clear a fixed count, so the exemption reached nearly all of them.
+    /// </remarks>
+    [Fact]
+    public void A_long_file_with_a_scattering_of_patterns_is_not_a_catalogue()
+    {
+        var result = Scan(BundleShaped(lines: 2_000, patterns: 5), "out/main/index.js");
+
+        Assert.Contains(result.Findings, f => f.RuleId == "VC-MAL-002");
+    }
+
+    /// <summary>
+    /// The same five definitions packed into a file the size of a rule table still are one.
+    /// Paired with the test above deliberately: the two differ only in how much ordinary code
+    /// surrounds the patterns, which is exactly the thing a count cannot see.
+    /// </summary>
+    [Fact]
+    public void The_same_patterns_packed_into_a_rule_table_still_count_as_one()
+    {
+        var result = Scan(BundleShaped(lines: 40, patterns: 5), "src/Rules.cs");
+
+        Assert.DoesNotContain(result.Findings, f => f.RuleId == "VC-MAL-002");
+        Assert.True(result.MatchesDiscounted > 0);
+    }
+
+    /// <summary>
+    /// Ordinary lines carrying <paramref name="patterns"/> regex definitions and one reference
+    /// to a browser cookie database, quoted the way a real one is.
+    /// </summary>
+    private static string BundleShaped(int lines, int patterns)
+    {
+        var builder = new StringBuilder();
+
+        builder.AppendLine("""const dbFiles = { firefox: ["places.sqlite", "cookies.sqlite"] };""");
+
+        var every = lines / patterns;
+
+        for (var i = 0; i < lines; i++)
+        {
+            builder.AppendLine(i % every == 0
+                ? $$"""const match{{i}} = new RegExp("^opt{{i}}$");"""
+                : $"const value{i} = compute({i});");
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>

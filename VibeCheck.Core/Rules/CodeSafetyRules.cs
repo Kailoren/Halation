@@ -23,6 +23,46 @@ public static class CodeSafetyRules
     private static readonly Regex EnumMemberDeclaration = PatternRule.Compile(
         """^\s*\w+\s*=\s*(?:0x[0-9a-fA-F]+|\d+)\s*,?\s*$""");
 
+    /// <summary>
+    /// Whether a match is a lowercase word inside a sentence rather than an algorithm name.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The test is the string the match sits in, not the characters beside it. An algorithm
+    /// name is a bare token however it is written: <c>"des"</c>, <c>"des-ede3-cbc"</c>,
+    /// <c>"DES/ECB/PKCS5Padding"</c>. A sentence has spaces in it. Checking only the adjacent
+    /// characters was tried first and let three matches through, because a translated line
+    /// holds the word several times and only one of them needs to sit against punctuation.
+    /// </para>
+    /// <para>
+    /// Confined to quoted text, so ordinary code naming a cipher is untouched, and to matches
+    /// carrying a lowercase letter. An algorithm is written <c>DES</c> or <c>des</c> and never
+    /// <c>Des</c>, so title case is a sentence beginning rather than a cipher: two of the
+    /// three that survived the first attempt were "Des privilèges administrateur…".
+    /// </para>
+    /// </remarks>
+    private static bool IsWordInProse(Match match, RuleContext context)
+    {
+        if (!match.Value.Any(char.IsLower)
+            || !Heuristics.IsInsideStringLiteral(context, match.Index))
+        {
+            return false;
+        }
+
+        var line = context.LineFor(match);
+        var at = context.OffsetInLine(match.Index);
+
+        if (at <= 0 || at >= line.Length)
+        {
+            return false;
+        }
+
+        var opening = line.LastIndexOfAny(['"', '\''], at - 1) + 1;
+        var closing = line.IndexOfAny(['"', '\''], at);
+
+        return line[opening..(closing < 0 ? line.Length : closing)].Any(char.IsWhiteSpace);
+    }
+
     /// <summary>The statement keyword a SQL match opens with. See <c>IsProseNotSql</c>.</summary>
     private static readonly Regex LeadingKeyword = PatternRule.Compile(
         """^\s*(SELECT|INSERT|UPDATE|DELETE|DROP)""",
@@ -272,6 +312,19 @@ public static class CodeSafetyRules
             // TripleDES is weak but not broken in the same way, and shares the substring.
             if (match.Value.Contains("3DES", StringComparison.OrdinalIgnoreCase)
                 || match.Value.Contains("TripleDES", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // "des" is an ordinary word in German, French and Spanish, and a translated
+            // interface carries hundreds of them: "Verwaltung des Kontextmenüs" is a menu
+            // label, not a cipher. Found on a real application, where its translation bundle
+            // produced 270 matches and twenty Medium findings, none of them real.
+            //
+            // A cipher name is never a word between two spaces. Lowercase does appear
+            // legitimately, but as the whole quoted value ('des') or a hyphenated OpenSSL
+            // spec ('des-ede3-cbc'), and neither of those is delimited this way.
+            if (IsWordInProse(match, context))
             {
                 return true;
             }

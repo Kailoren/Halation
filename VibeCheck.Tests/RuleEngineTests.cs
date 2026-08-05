@@ -298,6 +298,43 @@ public class RuleEngineTests
         Assert.False(finding.IsBlocking);
     }
 
+    // ---- Ciphers -----------------------------------------------------------
+
+    /// <summary>
+    /// "des" is an ordinary word in German, French and Spanish, and a translated interface is
+    /// full of them.
+    /// </summary>
+    /// <remarks>
+    /// Found on a real application: its translation bundle produced 270 matches and twenty
+    /// Medium findings, none of them a cipher. The rule matches case-insensitively, which it
+    /// must, so the article had to be told apart from the algorithm by where it sits.
+    /// </remarks>
+    [Theory]
+    [InlineData("""const t = "Die Verwaltung des Kontextmenüs ist nicht verfügbar.";""")]
+    [InlineData("""const t = "Verknüpfung des Geräts konnte nicht aufgehoben werden";""")]
+    [InlineData("""const t = "Analyse des Sicherheitsstatus für Antivirus und Firewall.";""")]
+    [InlineData("""const t = "la gestion des cookies et des favoris";""")]
+
+    // Sentence-initial, so title case rather than lowercase. An algorithm is written DES or
+    // des and never Des, and these two were the last survivors on the real bundle.
+    [InlineData("""const t = "Des privilèges administrateur peuvent être requis";""")]
+    [InlineData("""const t = "Échec de la suppression. Des privilèges sont requis.";""")]
+    public void TheWordDesInTranslatedText_IsNotACipher(string line) =>
+        Assert.False(Fired("VC-CODE-006", line));
+
+    /// <summary>
+    /// The other half. Every real spelling still fires, including the lowercase ones, which is
+    /// what stops the guard above from being a way to hide a cipher in a string.
+    /// </summary>
+    [Theory]
+    [InlineData("""var provider = new DESCryptoServiceProvider();""")]
+    [InlineData("""const c = crypto.createCipheriv("des-ede3-cbc", key, iv);""")]
+    [InlineData("""const c = crypto.createCipheriv("des", key, iv);""")]
+    [InlineData("""cipher = Cipher.getInstance("DES/ECB/PKCS5Padding");""")]
+    [InlineData("""var mode = CipherMode.ECB;""")]
+    public void RealCipherUse_StillFires(string line) =>
+        Assert.True(Fired("VC-CODE-006", line, "src/crypto.cs"));
+
     // ---- Droppers ----------------------------------------------------------
 
     /// <summary>

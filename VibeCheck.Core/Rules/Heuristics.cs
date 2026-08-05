@@ -197,8 +197,40 @@ public static class Heuristics
         """,
         RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
 
-    /// <summary>How many pattern definitions make a file a catalogue of them rather than code.</summary>
+    /// <summary>
+    /// The fewest pattern definitions that can make a file a catalogue of them, whatever its
+    /// size.
+    /// </summary>
+    /// <remarks>
+    /// A floor, not the test. Four definitions is a rule table in a file of forty lines and
+    /// nothing whatever in a file of thirty thousand, which is why
+    /// <see cref="MinimumCataloguePer1000Lines"/> carries the judgment.
+    /// </remarks>
     private const int PatternCatalogueThreshold = 4;
+
+    /// <summary>
+    /// How densely those definitions must sit before a file is a catalogue of patterns rather
+    /// than code that happens to use a few.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The count above was once the entire test, and a real application showed what that costs.
+    /// A bundled Electron cleaner carried eighteen regular expressions spread across
+    /// twenty-nine thousand lines, cleared a threshold of four on the strength of them, and had
+    /// every string literal in the file exempted as a result. Six references to a browser
+    /// cookie database were found and silently discounted, and the application scored 100/100
+    /// with no findings at all. Any bundled application is large enough to clear an absolute
+    /// count, so the exemption applied to very nearly all of them.
+    /// </para>
+    /// <para>
+    /// Read off a distribution of real files rather than chosen. In this project's own
+    /// decompiled build the five genuine rule tables sit between 40 and 61 per thousand lines;
+    /// across three real applications no other file reaches four definitions at all; the two
+    /// bundles that caused the problem sit at 0.62 and 0.07. Twenty is half the lowest real
+    /// catalogue and thirty times the densest bundle, so neither margin is tight.
+    /// </para>
+    /// </remarks>
+    private const double MinimumCataloguePer1000Lines = 20;
 
     /// <summary>
     /// Average line length past which a file is a bundle rather than something written by hand.
@@ -225,16 +257,32 @@ public static class Heuristics
     {
         ArgumentNullException.ThrowIfNull(content);
 
-        if (content.Length == 0 || !HasLineStructure(content))
+        if (content.Length == 0)
         {
             return false;
         }
+
+        var lines = CountLines(content);
+
+        // A bundle arrives as one enormous line, where definitions per line means nothing and
+        // any file containing a handful would read as infinitely dense. Excluded before the
+        // ratio is taken rather than by it.
+        if (content.Length / lines > MaxAverageLineLength)
+        {
+            return false;
+        }
+
+        // Scaled to the file, so the bar a rule table clears in forty lines is not one a
+        // bundled application clears merely by being long.
+        var required = Math.Max(
+            PatternCatalogueThreshold,
+            (int)Math.Ceiling(lines * MinimumCataloguePer1000Lines / 1000.0));
 
         var found = 0;
 
         foreach (Match _ in PatternConstruction.Matches(content))
         {
-            if (++found >= PatternCatalogueThreshold)
+            if (++found >= required)
             {
                 return true;
             }
@@ -243,8 +291,8 @@ public static class Heuristics
         return false;
     }
 
-    /// <summary>Whether a file is laid out in lines, rather than being one long bundle.</summary>
-    private static bool HasLineStructure(string content)
+    /// <summary>Lines in the content, counting the last whether or not it is terminated.</summary>
+    private static int CountLines(string content)
     {
         var lines = 1;
 
@@ -256,7 +304,7 @@ public static class Heuristics
             }
         }
 
-        return content.Length / lines <= MaxAverageLineLength;
+        return lines;
     }
 
     /// <summary>
