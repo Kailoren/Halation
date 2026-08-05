@@ -71,11 +71,27 @@ public static class UpdateInstall
     /// output, installed somewhere the current account cannot write, or unsigned and therefore
     /// with no publisher for a download to be held to.
     /// </remarks>
-    public static InstallCapability Assess(string? processPath)
+    /// <param name="packaged">
+    /// Whether this copy was installed as a package. Defaults to asking the operating system;
+    /// supplied directly only by tests, which cannot install themselves to find out.
+    /// </param>
+    public static InstallCapability Assess(string? processPath, bool? packaged = null)
     {
         if (!OperatingSystem.IsWindows())
         {
             return Refuse("Updates can only be installed on Windows.");
+        }
+
+        // Before every other refusal, because the other two would both fire on a packaged
+        // build and both would say something untrue. A package install directory is read-only,
+        // so the writability probe reports a permissions fault; and a packaged build ships its
+        // .deps.json, so the development-build check calls a Store installation somebody's
+        // working copy. This is the real reason, and it is not a failure.
+        if (packaged ?? PackageIdentity.IsPackaged)
+        {
+            return Refuse(
+                "This copy was installed from the Microsoft Store, which keeps it up to date "
+                + "on its own. Nothing needs doing here.");
         }
 
         if (string.IsNullOrWhiteSpace(processPath) || !File.Exists(processPath))

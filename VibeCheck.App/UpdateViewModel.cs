@@ -71,11 +71,25 @@ public sealed class UpdateViewModel : INotifyPropertyChanged
         // Whatever the last update left behind, now that the build it replaced is not running.
         UpdateInstall.SweepSuperseded(Environment.ProcessPath);
 
-        if (_settings.CheckOnStartup)
+        // A packaged copy never asks. The Store both distributes and updates it, so a check
+        // here could only announce a download the application must not install: replacing your
+        // own binary outside the Store is against Store policy, which makes an update strip
+        // pointing at GitHub a certification risk rather than a helpful notice.
+        if (_settings.CheckOnStartup && !PackageIdentity.IsPackaged)
         {
             _ = CheckAsync();
         }
     }
+
+    /// <summary>
+    /// Whether the update section is worth showing at all.
+    /// </summary>
+    /// <remarks>
+    /// False for a packaged copy, where every control in it is either inert or forbidden. An
+    /// always-disabled panel explaining that updates happen elsewhere is worse than no panel:
+    /// it puts a dead control in front of the reader on every launch.
+    /// </remarks>
+    public bool IsSelfUpdating => !PackageIdentity.IsPackaged;
 
     // ---- What the reader has decided ---------------------------------------
 
@@ -103,7 +117,8 @@ public sealed class UpdateViewModel : INotifyPropertyChanged
 
             // Turned on mid-session, so answer the question it was turned on to ask rather
             // than waiting for the next launch.
-            if (value && _stage is UpdateStage.Idle or UpdateStage.Failed)
+            if (value && !PackageIdentity.IsPackaged
+                && _stage is UpdateStage.Idle or UpdateStage.Failed)
             {
                 _ = CheckAsync();
             }

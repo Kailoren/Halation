@@ -11,6 +11,43 @@ namespace VibeCheck.Tests;
 /// </remarks>
 public class UpdateInstallTests : IDisposable
 {
+    /// <summary>
+    /// A copy installed from the Store is updated by the Store, and says so.
+    /// </summary>
+    /// <remarks>
+    /// Checked before every other refusal because the other two both fire on a packaged build
+    /// and both say something untrue. Observed on a real package built from this project: the
+    /// install directory is read-only, so the writability probe reports a permissions fault,
+    /// and the package ships its <c>.deps.json</c>, so the development-build check calls a
+    /// Store installation somebody's working copy. That message won, being first.
+    /// </remarks>
+    [Fact]
+    public void A_packaged_copy_refuses_and_says_the_store_handles_it()
+    {
+        var capability = UpdateInstall.Assess(
+            Environment.ProcessPath, packaged: true);
+
+        Assert.False(capability.CanInstall);
+        Assert.Contains("Microsoft Store", capability.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("development build", capability.Detail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("cannot write", capability.Detail, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// And the test process is not packaged, so the default answer must not be the packaged
+    /// one. Without this the check above would pass against a constant.
+    /// </summary>
+    [Fact]
+    public void An_ordinary_build_is_not_detected_as_packaged()
+    {
+        Assert.False(PackageIdentity.IsPackaged);
+
+        Assert.DoesNotContain(
+            "Microsoft Store",
+            UpdateInstall.Assess(Environment.ProcessPath).Detail,
+            StringComparison.Ordinal);
+    }
+
     private readonly string _scratch = Path.Combine(
         Path.GetTempPath(), $"vibecheck-update-{Guid.NewGuid():N}");
 
