@@ -101,6 +101,25 @@ public sealed record Finding
     /// </remarks>
     public bool IsCapability { get; init; }
 
+    /// <summary>
+    /// The power this finding demonstrates, when it is one a declared purpose could account
+    /// for. Null for everything that is wrong whatever the application is for.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Distinct from <see cref="IsCapability"/>, and the two compose rather than compete.
+    /// <see cref="IsCapability"/> says how this finding is treated: reported and never scored.
+    /// This says which power it is evidence of. A finding may carry one, both or neither: an
+    /// auto-start observation is both, a cookie-database read is currently a scored defect that
+    /// names a power, and a leaked API key is neither.
+    /// </para>
+    /// <para>
+    /// Set here so that nothing downstream has to infer intent from a rule identifier. See
+    /// <see cref="Model.Capability"/> for why most rules leave it null.
+    /// </para>
+    /// </remarks>
+    public Capability? Capability { get; init; }
+
     /// <summary>Reference URL, e.g. a CVE or vendor advisory.</summary>
     public string? Reference { get; init; }
 

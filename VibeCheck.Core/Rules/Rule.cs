@@ -189,6 +189,13 @@ public sealed class PatternRule : IRule
     /// </summary>
     public bool IsCapability { get; init; }
 
+    /// <summary>
+    /// The power a match demonstrates, when a declared purpose could account for it. Left unset
+    /// by every rule describing something wrong whatever the application is for. See
+    /// <see cref="Model.Capability"/>.
+    /// </summary>
+    public Capability? Capability { get; init; }
+
     public string? Reference { get; init; }
 
     /// <summary>Cap per rule per file, so one pathological file cannot flood the report.</summary>
@@ -277,6 +284,7 @@ public sealed class PatternRule : IRule
                 Evidence = Redaction.BuildEvidence(context.LineText(line), secret),
                 IsBlocking = IsBlocking,
                 IsCapability = IsCapability,
+                Capability = Capability,
                 Reference = Reference,
                 Source = FindingSource.Rule,
             });

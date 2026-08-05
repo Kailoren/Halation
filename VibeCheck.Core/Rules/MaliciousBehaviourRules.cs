@@ -104,6 +104,7 @@ public static class MaliciousBehaviourRules
         UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
+        Capability = Capability.BrowserCredentials,
         Description =
             "The application references the file where a web browser stores saved passwords. "
             + "Reading it, together with the local decryption key, recovers every password the "
@@ -141,6 +142,7 @@ public static class MaliciousBehaviourRules
         UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
+        Capability = Capability.BrowserCookies,
         Description =
             "The application references a browser's cookie database. Session cookies are "
             + "sufficient to sign in as the user without their password, and they bypass "
@@ -175,6 +177,7 @@ public static class MaliciousBehaviourRules
         UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
+        Capability = Capability.CryptocurrencyWallets,
         Description =
             "The application references local cryptocurrency wallet storage. These files contain "
             + "the private keys controlling the user's funds, and transfers made with a stolen key "
@@ -209,6 +212,7 @@ public static class MaliciousBehaviourRules
         UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
+        Capability = Capability.ChatTokens,
         Description =
             "The application reads the local storage of a desktop chat client, where the "
             + "authentication token is kept. That token allows an attacker to act as the user "
@@ -241,6 +245,7 @@ public static class MaliciousBehaviourRules
         UserSeverity = Severity.Critical,
         Category = FindingCategory.CodeSafety,
         IsBlocking = true,
+        Capability = Capability.ClipboardMonitoring,
         Description =
             "The application watches the clipboard and matches cryptocurrency address patterns. "
             + "This is the signature of clipboard-hijacking malware, which silently substitutes "
@@ -280,6 +285,7 @@ public static class MaliciousBehaviourRules
         Id = "VC-MAL-007",
         Title = "Can download and run a program",
         IsCapability = true,
+        Capability = Capability.DownloadsAndRunsCode,
 
         // Info on both, so that even if this were ever counted it could not move a number.
         // The section it lives in is kept out of the arithmetic; this is the second lock.
@@ -328,11 +334,21 @@ public static class MaliciousBehaviourRules
     /// Execution routed through a Windows binary that exists for something else.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Blocking, and held to the same bar as the credential rules: each alternative is a named
     /// technique rather than a capability. An application with its own HTTP client has no reason
     /// to download through <c>certutil</c>, and nothing legitimate pipes a web response into a
     /// shell. <c>powershell -EncodedCommand</c> is deliberately absent, being something real
     /// installers do to get around quoting.
+    /// </para>
+    /// <para>
+    /// <b>The only rule in this file with no <see cref="Model.Capability"/>, and deliberately
+    /// so.</b> The other seven describe powers an application might have a reason for, and a
+    /// declared purpose can account for them. This one describes a technique whose entire point
+    /// is that the traffic does not look like it came from the application, and no purpose
+    /// makes that reasonable. Something has to sit outside what a declaration can reach, or
+    /// declaring a purpose becomes a way to wave anything through.
+    /// </para>
     /// </remarks>
     private static PatternRule LivesOffTheLand { get; } = new()
     {
@@ -386,6 +402,7 @@ public static class MaliciousBehaviourRules
         Id = "VC-MAL-006",
         Title = "Can start itself when you sign in",
         IsCapability = true,
+        Capability = Capability.StartsWithWindows,
         Severity = Severity.Info,
         UserSeverity = Severity.Info,
         Category = FindingCategory.CodeSafety,
