@@ -1,0 +1,106 @@
+<Window x:Class="VibeCheck.App.EndpointWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Deep pass endpoint"
+        Width="600"
+        WindowStartupLocation="CenterOwner"
+
+        ResizeMode="NoResize"
+        Background="{StaticResource Bg}"
+        FontFamily="{DynamicResource UiFont}" FontSize="{DynamicResource BodySize}"
+        WindowStyle="None" AllowsTransparency="False">
+
+    <!-- Sized to its content for the same reason as the key dialog: the paragraphs wrap to a
+         different number of lines depending on font and DPI, so any fixed height is a guess
+         that is wrong on somebody's machine. -->
+    <Window.SizeToContent>Height</Window.SizeToContent>
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="36" ResizeBorderThickness="0"
+                            GlassFrameThickness="0" CornerRadius="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource Panel}"
+                BorderBrush="{StaticResource Edge}" BorderThickness="0,0,0,1">
+            <Grid>
+                <TextBlock Text="Deep pass endpoint" FontWeight="SemiBold"
+                           Margin="14,0" VerticalAlignment="Center"/>
+
+                <Button Style="{StaticResource CloseBtn}" Content="&#xE8BB;"
+                        HorizontalAlignment="Right" Click="OnCancel"/>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="1" Margin="20">
+            <TextBlock Text="Answer the deep pass with another model" Style="{StaticResource Heading}"/>
+
+            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,14"
+                       Text="Anything that speaks the OpenAI chat-completions shape can read the files, which covers every hosted provider worth naming and Ollama or LM Studio on this machine. A local model is the only route where the files never leave this computer at all."/>
+
+            <!-- Buttons rather than a drop-down. Every option is visible without a click, which
+                 is the point: the reason this list exists is that nobody remembers Ollama's port
+                 or that OpenRouter serves from /api/v1, and a closed list hides exactly the
+                 thing that was hard to remember. -->
+            <TextBlock Style="{StaticResource Caption}" Text="Start from"/>
+
+            <ItemsControl x:Name="PresetList" Margin="0,6,0,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Content="{Binding Name}" Style="{StaticResource Btn}"
+                                Margin="0,0,8,8" Click="OnPreset"/>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Text="Endpoint" Margin="0,10,0,4"/>
+            <TextBox x:Name="UrlBox" Height="30" LostFocus="OnUrlLostFocus"/>
+            <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                       Text="A base URL is completed to the chat-completions path when you leave the field, so this box always shows the exact address the files will be sent to. https is required unless the model is on this machine."/>
+
+            <TextBlock Text="Model" Margin="0,14,0,4"/>
+            <TextBox x:Name="ModelBox" Height="30"/>
+            <TextBlock x:Name="PresetNote" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                       Margin="0,6,0,0"
+                       Text="The model id exactly as the provider writes it. A request has to name one, and there is no default that would be right for both a local runtime and a hosted provider."/>
+
+            <TextBlock Text="Key" Margin="0,14,0,4"/>
+            <PasswordBox x:Name="KeyBox" Height="30"/>
+            <TextBlock x:Name="KeyNote" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                       Margin="0,6,0,0"
+                       Text="Left empty for a model on this machine, which has nothing to authenticate. Sent as a bearer token, encrypted to your Windows account, and stored outside this application's folder."/>
+
+            <!-- Only when there is one to forget. A key already stored cannot be shown back, so
+                 an empty box has to mean "keep it", and this is the only way to say otherwise
+                 without offering to display a credential. -->
+            <CheckBox x:Name="ForgetKey" Content="Forget the stored key" Margin="0,8,0,0"
+                      Visibility="Collapsed"/>
+
+            <TextBlock x:Name="Problem" TextWrapping="Wrap" Margin="0,14,0,0"
+                       Foreground="{StaticResource Critical}" Visibility="Collapsed"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                <Button x:Name="RemoveButton" Content="Remove endpoint" Style="{StaticResource Btn}"
+                        Click="OnRemove"/>
+                <!-- IsCancel so Escape still closes it: replacing the system title bar took away
+                     the usual way out of a dialog. -->
+                <Button Content="Cancel" Style="{StaticResource Btn}" Margin="8,0,0,0"
+                        IsCancel="True" Click="OnCancel"/>
+                <Button Content="Save" Style="{StaticResource Btn}" Margin="8,0,0,0"
+                        Click="OnSave" IsDefault="True"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>

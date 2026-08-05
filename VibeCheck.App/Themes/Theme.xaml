@@ -749,8 +749,9 @@
          reachable from any palette in this file, and they were the last two places a dark
          yellow application still lit up in Windows blue.
 
-         Implicit, so the two check boxes and the one password box get them without being told,
-         and so does anything added later. Neither names a colour of its own.
+         Implicit, so the check boxes, the password boxes and the endpoint fields get them
+         without being told, and so does anything added later. None of them names a colour of
+         its own.
          ==================================================================== -->
 
     <Style TargetType="PasswordBox">
@@ -801,6 +802,63 @@
                                     </Storyboard>
                                 </BeginStoryboard>
                             </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The same field as the PasswordBox above, for the endpoint and model boxes, which hold
+         nothing secret and so are read back. Written out rather than derived from that style
+         because a TextBox template cannot be shared with a PasswordBox: the two controls have
+         different templated properties, and BasedOn across the two types is not legal XAML. -->
+    <Style TargetType="TextBox">
+        <Setter Property="Background" Value="{DynamicResource PanelRaised}" />
+        <Setter Property="Foreground" Value="{DynamicResource Text}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Edge}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
+        <Setter Property="CaretBrush" Value="{DynamicResource Accent}" />
+        <Setter Property="SelectionBrush" Value="{DynamicResource Accent}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Grid>
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource ButtonRadius}" />
+
+                        <Border x:Name="Hot" Opacity="0" BorderBrush="{DynamicResource Muted}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource ButtonRadius}" />
+
+                        <Border x:Name="Focused" Opacity="0" BorderBrush="{DynamicResource Accent}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource ButtonRadius}" Effect="{DynamicResource ButtonGlow}" />
+
+                        <!-- Named by contract, as on the PasswordBox: a TextBox with no
+                             PART_ContentHost renders an empty box that swallows typing. -->
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" Focusable="False" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Hot" Property="Opacity" Value="1" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Focused" Storyboard.TargetProperty="Opacity" To="1" Duration="{StaticResource SwiftDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Focused" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource CalmDuration}" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

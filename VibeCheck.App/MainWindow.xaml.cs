@@ -132,6 +132,24 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Collects the endpoint the deep pass should go to when neither Anthropic route is wanted.
+    /// </summary>
+    /// <remarks>
+    /// Opened with whatever is stored so the dialog can edit rather than only replace. The key
+    /// is passed in and never rendered: the dialog needs to know one exists in order to decide
+    /// what an empty field means, which is a different thing from showing it.
+    /// </remarks>
+    private void OnConfigureEndpoint(object sender, RoutedEventArgs e)
+    {
+        var dialog = new EndpointWindow(_model.Endpoint) { Owner = this };
+
+        if (dialog.ShowDialog() == true)
+        {
+            _model.SetEndpoint(dialog.Settings);
+        }
+    }
+
     // ---- Links -------------------------------------------------------------
 
     /// <summary>

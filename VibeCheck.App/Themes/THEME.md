@@ -282,9 +282,11 @@ Restyling rather than recolouring means overriding these whole. Copy the one you
 | `ScrollThumb` | The draggable part, used by the above |
 | `ScrollPage` | The click-to-page halves of the track, used by the above |
 | *(implicit)* `PasswordBox` | The API key field, including its focus ring |
+| *(implicit)* `TextBox` | The endpoint and model fields, same field as above but read back |
 | *(implicit)* `CheckBox` | The box, the tick, and the states of both |
+| *(implicit)* `RadioButton` | The deep pass source choices. A round mark, otherwise the check box |
 
-The last four are templated in full for the reason that kept recurring while this file was being
+The input styles are templated in full for the reason that kept recurring while this file was being
 written: **WPF's stock control templates take their colours from the framework's own theme
 dictionary, which no palette here can reach.** The Aero2 mouse-over blue on a button, the light
 grey scroll bar down the side of a dark window, the blue focus ring on a password box and the

@@ -27,6 +27,26 @@ public enum AppState
     Results,
 }
 
+/// <summary>
+/// Which of the three things answers the deep pass.
+/// </summary>
+/// <remarks>
+/// One value rather than a set of interlocking flags. It began as a pair of booleans that were
+/// each other's inverse, which worked for two options and does not survive a third: three flags
+/// have eight states and five of them are nonsense.
+/// </remarks>
+public enum DeepPassSource
+{
+    /// <summary>An Anthropic key the reader bought. Costs money, per file read.</summary>
+    ApiKey,
+
+    /// <summary>Claude Code on this machine. Costs subscription quota, not money.</summary>
+    LocalCli,
+
+    /// <summary>Any chat-completions endpoint, hosted or on this machine.</summary>
+    Endpoint,
+}
+
 /// <summary>Drives the whole window. Deliberately one view model; the app has three screens.</summary>
 public sealed class MainViewModel : INotifyPropertyChanged
 {
@@ -106,17 +126,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Notify(nameof(DeepPassOfferedHere));
             Notify(nameof(DeepPassSourceReady));
 
-            if (DeepPassUsesLocalCli && !LocalCliReady)
+            if (_deepPassSource == DeepPassSource.LocalCli && !LocalCliReady)
             {
-                DeepPassUsesLocalCli = false;
+                ChooseSource(HasEndpoint ? DeepPassSource.Endpoint : DeepPassSource.ApiKey);
             }
 
             if (_deepPassEnabled && !DeepPassSourceReady)
             {
                 _deepPassEnabled = false;
                 Notify(nameof(DeepPassEnabled));
-                Notify(nameof(PrivacyLine));
-                Notify(nameof(NetworkSummary));
+                NotifyDeepPassState();
             }
 
             // The number itself will not move, being the worse of both readings either way,
@@ -170,7 +189,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
     // ---- Deep pass ---------------------------------------------------------
 
     private bool _deepPassEnabled;
-    private bool _deepPassUsesLocalCli;
+    private DeepPassSource _deepPassSource;
+    private DeepPassEndpointSettings? _endpoint = EndpointStore.Load();
     private ClaudeCodeCli? _localCli;
     private bool _localCliSignedIn;
     private bool _localCliSearched;
@@ -196,15 +216,24 @@ public sealed class MainViewModel : INotifyPropertyChanged
             // install found the box would not stay ticked, with nothing on screen saying why.
             // They had to discover that picking the other option first was the real action,
             // which left the checkbox doing nothing at all.
+            //
+            // A configured endpoint is preferred first, in the same order DeepPassRunner uses.
+            // Nominating one is the most specific instruction of the three, and somebody who
+            // set up a local model must not be quietly answered by a subscription that sends
+            // their code somewhere they deliberately chose not to send it.
             if (value && !DeepPassSourceReady)
             {
-                if (LocalCliReady)
+                if (HasEndpoint)
                 {
-                    DeepPassUsesLocalCli = true;
+                    ChooseSource(DeepPassSource.Endpoint);
+                }
+                else if (LocalCliReady)
+                {
+                    ChooseSource(DeepPassSource.LocalCli);
                 }
                 else if (HasApiKey)
                 {
-                    DeepPassUsesLocalCli = false;
+                    ChooseSource(DeepPassSource.ApiKey);
                 }
             }
 
@@ -215,71 +244,166 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 Notify(nameof(DeepPassEnabled));
             }
 
-            Notify(nameof(PrivacyLine));
-            Notify(nameof(NetworkSummary));
-            Notify(nameof(CanChooseApiKey));
-            Notify(nameof(CanChooseLocalCli));
+            NotifyDeepPassState();
         }
     }
 
     /// <summary>
-    /// Whether the source choice is live.
+    /// Whether each source choice is live.
     /// </summary>
     /// <remarks>
-    /// Storing a key stays reachable whether or not the pass is on: it is configuration rather
-    /// than part of this scan, and gating it would leave someone with no key unable to reach the
-    /// control that would give them one.
+    /// Setting a key or an endpoint stays reachable whether or not the pass is on: that is
+    /// configuration rather than part of this scan, and gating it would leave someone with
+    /// nothing configured unable to reach the control that would configure something. Only the
+    /// choice between ready sources is gated.
     /// </remarks>
     public bool CanChooseApiKey => DeepPassEnabled && HasApiKey;
 
     public bool CanChooseLocalCli => DeepPassEnabled && LocalCliReady;
 
+    public bool CanChooseEndpoint => DeepPassEnabled && HasEndpoint;
+
     /// <summary>
-    /// Whether the pass runs through a Claude Code installation on this machine rather than a
-    /// key the reader bought.
+    /// The three radio buttons, one property each.
     /// </summary>
     /// <remarks>
-    /// Two radio buttons bind to this and its inverse. Changing it can invalidate the pass
-    /// itself, because each source has its own reasons for being unavailable.
+    /// Read from one enum rather than held as three flags. Setting only acts on true because
+    /// WPF clears the outgoing button as well as setting the incoming one, and honouring the
+    /// clear would mean the group briefly had no answer.
     /// </remarks>
-    public bool DeepPassUsesLocalCli
-    {
-        get => _deepPassUsesLocalCli;
-        set
-        {
-            if (!Set(ref _deepPassUsesLocalCli, value))
-            {
-                return;
-            }
-
-            Notify(nameof(DeepPassUsesApiKey));
-            Notify(nameof(PrivacyLine));
-            Notify(nameof(NetworkSummary));
-            Notify(nameof(DeepPassCostLine));
-
-            if (_deepPassEnabled && !DeepPassSourceReady)
-            {
-                _deepPassEnabled = false;
-                Notify(nameof(DeepPassEnabled));
-                Notify(nameof(PrivacyLine));
-                Notify(nameof(NetworkSummary));
-            }
-        }
-    }
-
     public bool DeepPassUsesApiKey
     {
-        get => !_deepPassUsesLocalCli;
+        get => _deepPassSource == DeepPassSource.ApiKey;
         set
         {
             if (value)
             {
-                DeepPassUsesLocalCli = false;
+                ChooseSource(DeepPassSource.ApiKey);
             }
         }
     }
 
+    public bool DeepPassUsesLocalCli
+    {
+        get => _deepPassSource == DeepPassSource.LocalCli;
+        set
+        {
+            if (value)
+            {
+                ChooseSource(DeepPassSource.LocalCli);
+            }
+        }
+    }
+
+    public bool DeepPassUsesEndpoint
+    {
+        get => _deepPassSource == DeepPassSource.Endpoint;
+        set
+        {
+            if (value)
+            {
+                ChooseSource(DeepPassSource.Endpoint);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Moves the pass to a different source, and withdraws it if that source cannot answer.
+    /// </summary>
+    /// <remarks>
+    /// Each source has its own reasons for being unavailable, so a change of source can
+    /// invalidate a pass that was valid a moment ago. Silently leaving the tick would promise a
+    /// deep pass that the scan then declines to run.
+    /// </remarks>
+    private void ChooseSource(DeepPassSource source)
+    {
+        if (_deepPassSource == source)
+        {
+            return;
+        }
+
+        _deepPassSource = source;
+
+        Notify(nameof(DeepPassUsesApiKey));
+        Notify(nameof(DeepPassUsesLocalCli));
+        Notify(nameof(DeepPassUsesEndpoint));
+        NotifyDeepPassState();
+
+        if (_deepPassEnabled && !DeepPassSourceReady)
+        {
+            _deepPassEnabled = false;
+            Notify(nameof(DeepPassEnabled));
+            NotifyDeepPassState();
+        }
+    }
+
+    /// <summary>
+    /// Everything that depends on which source is chosen and whether the pass is on.
+    /// </summary>
+    /// <remarks>
+    /// Kept in one place because the list grew a third entry and the notifications were
+    /// duplicated across five setters. A property missing from one copy is a line of the
+    /// interface that goes stale while the rest updates, which reads as the wrong sentence
+    /// rather than as a bug.
+    /// </remarks>
+    private void NotifyDeepPassState()
+    {
+        Notify(nameof(PrivacyLine));
+        Notify(nameof(NetworkSummary));
+        Notify(nameof(DeepPassCostLine));
+        Notify(nameof(DeepPassDestinationLine));
+        Notify(nameof(CanChooseApiKey));
+        Notify(nameof(CanChooseLocalCli));
+        Notify(nameof(CanChooseEndpoint));
+    }
+
     public bool HasApiKey => ApiKeyStore.Load() is not null;
+
+    /// <summary>Whether an endpoint has been configured for this machine.</summary>
+    public bool HasEndpoint => _endpoint is not null;
+
+    /// <summary>
+    /// What is stored, for the dialog that edits it. Not bound to by anything on this screen.
+    /// </summary>
+    /// <remarks>
+    /// This carries the key, which is otherwise never handed out. The dialog needs to know one
+    /// exists in order to decide what an empty field means, and that is a different thing from
+    /// displaying it: nothing renders this, and the dialog puts it back only when the endpoint
+    /// it belongs to is unchanged.
+    /// </remarks>
+    public DeepPassEndpointSettings? Endpoint => _endpoint;
+
+    /// <summary>
+    /// The configured endpoint, named by where the code would go rather than by provider.
+    /// </summary>
+    /// <remarks>
+    /// The host and the model, because those are the two facts that decide what happens: one
+    /// says whose machine reads the source and the other says what it is read by. Nobody can
+    /// infer either from anywhere else on this screen.
+    /// </remarks>
+    public string EndpointStatus => _endpoint?.Description ?? "not configured";
+
+    /// <summary>
+    /// Why the endpoint route is or is not available, in the same place the other two routes
+    /// say it.
+    /// </summary>
+    /// <remarks>
+    /// Says whether it is on this machine, which is the one fact that distinguishes this route
+    /// from the other two rather than merely from another provider. Everything else about it is
+    /// the reader's own configuration and needs no explaining back to them.
+    /// </remarks>
+    public string EndpointSourceStatus => _endpoint is null
+        ? "Not configured. Use Configure above to name one, including a model on this machine."
+        : _endpoint.Description + (_endpoint.IsLocal ? ", on this machine." : ".");
+
+    /// <summary>Whether the chosen source reads the files without them leaving this computer.</summary>
+    /// <remarks>
+    /// True only for a local model behind a loopback endpoint. Both Anthropic routes upload,
+    /// and so does a hosted endpoint, so this is the one configuration in which switching the
+    /// deep pass on does not change what leaves the machine.
+    /// </remarks>
+    public bool DeepPassStaysLocal =>
+        _deepPassSource == DeepPassSource.Endpoint && _endpoint?.IsLocal == true;
 
     /// <summary>
     /// Whether the deep pass is offered to this reader at all.
@@ -293,11 +417,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool DeepPassOfferedHere => Audience == Audience.Developer;
 
     /// <summary>Whether the source currently chosen can actually answer.</summary>
-    public bool DeepPassSourceReady =>
-        DeepPassOfferedHere && (DeepPassUsesLocalCli ? LocalCliReady : HasApiKey);
+    public bool DeepPassSourceReady => DeepPassOfferedHere && _deepPassSource switch
+    {
+        DeepPassSource.LocalCli => LocalCliReady,
+        DeepPassSource.Endpoint => HasEndpoint,
+        _ => HasApiKey,
+    };
 
     /// <summary>Whether anything at all could answer, which is what gates the checkbox.</summary>
-    public bool CanRunDeepPass => DeepPassOfferedHere && (HasApiKey || LocalCliReady);
+    public bool CanRunDeepPass =>
+        DeepPassOfferedHere && (HasApiKey || LocalCliReady || HasEndpoint);
 
     /// <summary>
     /// Shown in place of the controls when the pass is not on offer, rather than leaving a row
@@ -413,9 +542,57 @@ public sealed class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>What the chosen source spends, said plainly next to the choice.</summary>
-    public string DeepPassCostLine => DeepPassUsesLocalCli
-        ? "Spends your Claude subscription's quota. Nothing is charged to you."
-        : "Billed to your Anthropic API key, per file read.";
+    /// <remarks>
+    /// The endpoint route deliberately declines to name a figure. What a request costs there
+    /// depends on a price list this application has never seen, and a scanner whose entire value
+    /// is that it does not state things it cannot check should not begin by stating a price it
+    /// guessed. <see cref="OpenAiCompatibleBackend"/> takes the same position in the report.
+    /// </remarks>
+    public string DeepPassCostLine => _deepPassSource switch
+    {
+        DeepPassSource.LocalCli =>
+            "Spends your Claude subscription's quota. Nothing is charged to you.",
+
+        DeepPassSource.Endpoint when DeepPassStaysLocal =>
+            "Runs on your own hardware. Nothing is charged and nothing is uploaded.",
+
+        DeepPassSource.Endpoint =>
+            "Billed by whoever runs that endpoint, at rates VibeCheck has no way to know. The "
+            + "report states the tokens spent rather than inventing what they cost.",
+
+        _ => "Billed to your Anthropic API key, per file read.",
+    };
+
+    /// <summary>
+    /// Where the selected files go and what happens to them, beneath the source choice.
+    /// </summary>
+    /// <remarks>
+    /// Bound rather than fixed because it used to be a fixed sentence saying both routes went to
+    /// Anthropic, which stopped being true the moment a third route existed. A paragraph that
+    /// keeps asserting a destination the reader has just changed is worse than no paragraph:
+    /// they have no reason to doubt it.
+    /// </remarks>
+    public string DeepPassDestinationLine =>
+        "Only the files that handle untrusted input are sent, never the whole application. "
+        + _deepPassSource switch
+        {
+            DeepPassSource.LocalCli =>
+                "They go to Anthropic through Claude Code, on your subscription. ",
+
+            DeepPassSource.Endpoint when DeepPassStaysLocal =>
+                $"They go to the model at {EndpointHost} and no further: nothing leaves this "
+                + "computer. ",
+
+            DeepPassSource.Endpoint when _endpoint is not null =>
+                $"They go to {EndpointHost}, over an encrypted connection, and this application "
+                + "knows nothing else about what happens to them there. ",
+
+            DeepPassSource.Endpoint => string.Empty,
+
+            _ => "They go to Anthropic on your key. ",
+        }
+        + "Keys you set are encrypted to your Windows account and stored outside the "
+        + "application folder. The report names which files were read and what answered.";
 
     /// <summary>
     /// The standing promise on the drop screen, which stops being true the moment the deep
@@ -423,19 +600,32 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// sent to an API would be the plainest possible lie this interface could tell.
     /// </summary>
     /// <remarks>
-    /// Both routes send code to Anthropic. Only the billing differs, so the local option must
-    /// not be allowed to read as the private one.
+    /// Both Anthropic routes upload, and so does a hosted endpoint. Only a model on this machine
+    /// leaves the promise standing, so only that case is allowed to keep saying so.
     /// </remarks>
-    public string PrivacyLine => (DeepPassEnabled, DeepPassUsesLocalCli) switch
-    {
-        (false, _) => "Nothing is uploaded. Analysis runs on this machine.",
+    public string PrivacyLine => DeepPassEnabled
+        ? _deepPassSource switch
+        {
+            DeepPassSource.LocalCli =>
+                "Deep pass is on: the files it selects will be sent to Anthropic through Claude "
+                + "Code, on your subscription. Everything else runs on this machine.",
 
-        (true, true) => "Deep pass is on: the files it selects will be sent to Anthropic through "
-                        + "Claude Code, on your subscription. Everything else runs on this machine.",
+            DeepPassSource.Endpoint when DeepPassStaysLocal =>
+                $"Deep pass is on, answered by the model at {EndpointHost}. Nothing is uploaded: "
+                + "all of it runs on this machine.",
 
-        (true, false) => "Deep pass is on: the files it selects will be sent to Anthropic on your "
-                         + "key. Everything else runs on this machine.",
-    };
+            DeepPassSource.Endpoint when _endpoint is not null =>
+                $"Deep pass is on: the files it selects will be sent to {EndpointHost}. "
+                + "Everything else runs on this machine.",
+
+            DeepPassSource.Endpoint =>
+                "Deep pass is on: the files it selects will be sent to the endpoint you "
+                + "configure. Everything else runs on this machine.",
+
+            _ => "Deep pass is on: the files it selects will be sent to Anthropic on your key. "
+                 + "Everything else runs on this machine.",
+        }
+        : "Nothing is uploaded. Analysis runs on this machine.";
 
     /// <summary>
     /// What leaves this machine, in one line, for the status bar.
@@ -445,13 +635,18 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// built around and which until now vanished the moment a scan finished: it appears on the
     /// drop screen and nowhere else, so the reader was told what was uploaded only while there
     /// was nothing to upload. Kept true rather than reassuring, so switching the deep pass on
-    /// changes it.
+    /// changes it, and a deep pass answered on this machine leaves it alone.
     /// </remarks>
-    public string NetworkSummary => DeepPassEnabled && DeepPassSourceReady
-        ? "Runs on this machine  ·  package names and the deep pass's files leave it"
-        : "Runs on this machine  ·  only package names leave it";
+    public string NetworkSummary =>
+        DeepPassEnabled && DeepPassSourceReady && !DeepPassStaysLocal
+            ? "Runs on this machine  ·  package names and the deep pass's files leave it"
+            : "Runs on this machine  ·  only package names leave it";
 
     public string ApiKeyStatus => ApiKeyStore.Describe(ApiKeyStore.Load());
+
+    /// <summary>Just the destination, for sentences that have already said what is sent.</summary>
+    private string EndpointHost =>
+        _endpoint is null ? "that endpoint" : DeepPassEndpoints.Describe(_endpoint.Endpoint, null);
 
     /// <summary>Stores or clears the key, then refreshes everything that depends on it.</summary>
     public void SetApiKey(string? key)
@@ -466,10 +661,33 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Notify(nameof(HasApiKey));
         Notify(nameof(ApiKeyStatus));
         Notify(nameof(CanRunDeepPass));
-        Notify(nameof(CanChooseApiKey));
         Notify(nameof(DeepPassEnabled));
-        Notify(nameof(PrivacyLine));
-        Notify(nameof(NetworkSummary));
+        NotifyDeepPassState();
+    }
+
+    /// <summary>Stores or clears the endpoint, then refreshes everything that depends on it.</summary>
+    /// <remarks>
+    /// Removing the endpoint that was about to answer withdraws the pass rather than falling
+    /// back to a key, on the same reasoning the runner uses: somebody who set up a local model
+    /// and then removed it has not thereby asked for their code to be sent to Anthropic instead.
+    /// </remarks>
+    public void SetEndpoint(DeepPassEndpointSettings? settings)
+    {
+        EndpointStore.Save(settings);
+        _endpoint = settings;
+
+        if (!DeepPassSourceReady)
+        {
+            _deepPassEnabled = false;
+        }
+
+        Notify(nameof(HasEndpoint));
+        Notify(nameof(EndpointStatus));
+        Notify(nameof(EndpointSourceStatus));
+        Notify(nameof(DeepPassStaysLocal));
+        Notify(nameof(CanRunDeepPass));
+        Notify(nameof(DeepPassEnabled));
+        NotifyDeepPassState();
     }
 
     /// <summary>
@@ -814,14 +1032,25 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         _cancellation = new CancellationTokenSource();
 
+        // Read once rather than per property: three settings have to describe the same source,
+        // and a half-filled ScanOptions is answered by whichever branch the runner reaches
+        // first. An endpoint left in beside a key would win over it there.
+        var endpoint = DeepPassEnabled && DeepPassUsesEndpoint ? _endpoint : null;
+
         var options = new ScanOptions
         {
             Audience = Audience,
 
             // Only when the reader switched the pass on for this scan and chose a source that
             // can answer.
-            DeepPassApiKey = DeepPassEnabled && !DeepPassUsesLocalCli ? ApiKeyStore.Load() : null,
+            DeepPassApiKey = DeepPassEnabled && DeepPassUsesApiKey ? ApiKeyStore.Load() : null,
             DeepPassUseLocalCli = DeepPassEnabled && DeepPassUsesLocalCli,
+            DeepPassEndpoint = endpoint?.Endpoint,
+            DeepPassEndpointKey = endpoint?.Key,
+
+            // The model belongs to the endpoint and only to the endpoint. Left set for another
+            // source it would override the Claude model that route was built around.
+            DeepPassModel = endpoint?.Model,
         };
 
         try

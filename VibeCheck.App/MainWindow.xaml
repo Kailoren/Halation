@@ -282,6 +282,21 @@
                                         Click="OnSetApiKey"/>
                             </StackPanel>
 
+                            <!-- The third route's setup row, outside the switch for the same
+                                 reason as the key: this is the control that makes the route
+                                 available at all. The status names the host and the model
+                                 rather than the provider, because those are the two facts that
+                                 decide what happens to the files. -->
+                            <StackPanel Orientation="Horizontal" Margin="24,8,0,0">
+                                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                           Text="Other endpoint:"/>
+                                <TextBlock Style="{StaticResource Caption}" VerticalAlignment="Center"
+                                           Margin="6,0,0,0" FontFamily="{DynamicResource MonoFont}"
+                                           Text="{Binding EndpointStatus}"/>
+                                <Button Content="Configure" Style="{StaticResource Btn}" Margin="12,0,0,0"
+                                        Click="OnConfigureEndpoint"/>
+                            </StackPanel>
+
                             <!-- Beside the key row and outside the switch for the same reason:
                                  this is what makes a source available, so gating it behind the
                                  switch would strand somebody behind the control that would
@@ -330,12 +345,28 @@
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
                                            Margin="24,4,0,0" Text="{Binding LocalCliStatus}"/>
 
+                                <!-- Last of the three because it is the one that needs setting
+                                     up first, and disabled rather than hidden while nothing is
+                                     configured: the row above it is what does the configuring,
+                                     and an option that vanishes explains nothing. -->
+                                <RadioButton GroupName="DeepPassSource"
+                                             Content="Use another model (any OpenAI-compatible endpoint)"
+                                             IsChecked="{Binding DeepPassUsesEndpoint}"
+                                             IsEnabled="{Binding CanChooseEndpoint}"
+                                             Margin="0,12,0,0"/>
+                                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
+                                           Margin="24,4,0,0" Text="{Binding EndpointSourceStatus}"/>
+
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
                                            Margin="0,12,0,0" Text="{Binding DeepPassCostLine}"/>
                             </StackPanel>
 
+                            <!-- Bound, not fixed. This sentence used to state that both routes
+                                 went to Anthropic, which a third route made false; a paragraph
+                                 that keeps naming a destination the reader has just changed is
+                                 worse than none, because there is no reason to doubt it. -->
                             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="24,10,0,0"
-                                       Text="Only the files that handle untrusted input are sent, never the whole application. Both routes send them to Anthropic; they differ in what they spend, not in what leaves this machine. Your API key, if you set one, is encrypted to your Windows account and stored outside the application folder. The report names which files were read and what answered."/>
+                                       Text="{Binding DeepPassDestinationLine}"/>
                         </StackPanel>
                     </StackPanel>
                 </ContentControl>
