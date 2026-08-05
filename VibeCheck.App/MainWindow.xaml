@@ -329,10 +329,26 @@
                                     </Style>
                                 </StackPanel.Style>
 
+                                <!-- Each of the three explains itself on hover, in the same
+                                     shape and the same order: where the code goes, what it
+                                     costs, what it needs. ShowOnDisabled is not optional here.
+                                     WPF suppresses tooltips on disabled controls, and a route
+                                     is disabled exactly while it is unconfigured, which is the
+                                     moment somebody wants to know what configuring it buys. -->
                                 <RadioButton GroupName="DeepPassSource"
                                              Content="Use my Anthropic API key"
                                              IsChecked="{Binding DeepPassUsesApiKey}"
-                                             IsEnabled="{Binding CanChooseApiKey}"/>
+                                             IsEnabled="{Binding CanChooseApiKey}"
+                                             ToolTipService.ShowOnDisabled="True"
+                                             ToolTipService.ShowDuration="60000"
+                                             ToolTipService.InitialShowDelay="350">
+                                    <RadioButton.ToolTip>
+                                        <ToolTip MaxWidth="420">
+                                            <TextBlock Text="{Binding ApiKeyRouteTooltip}"
+                                                       TextWrapping="Wrap"/>
+                                        </ToolTip>
+                                    </RadioButton.ToolTip>
+                                </RadioButton>
 
                                 <!-- Disabled rather than hidden when unavailable: the status
                                      line underneath is the point, since every reason it is
@@ -341,7 +357,17 @@
                                              Content="Use Claude Code on this machine (your subscription)"
                                              IsChecked="{Binding DeepPassUsesLocalCli}"
                                              IsEnabled="{Binding CanChooseLocalCli}"
-                                             Margin="0,12,0,0"/>
+                                             Margin="0,12,0,0"
+                                             ToolTipService.ShowOnDisabled="True"
+                                             ToolTipService.ShowDuration="60000"
+                                             ToolTipService.InitialShowDelay="350">
+                                    <RadioButton.ToolTip>
+                                        <ToolTip MaxWidth="420">
+                                            <TextBlock Text="{Binding LocalCliRouteTooltip}"
+                                                       TextWrapping="Wrap"/>
+                                        </ToolTip>
+                                    </RadioButton.ToolTip>
+                                </RadioButton>
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
                                            Margin="24,4,0,0" Text="{Binding LocalCliStatus}"/>
 
@@ -353,7 +379,17 @@
                                              Content="Use another model (any OpenAI-compatible endpoint)"
                                              IsChecked="{Binding DeepPassUsesEndpoint}"
                                              IsEnabled="{Binding CanChooseEndpoint}"
-                                             Margin="0,12,0,0"/>
+                                             Margin="0,12,0,0"
+                                             ToolTipService.ShowOnDisabled="True"
+                                             ToolTipService.ShowDuration="60000"
+                                             ToolTipService.InitialShowDelay="350">
+                                    <RadioButton.ToolTip>
+                                        <ToolTip MaxWidth="420">
+                                            <TextBlock Text="{Binding EndpointRouteTooltip}"
+                                                       TextWrapping="Wrap"/>
+                                        </ToolTip>
+                                    </RadioButton.ToolTip>
+                                </RadioButton>
                                 <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap"
                                            Margin="24,4,0,0" Text="{Binding EndpointSourceStatus}"/>
 

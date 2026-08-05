@@ -564,6 +564,79 @@ public sealed class MainViewModel : INotifyPropertyChanged
     };
 
     /// <summary>
+    /// What each route does, on hover: where the code goes, what it costs, what it needs.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The same three facts in the same order in all three, so that moving the pointer from one
+    /// option to the next compares like with like. They are the questions somebody actually has
+    /// when choosing, and the card has room for one line about the route already selected, which
+    /// is no use at the moment of choosing between them.
+    /// </para>
+    /// <para>
+    /// <b>The first fact is deliberately the destination rather than the price.</b> Two of these
+    /// three routes upload the reader's recovered source and one does not, and that difference
+    /// is easy to miss when the visible difference is the billing. "Claude Code on this machine"
+    /// in particular reads as local and is not: the program is local, the reading is not.
+    /// </para>
+    /// <para>
+    /// Shown on the disabled radios too, through <c>ToolTipService.ShowOnDisabled</c>. A route is
+    /// disabled exactly when it has not been set up, which is precisely when somebody wants to
+    /// know what setting it up would get them.
+    /// </para>
+    /// </remarks>
+    public string ApiKeyRouteTooltip =>
+        "Where your code goes: to Anthropic, over the internet.\n\n"
+        + "What it costs: your API key is billed for every file read, on every scan. Tens of "
+        + "cents for a small application, a few dollars for a large one.\n\n"
+        + "What you need: a key from console.anthropic.com. Nothing to install.\n\n"
+        + "This route runs Claude Opus 5, the most capable of the three, so it finds the most.";
+
+    public string LocalCliRouteTooltip =>
+        "Where your code goes: to Anthropic, the same as the key route. Claude Code is installed "
+        + "on this machine, but the reading does not happen here.\n\n"
+        + "What it costs: quota from the Claude subscription you already pay for. Nothing is "
+        + "charged, and nothing is billed per scan.\n\n"
+        + "What you need: Claude Code installed and signed in.\n\n"
+        + "Offered only for an application you built yourself, because Claude Code can act on "
+        + "this computer and an API endpoint cannot.";
+
+    /// <summary>
+    /// The third route, which is the only one whose answer depends on how it was configured.
+    /// </summary>
+    /// <remarks>
+    /// Asks <c>_endpoint</c> directly rather than going through
+    /// <see cref="DeepPassStaysLocal"/>, which is only true once this route is the selected one.
+    /// A tooltip describes what an option would do, and is read before it is chosen.
+    /// </remarks>
+    public string EndpointRouteTooltip => _endpoint switch
+    {
+        null =>
+            "Any server that speaks the OpenAI chat-completions format: OpenAI, OpenRouter, "
+            + "Gemini, Groq and others, or Ollama and LM Studio running on this machine.\n\n"
+            + "Pointed at this machine, it is the only route where your code never leaves it: "
+            + "no upload, no account, no bill, and it works with the network unplugged.\n\n"
+            + "Nothing is configured yet. Use Configure above.",
+
+        { IsLocal: true } =>
+            $"Where your code goes: nowhere. {EndpointHost} is this computer talking to itself, "
+            + "so the files never reach the network.\n\n"
+            + "What it costs: nothing but electricity.\n\n"
+            + "What you need: Ollama or LM Studio running, with a model downloaded.\n\n"
+            + "A model on your own machine is smaller than Claude Opus 5 and will find less. The "
+            + "report names what answered, so a quiet result can be read for what it is.",
+
+        _ =>
+            $"Where your code goes: to {EndpointHost}, over an encrypted connection. VibeCheck "
+            + "knows nothing about what happens to it there.\n\n"
+            + "What it costs: whatever that provider charges. VibeCheck has no way to know their "
+            + "prices, so the report states the tokens spent rather than inventing a figure.\n\n"
+            + "What you need: the endpoint, a model id, and usually a key.\n\n"
+            + "Point this same route at Ollama or LM Studio instead and nothing leaves this "
+            + "machine at all.",
+    };
+
+    /// <summary>
     /// Where the selected files go and what happens to them, beneath the source choice.
     /// </summary>
     /// <remarks>
@@ -684,6 +757,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Notify(nameof(HasEndpoint));
         Notify(nameof(EndpointStatus));
         Notify(nameof(EndpointSourceStatus));
+        Notify(nameof(EndpointRouteTooltip));
         Notify(nameof(DeepPassStaysLocal));
         Notify(nameof(CanRunDeepPass));
         Notify(nameof(DeepPassEnabled));

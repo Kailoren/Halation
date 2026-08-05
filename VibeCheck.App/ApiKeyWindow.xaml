@@ -58,8 +58,13 @@
             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,12,0,0"
                        Text="Only the files selected by triage are sent, and only on scans where you turn the deep pass on. Leave the box empty and save to remove a stored key."/>
 
+            <!-- The figure, not a reassuring adjective. This said "a few cents per scan", which
+                 is true only of a tiny application: the pass sends up to forty files and each
+                 one is a fresh request, so a real application is dollars rather than cents. A
+                 scanner whose value is that it does not state things it cannot check should not
+                 open by understating its own bill. -->
             <TextBlock x:Name="CostNote" Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,10,0,0"
-                       Text="Typical cost is a few cents per scan, billed to you by Anthropic. The report states what was spent."/>
+                       Text="Billed to you by Anthropic for every file read: tens of cents for a small application, a few dollars for a large one. The report states what was spent."/>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
                 <Button Content="Remove key" Style="{StaticResource Btn}" Click="OnRemove"/>
