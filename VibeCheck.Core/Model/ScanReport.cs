@@ -46,6 +46,16 @@ public sealed record ScanReport
     /// </remarks>
     public IReadOnlyList<Finding> Capabilities { get; init; } = [];
 
+    /// <summary>
+    /// What this application was said to have a reason to do, or null when nothing was said.
+    /// </summary>
+    /// <remarks>
+    /// Carried on the report and written into every export, so a result that went quiet because
+    /// somebody vouched for the application cannot be shown to a third person without also
+    /// showing what was vouched for.
+    /// </remarks>
+    public DeclaredPurpose? Purpose { get; init; }
+
     /// <summary>Per-category subscores, on the same 0-100 scale as the overall score.</summary>
     public required IReadOnlyDictionary<FindingCategory, int> CategoryScores { get; init; }
 
@@ -200,6 +210,21 @@ public sealed record ScanReport
               + "figure suggests."
             : null;
 
+    /// <summary>
+    /// What a statement of purpose moved out of the count, said in the same breath as the count.
+    /// </summary>
+    /// <remarks>
+    /// Without this the summary of an accounted-for scan reads "nothing was found that reaches
+    /// you", which is true of the arithmetic and false of the application. The behaviour is
+    /// still there and still listed; the sentence beside the number has to admit it.
+    /// </remarks>
+    private string AccountedForClause =>
+        Verdict.AccountedFor.Count == 0
+            ? string.Empty
+            : $" {Verdict.AccountedFor.Count} further finding"
+              + $"{(Verdict.AccountedFor.Count == 1 ? " was" : "s were")} accounted for as "
+              + "intended and left out of the count.";
+
     public string SummaryLine
     {
         get
@@ -212,23 +237,23 @@ public sealed record ScanReport
 
             if (counts.Count > 0)
             {
-                return $"Found {string.Join(", ", counts)}.";
+                return $"Found {string.Join(", ", counts)}.{AccountedForClause}";
             }
 
             var informational = CountOf(Severity.Info);
 
             if (informational == 0)
             {
-                return "No issues were found by the checks that ran.";
+                return $"No issues were found by the checks that ran.{AccountedForClause}";
             }
 
             var listed = informational == 1 ? "finding is" : "findings are";
 
             return Audience == Audience.EndUser
                 ? $"Nothing was found that reaches you. {informational} {listed} listed below, "
-                  + "marked as the developer's rather than yours."
+                  + $"marked as the developer's rather than yours.{AccountedForClause}"
                 : $"No issues were found that count against the score. {informational} "
-                  + $"informational {listed} listed below.";
+                  + $"informational {listed} listed below.{AccountedForClause}";
         }
     }
 

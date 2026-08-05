@@ -52,8 +52,21 @@ public static class JsonReportWriter
                 band = report.Verdict.Band.ToString(),
                 bandLabel = report.Verdict.BandLabel,
                 adviseAgainstInstall = report.Verdict.AdviseAgainstInstall,
+                advice = report.Verdict.Advice.ToString(),
                 blockingReasons = report.Verdict.BlockingReasons,
+
+                // What a statement of purpose moved out of the score, so a consumer reading
+                // this cannot see the quiet result without also seeing what bought it.
+                accountedFor = report.Verdict.AccountedFor,
             },
+
+            statedPurpose = report.Purpose is null
+                ? null
+                : new
+                {
+                    source = report.Purpose.Source.ToString(),
+                    accounted = report.Purpose.Accounted.Select(c => c.ToString()).ToList(),
+                },
 
             coverage = new
             {

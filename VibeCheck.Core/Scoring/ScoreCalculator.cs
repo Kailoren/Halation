@@ -86,10 +86,17 @@ public static class ScoreCalculator
     /// their order, and it breaks a tie over which reading the account beneath the score
     /// describes. It does <b>not</b> decide the number: see the remarks on this class.
     /// </param>
+    /// <param name="accountedFor">
+    /// Behaviour moved out of <paramref name="findings"/> because the application was said to
+    /// have a reason for it. Never scored, and never able to make the verdict worse; its only
+    /// effect is to distinguish "nothing was found" from "something was found and vouched for",
+    /// which a reader is owed.
+    /// </param>
     public static Verdict Calculate(
         IReadOnlyList<Finding> findings,
         int coveragePercent = 100,
-        Audience audience = Audience.Developer)
+        Audience audience = Audience.Developer,
+        IReadOnlyList<Finding>? accountedFor = null)
     {
         ArgumentNullException.ThrowIfNull(findings);
 
@@ -122,12 +129,10 @@ public static class ScoreCalculator
                 Band = blockingAtLowCoverage.Count > 0
                     ? ScoreBand.CriticalIssues
                     : ScoreBand.InsufficientCoverage,
-                AdviseAgainstInstall = blockingAtLowCoverage.Count > 0,
+                Advice = AdviceFor(blockingAtLowCoverage, accountedFor),
                 Audience = audience,
-                BlockingReasons = blockingAtLowCoverage
-                    .Select(f => f.Title)
-                    .Distinct(StringComparer.Ordinal)
-                    .ToList(),
+                BlockingReasons = Titles(blockingAtLowCoverage),
+                AccountedFor = Titles(Vouched(accountedFor)),
             };
         }
 
@@ -143,15 +148,40 @@ public static class ScoreCalculator
         {
             Score = score,
             Band = BandFor(score),
-            AdviseAgainstInstall = blocking.Count > 0,
+            Advice = AdviceFor(blocking, accountedFor),
             Audience = audience,
             Explanation = Explain(findings, governing, developer, endUser),
-            BlockingReasons = blocking
-                .Select(f => f.Title)
-                .Distinct(StringComparer.Ordinal)
-                .ToList(),
+            BlockingReasons = Titles(blocking),
+            AccountedFor = Titles(Vouched(accountedFor)),
         };
     }
+
+    /// <summary>
+    /// Behaviour that would have blocked, had nobody vouched for it.
+    /// </summary>
+    /// <remarks>
+    /// Rules that report a capability by nature are excluded: auto-updating was never going to
+    /// advise against installing anything, so listing it as something a declaration rescued
+    /// would overstate what the declaration did.
+    /// </remarks>
+    private static List<Finding> Vouched(IReadOnlyList<Finding>? accountedFor) =>
+        accountedFor?
+            .Where(f => f.ExplainedBy is not null && f.IsBlocking && f.Source == FindingSource.Rule)
+            .ToList() ?? [];
+
+    /// <summary>
+    /// Blocking wins. A declaration accounting for one thing cannot quieten a second thing it
+    /// said nothing about.
+    /// </summary>
+    private static InstallAdvice AdviceFor(
+        List<Finding> blocking,
+        IReadOnlyList<Finding>? accountedFor) =>
+        blocking.Count > 0 ? InstallAdvice.AdviseAgainst
+        : Vouched(accountedFor).Count > 0 ? InstallAdvice.ConsistentWithStatedPurpose
+        : InstallAdvice.None;
+
+    private static List<string> Titles(IEnumerable<Finding> findings) =>
+        [.. findings.Select(f => f.Title).Distinct(StringComparer.Ordinal)];
 
     /// <summary>Records what drove the number, so the report can account for it.</summary>
     /// <remarks>

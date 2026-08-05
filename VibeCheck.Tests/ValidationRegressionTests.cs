@@ -433,7 +433,7 @@ public class ValidationRegressionTests : IDisposable
             {
                 Score = 50,
                 Band = band,
-                AdviseAgainstInstall = false,
+                Advice = InstallAdvice.None,
                 Audience = Audience.Developer,
             }.BandLabel;
 

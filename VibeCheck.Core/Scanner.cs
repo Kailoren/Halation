@@ -146,9 +146,10 @@ public sealed class Scanner
 
         // Split here, once, so that nothing downstream has to remember to exclude capabilities
         // from the arithmetic. What an application can do is reported; only what it does wrong
-        // is scored. See Finding.IsCapability.
-        var capabilities = observed.Where(f => f.IsCapability).ToList();
-        var findings = observed.Where(f => !f.IsCapability).ToList();
+        // is scored. See Finding.IsCapability and DeclaredPurpose.
+        var (findings, capabilities) = PurposeSplit.Apply(
+            [.. observed, .. OverDeclaration(observed, options.DeclaredPurpose)],
+            options.DeclaredPurpose);
 
         var coverage = MergeCoverage(
             recovery.Coverage, analysis, dependencies, lookup, deepPass, redundancy)
@@ -164,10 +165,12 @@ public sealed class Scanner
 
             // Coverage gates the verdict: without it, an artifact that yielded no readable
             // code at all scores full marks for the absence of findings never looked for.
-            Verdict = ScoreCalculator.Calculate(findings, coverage.Percent, options.Audience),
+            Verdict = ScoreCalculator.Calculate(
+                findings, coverage.Percent, options.Audience, capabilities),
             Coverage = coverage,
             Findings = findings,
             Capabilities = capabilities,
+            Purpose = options.DeclaredPurpose,
             CategoryScores = ScoreCalculator.CategoryScores(findings),
             VulnerabilityData = lookup.Provenance,
             Effort = new ScanEffort
@@ -226,9 +229,65 @@ public sealed class Scanner
 
         return report with
         {
-            Verdict = ScoreCalculator.Calculate(report.Findings, report.Coverage.Percent, audience),
+            Verdict = ScoreCalculator.Calculate(
+                report.Findings, report.Coverage.Percent, audience, report.Capabilities),
             CategoryScores = ScoreCalculator.CategoryScores(report.Findings),
         };
+    }
+
+    /// <summary>
+    /// Re-answers an existing report against a different statement of purpose, without
+    /// rescanning.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Nothing about the artifact is examined again. Every finding already names the capability
+    /// it demonstrates, so accounting for one is a re-sort of what is already in hand: the same
+    /// arithmetic that lets the reader be switched, applied to a different question. That
+    /// matters beyond tidiness, because it means answering costs nothing and the two views
+    /// cannot disagree about what was found, only about what accounts for it.
+    /// </para>
+    /// <para>
+    /// The declaration check is rebuilt rather than carried over, since it describes the
+    /// declaration being replaced.
+    /// </para>
+    /// </remarks>
+    public static ScanReport Reconsider(ScanReport report, DeclaredPurpose? purpose)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        var observed = report.Findings
+            .Concat(report.Capabilities)
+            .Where(f => f.RuleId != OverDeclarationRule)
+            .ToList();
+
+        var (findings, capabilities) = PurposeSplit.Apply(
+            [.. observed, .. OverDeclaration(observed, purpose)],
+            purpose);
+
+        return report with
+        {
+            Verdict = ScoreCalculator.Calculate(
+                findings, report.Coverage.Percent, report.Audience, capabilities),
+            Findings = findings,
+            Capabilities = capabilities,
+            CategoryScores = ScoreCalculator.CategoryScores(findings),
+            Purpose = purpose,
+        };
+    }
+
+    /// <summary>
+    /// Capabilities in this report that a statement of purpose could account for, so a caller
+    /// knows which questions are worth asking and asks no others.
+    /// </summary>
+    public static IReadOnlyList<Capability> QuestionsFor(ScanReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        return [.. report.Findings
+            .Where(f => f.IsBlocking && f.Capability is not null)
+            .Select(f => f.Capability!.Value)
+            .Distinct()];
     }
 
     /// <summary>
@@ -250,6 +309,84 @@ public sealed class Scanner
 
         return await source.LookupAsync(dependencies.Dependencies, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Identifier of the finding raised when a declaration accounts for too much to be worth
+    /// anything.
+    /// </summary>
+    public const string OverDeclarationRule = "VC-PUR-001";
+
+    /// <summary>
+    /// How many blocking capabilities a declaration may account for before the declaration is
+    /// itself the thing worth reporting.
+    /// </summary>
+    /// <remarks>
+    /// Three. One is an application doing its job; two is a plausible combination, as a
+    /// security tool touching both browser stores would be; from three the declaration has
+    /// stopped narrowing anything and is just a list of everything that would otherwise have
+    /// been said.
+    /// </remarks>
+    public const int TooMuchAccountedFor = 3;
+
+    /// <summary>
+    /// The check on the declaration itself, which no declaration can account for.
+    /// </summary>
+    /// <remarks>
+    /// Affirming a purpose moves findings out of the score, so the obvious way to abuse it is
+    /// to affirm everything. That cannot be prevented, and pretending otherwise would be worse
+    /// than saying it plainly: this reports the breadth of what was waved through, in the same
+    /// report, where anybody reading a screenshot of it can see the same thing the person who
+    /// ran the scan saw.
+    /// </remarks>
+    private static IEnumerable<Finding> OverDeclaration(
+        IReadOnlyList<Finding> observed,
+        DeclaredPurpose? purpose)
+    {
+        if (purpose is null)
+        {
+            yield break;
+        }
+
+        var waved = observed
+            .Where(f => f.IsBlocking
+                        && f.Capability is { } capability
+                        && purpose.Accounts(capability))
+            .Select(f => f.Capability!.Value)
+            .Distinct()
+            .ToList();
+
+        if (waved.Count < TooMuchAccountedFor)
+        {
+            yield break;
+        }
+
+        var listed = string.Join(", ", waved.Select(c => c.Humanise().ToLowerInvariant()));
+
+        yield return new Finding
+        {
+            RuleId = OverDeclarationRule,
+            Title = "This application was said to have a reason for most of what was found",
+            Severity = Severity.Medium,
+            UserSeverity = Severity.Medium,
+            Category = FindingCategory.CodeSafety,
+            Description =
+                $"{waved.Count} separate behaviours that would each advise against installing "
+                + $"this application were accounted for as intended: {listed}. A statement of "
+                + "purpose that covers nearly everything found narrows nothing, and the quiet "
+                + "result below rests entirely on it being true.",
+            Remediation =
+                "If these really are all intended, nothing here needs fixing and this finding "
+                + "is the report being honest about how much it was asked to take on trust.",
+            UserDescription =
+                $"This application does {waved.Count} separate things that would normally be "
+                + $"reason enough not to install it: {listed}. All of them were marked as "
+                + "expected. If you were not certain about every one of those, the result above "
+                + "is friendlier than what was actually found.",
+            UserRemediation =
+                "Go back and account only for what you specifically know this application is "
+                + "for, then read the result again.",
+        };
     }
 
     /// <summary>

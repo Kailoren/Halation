@@ -101,6 +101,32 @@ public sealed record ScoreExplanation
     }
 }
 
+/// <summary>
+/// What the report advises about installing the artifact.
+/// </summary>
+/// <remarks>
+/// Three states rather than two, because a declared purpose creates a case that neither of the
+/// old ones described. An application doing something that would otherwise block, which the
+/// person scanning has said it has a reason for, is not the same as one where nothing was
+/// found: the behaviour is still there, still reported, and still worth the reader seeing.
+/// Collapsing it into silence would let a declaration turn a warning into an all-clear, which
+/// is the failure this whole feature has to avoid being.
+/// </remarks>
+public enum InstallAdvice
+{
+    /// <summary>Nothing was found that bears on installing it.</summary>
+    None,
+
+    /// <summary>
+    /// Behaviour that would otherwise advise against installing, accounted for by what the
+    /// application was said to be for. Reported plainly rather than suppressed.
+    /// </summary>
+    ConsistentWithStatedPurpose,
+
+    /// <summary>At least one blocking rule fired and nothing accounts for it.</summary>
+    AdviseAgainst,
+}
+
 public sealed record Verdict
 {
     /// <summary>0-100, capped by the worst finding present.</summary>
@@ -109,13 +135,33 @@ public sealed record Verdict
     public required ScoreBand Band { get; init; }
 
     /// <summary>
-    /// True when at least one blocking rule fired. Driven only by specific deterministic
-    /// rules, never by the aggregate score and never by the assisted deep pass.
+    /// What this report advises about installing the artifact. Driven only by specific
+    /// deterministic rules, never by the aggregate score and never by the assisted deep pass.
     /// </summary>
-    public required bool AdviseAgainstInstall { get; init; }
+    public required InstallAdvice Advice { get; init; }
+
+    /// <summary>
+    /// True when at least one blocking rule fired and nothing accounted for it.
+    /// </summary>
+    /// <remarks>
+    /// Derived rather than stored, so it cannot drift from <see cref="Advice"/>. Behaviour
+    /// explained by a stated purpose is deliberately false here: it belongs in its own state,
+    /// not folded into the one that means nothing was wrong.
+    /// </remarks>
+    public bool AdviseAgainstInstall => Advice == InstallAdvice.AdviseAgainst;
 
     /// <summary>The specific findings behind <see cref="AdviseAgainstInstall"/>.</summary>
     public IReadOnlyList<string> BlockingReasons { get; init; } = [];
+
+    /// <summary>
+    /// Behaviour that would have advised against installing, and what accounted for it.
+    /// </summary>
+    /// <remarks>
+    /// Carried on the verdict rather than left for a reader to find further down. A result that
+    /// went quiet because somebody vouched for the application should say so where the number
+    /// is, including in an exported copy that a different person is reading.
+    /// </remarks>
+    public IReadOnlyList<string> AccountedFor { get; init; } = [];
 
     /// <summary>
     /// Which report this verdict was rendered for.
@@ -173,13 +219,26 @@ public sealed record Verdict
     /// </remarks>
     public string ScoreDisplay => HasMeaningfulScore ? $"{Score}/100" : "Not scored";
 
-    /// <summary>Short label for the band, for display next to the score.</summary>
+    /// <summary>
+    /// Short label for the band, for display next to the score.
+    /// </summary>
+    /// <remarks>
+    /// The top band is qualified when something was accounted for, and that qualification is
+    /// the point. Scanning a cleaner and stating it has a reason to read browser cookies
+    /// correctly produces 100/100, because the arithmetic genuinely has nothing left to count.
+    /// Labelled "no known issues found", that headline is a screenshot claiming a clean bill of
+    /// health for an application with six critical behaviours in it, all of them still listed
+    /// further down where the screenshot does not reach. The number can stay honest and the
+    /// label still overreach, so the label says what the number rests on.
+    /// </remarks>
     public string BandLabel => Band switch
     {
         ScoreBand.CriticalIssues => "Critical issues",
         ScoreBand.SeriousIssues => "Serious issues",
         ScoreBand.NeedsWork => "Needs work",
-        ScoreBand.NoKnownIssues => "No known issues found",
+        ScoreBand.NoKnownIssues => Advice == InstallAdvice.ConsistentWithStatedPurpose
+            ? "Nothing beyond what you accounted for"
+            : "No known issues found",
         ScoreBand.InsufficientCoverage => "Could not analyse",
         _ => "Unknown",
     };

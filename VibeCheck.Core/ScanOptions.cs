@@ -55,6 +55,17 @@ public sealed record ScanOptions
     /// </summary>
     public Audience Audience { get; init; } = Audience.Developer;
 
+    /// <summary>
+    /// What this application has been said to have a reason to do, or null for the strict
+    /// reading in which nothing is accounted for.
+    /// </summary>
+    /// <remarks>
+    /// Null by default and never inferred. A scan that quietened itself because it guessed what
+    /// an application probably was would be worse than one that cried wolf, since the reader
+    /// would have no idea a judgment had been made on their behalf.
+    /// </remarks>
+    public DeclaredPurpose? DeclaredPurpose { get; init; }
+
     /// <summary>Default behaviour: live dependency lookup, no deep pass.</summary>
     public static ScanOptions Default { get; } = new();
 

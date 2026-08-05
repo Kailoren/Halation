@@ -132,6 +132,19 @@ public sealed record Finding
     /// </remarks>
     public Capability? Capability { get; init; }
 
+    /// <summary>
+    /// Who affirmed that this application has a reason for <see cref="Capability"/>, or null
+    /// when nobody did.
+    /// </summary>
+    /// <remarks>
+    /// Set means this finding was moved out of the score and into what the application can do.
+    /// It does not mean the observation was wrong, or that the severity was lowered: both are
+    /// left exactly as they were, because the behaviour is the same behaviour and only its
+    /// explanation changed. The report prints the affirmation beside it so that a quiet result
+    /// still shows what was accounted for and on whose say-so.
+    /// </remarks>
+    public PurposeSource? ExplainedBy { get; init; }
+
     /// <summary>Reference URL, e.g. a CVE or vendor advisory.</summary>
     public string? Reference { get; init; }
 

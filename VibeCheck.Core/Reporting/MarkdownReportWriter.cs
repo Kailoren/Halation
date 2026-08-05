@@ -70,6 +70,18 @@ public static class MarkdownReportWriter
             output.AppendLine(capability.DescriptionFor(report.Audience));
             output.AppendLine();
 
+            // Named here, in the exported copy, because this is the entry that would otherwise
+            // have advised against installing the application. A reader handed this report has
+            // to be able to see what was accounted for and who accounted for it.
+            if (capability.ExplainedBy is not null
+                && report.Purpose is { } purpose
+                && capability.Capability is { } power)
+            {
+                output.AppendLine($"> **Accounted for.** {purpose.Attribution(power)} "
+                                  + "Without that, this alone would advise against installing it.");
+                output.AppendLine();
+            }
+
             if (capability.Location.Length > 0)
             {
                 output.AppendLine($"`{capability.Location}`");
