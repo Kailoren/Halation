@@ -265,6 +265,20 @@ public sealed record ScanReport
     public IEnumerable<Finding> NotRelevantToReader =>
         Findings.Where(f => !f.AffectsDecisionOf(Audience));
 
+    /// <summary>
+    /// Whether something is advising against installation that no statement of purpose could
+    /// account for.
+    /// </summary>
+    /// <remarks>
+    /// The signal for whether asking the reader anything is worth their time. If a dropper
+    /// fired, the answer to "does this application have a reason to read your cookies" cannot
+    /// change the advice, and putting the question up anyway would imply it might.
+    /// </remarks>
+    public bool HasUnanswerableBlocking =>
+        Findings.Any(f => f.IsBlocking
+                          && f.Capability is null
+                          && f.Source == FindingSource.Rule);
+
     /// <summary>Human-readable kind, for headers and exports.</summary>
     public string KindLabel => Kind switch
     {

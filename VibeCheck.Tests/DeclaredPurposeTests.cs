@@ -287,4 +287,47 @@ public class DeclaredPurposeTests : IDisposable
 
         Assert.Empty(Scanner.QuestionsFor(await ScanAsync("const x = 1;")));
     }
+
+    // ---- Whether asking is worth the reader's time at all -------------------
+
+    /// <summary>
+    /// Nothing worth asking about is not the same as nothing wrong. When a dropper fired, no
+    /// answer to any question can change the advice, and putting one up would imply otherwise.
+    /// </summary>
+    [Fact]
+    public async Task A_dropper_leaves_nothing_worth_asking()
+    {
+        var report = await ScanAsync(Dropper);
+
+        Assert.True(report.HasUnanswerableBlocking);
+    }
+
+    /// <summary>The case that is worth asking: everything blocking could be accounted for.</summary>
+    [Fact]
+    public async Task A_cleaner_leaves_a_question_worth_asking()
+    {
+        var report = await ScanAsync(Cleaner);
+
+        Assert.False(report.HasUnanswerableBlocking);
+        Assert.NotEmpty(Scanner.QuestionsFor(report));
+    }
+
+    /// <summary>
+    /// And one of each settles it. A question alongside something no answer can rescue would
+    /// offer the reader an influence over the verdict that they do not have.
+    /// </summary>
+    [Fact]
+    public async Task A_dropper_alongside_an_answerable_one_settles_the_verdict()
+    {
+        var report = await ScanAsync(Cleaner + "\n" + Dropper);
+
+        Assert.True(report.HasUnanswerableBlocking);
+
+        // And accounting for the answerable half still does not move the advice.
+        var accounted = Scanner.Reconsider(
+            report, DeclaredPurpose.FromReader(Capability.BrowserCookies));
+
+        Assert.Equal(InstallAdvice.AdviseAgainst, accounted.Verdict.Advice);
+        Assert.True(accounted.HasUnanswerableBlocking);
+    }
 }

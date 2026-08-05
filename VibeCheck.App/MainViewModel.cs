@@ -641,6 +641,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
                              nameof(SummaryLine), nameof(VulnerabilitySummary), nameof(Sha256),
                              nameof(DependencyCaveat), nameof(MinificationCaveat),
                              nameof(DurationLabel), nameof(ScoreCaption),
+                             nameof(AwaitingAnswer), nameof(ShowInstallBanner),
+                             nameof(AccountedForReasons), nameof(HasAccountedFor),
                          })
                 {
                     Notify(name);
@@ -650,6 +652,49 @@ public sealed class MainViewModel : INotifyPropertyChanged
             }
         }
     }
+
+    /// <summary>
+    /// The result with nothing accounted for, kept so an answer can be changed or taken back.
+    /// </summary>
+    /// <remarks>
+    /// Every displayed report is derived from this one. Deriving rather than mutating means a
+    /// reader who answers wrongly is never stuck with a friendlier result than the evidence
+    /// supports, and the questions themselves stay stable instead of disappearing as they are
+    /// answered.
+    /// </remarks>
+    private ScanReport? _strict;
+
+    private readonly HashSet<Capability> _accounted = [];
+    private readonly HashSet<Capability> _answered = [];
+
+    /// <summary>
+    /// What the scanner cannot decide on its own, put to the reader rather than guessed.
+    /// </summary>
+    /// <remarks>
+    /// Reading a browser's cookie database is a cleaner doing its job and a password stealer
+    /// doing its job, and no amount of static analysis separates them. The alternative designs
+    /// were both worse: guessing produces the wrong banner on honest software, and showing the
+    /// red banner first and retracting it once answered teaches people that alarming banners
+    /// get withdrawn.
+    /// </remarks>
+    public ObservableCollection<PurposeQuestion> Questions { get; } = [];
+
+    /// <summary>
+    /// Whether the verdict is being held back pending an answer.
+    /// </summary>
+    /// <remarks>
+    /// False the moment anything fired that an answer could not change, because then the advice
+    /// is settled and asking would imply otherwise. Also false once every question has been
+    /// answered, whichever way.
+    /// </remarks>
+    public bool AwaitingAnswer =>
+        Questions.Count > 0 && Report is not null && !Report.HasUnanswerableBlocking;
+
+    /// <summary>
+    /// Held back rather than shown, so the reader is never told not to install something and
+    /// then told it was fine after all.
+    /// </summary>
+    public bool ShowInstallBanner => AdviseAgainstInstall && !AwaitingAnswer;
 
     public ObservableCollection<FindingCard> Findings { get; } = [];
 
@@ -700,6 +745,20 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string BlockingReasons => Report is null
         ? string.Empty
         : string.Join("\n", Report.Verdict.BlockingReasons.Select(r => "• " + r));
+
+    /// <summary>
+    /// What the reader accounted for, shown where the banner would have been.
+    /// </summary>
+    /// <remarks>
+    /// A result that went quiet because somebody vouched for the application has to say so on
+    /// the same screen as the number. Otherwise the only difference between "nothing was found"
+    /// and "something was found and waved through" is a section further down.
+    /// </remarks>
+    public string AccountedForReasons => Report is null
+        ? string.Empty
+        : string.Join("\n", Report.Verdict.AccountedFor.Select(r => "• " + r));
+
+    public bool HasAccountedFor => Report?.Verdict.AccountedFor.Count > 0;
 
     public int CoveragePercent => Report?.Coverage.Percent ?? 0;
 
@@ -790,7 +849,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
             var report = await scan;
 
             ProgressPercent = 100;
+
+            _strict = report;
+            _accounted.Clear();
+            _answered.Clear();
+
             Report = report;
+            RebuildQuestions();
+
             State = AppState.Results;
         }
         catch (OperationCanceledException)
@@ -858,6 +924,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         Report = null;
         Error = null;
+
+        // Answers belong to the artifact they were given about. Carrying them into the next
+        // scan would account for behaviour in one application on the strength of what somebody
+        // said about a different one.
+        _strict = null;
+        _accounted.Clear();
+        _answered.Clear();
+        RebuildQuestions();
+
         State = AppState.Waiting;
     }
 
@@ -912,6 +987,61 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// reads as a judgement rather than a measurement.
     /// </summary>
     public ObservableCollection<string> ScoreExplanation { get; } = [];
+
+    /// <summary>
+    /// Puts the questions the scan could not answer to the reader.
+    /// </summary>
+    /// <remarks>
+    /// Taken from the strict result rather than the displayed one, so answering does not make
+    /// the question vanish from the list. A reader who says yes and then reconsiders can say no
+    /// again without rescanning.
+    /// </remarks>
+    private void RebuildQuestions()
+    {
+        Questions.Clear();
+
+        if (_strict is not null)
+        {
+            foreach (var capability in Scanner.QuestionsFor(_strict).Except(_answered))
+            {
+                Questions.Add(new PurposeQuestion(capability, Answer));
+            }
+        }
+
+        Notify(nameof(AwaitingAnswer));
+        Notify(nameof(ShowInstallBanner));
+    }
+
+    /// <summary>
+    /// Records one answer and re-reads the report against it, without rescanning.
+    /// </summary>
+    /// <remarks>
+    /// Declining is recorded as an answer rather than ignored, because a question left on
+    /// screen forever would hold the verdict back indefinitely. Saying no resolves it to
+    /// exactly the reading the scan produced on its own.
+    /// </remarks>
+    private void Answer(Capability capability, bool hasReason)
+    {
+        _answered.Add(capability);
+
+        if (hasReason)
+        {
+            _accounted.Add(capability);
+        }
+        else
+        {
+            _accounted.Remove(capability);
+        }
+
+        if (_strict is not null)
+        {
+            Report = Scanner.Reconsider(
+                _strict,
+                _accounted.Count == 0 ? null : DeclaredPurpose.FromReader([.. _accounted]));
+        }
+
+        RebuildQuestions();
+    }
 
     private void RebuildCollections()
     {
@@ -1067,6 +1197,64 @@ public sealed class MainViewModel : INotifyPropertyChanged
 /// The audience is resolved here rather than in the view, so no binding can reach past it to
 /// the developer's copy.
 /// </remarks>
+/// <summary>
+/// One thing the scan observed but cannot judge, put to the reader.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Deliberately a question about a specific behaviour rather than a menu of kinds of
+/// application. Naming kinds fails twice: the list has no end, and picking a flattering label
+/// off it is easy and deniable. Affirming that <i>this application has a reason to read browser
+/// cookies</i> is a specific claim, and the report prints it back in those words, so a
+/// screenshot of a quiet result still shows what bought the quiet.
+/// </para>
+/// <para>
+/// Both answers are offered plainly and neither is preselected. A default here would be the
+/// scanner guessing, which is the thing it is asking because it cannot do.
+/// </para>
+/// </remarks>
+public sealed class PurposeQuestion
+{
+    public PurposeQuestion(Capability capability, Action<Capability, bool> answer)
+    {
+        ArgumentNullException.ThrowIfNull(answer);
+
+        Capability = capability;
+        HasReasonCommand = new RelayCommand(_ => answer(capability, true));
+        NoReasonCommand = new RelayCommand(_ => answer(capability, false));
+    }
+
+    public Capability Capability { get; }
+
+    /// <summary>What was observed, in the reader's terms rather than the rule's.</summary>
+    public string Statement
+    {
+        get
+        {
+            var phrase = Capability.Humanise();
+
+            return $"This application can {char.ToLowerInvariant(phrase[0])}{phrase[1..]}.";
+        }
+    }
+
+    /// <summary>
+    /// Who legitimately does this, so the answer is an informed one rather than a guess.
+    /// </summary>
+    /// <remarks>
+    /// The second sentence matters as much as the first. Without it a reader has no basis to
+    /// answer and will tend to say yes, which would make the question a formality.
+    /// </remarks>
+    public string Context =>
+        $"Expected of {Capability.ExpectedOf()}. Unusual in anything else, and this alone "
+        + "would otherwise advise against installing it.";
+
+    public string Prompt => "Does it have a reason to?";
+
+    public ICommand HasReasonCommand { get; }
+
+    public ICommand NoReasonCommand { get; }
+}
+
 public sealed class FindingCard(Finding finding, Audience audience) : INotifyPropertyChanged
 {
     private bool _expanded;
