@@ -164,6 +164,42 @@ public sealed record ScanReport
         }
     }
 
+    /// <summary>
+    /// Share of minified code past which the reader is told, rather than left to infer it from
+    /// evidence they cannot read.
+    /// </summary>
+    /// <remarks>
+    /// A majority. Below it there is still a substantial body of readable source behind the
+    /// findings, and the note in the coverage limitations covers it without crowding the score.
+    /// </remarks>
+    public const int MinifiedShareWorthSaying = 50;
+
+    /// <summary>
+    /// Said beside the score when most of what was read is a bundle rather than source.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Recovered is not readable, and the coverage meter cannot tell them apart. A real
+    /// application reported "100% readable, no known issues found" while 99% of its code was
+    /// minified, and every line of evidence it could have quoted was a fragment several
+    /// thousand characters wide.
+    /// </para>
+    /// <para>
+    /// Beside the number rather than among the limitations, on the same reasoning as
+    /// <see cref="DependencyCaveat"/>: the fact was already in the report, several cards down,
+    /// which is several cards further than anybody scrolls before deciding. This one is not a
+    /// claim that less was checked, because since matches stopped collapsing per line the same
+    /// things are found either way. It is a claim about what the reader can verify.
+    /// </para>
+    /// </remarks>
+    public string? MinificationCaveat =>
+        Coverage.MinifiedPercent >= MinifiedShareWorthSaying
+            ? $"{Coverage.MinifiedPercent}% of this application's code ships minified. The "
+              + "checks still ran against it, but anything quoted below is a fragment of a "
+              + "bundle, so judging a finding for yourself is harder here than the coverage "
+              + "figure suggests."
+            : null;
+
     public string SummaryLine
     {
         get

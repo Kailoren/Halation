@@ -238,6 +238,14 @@ public static class MarkdownReportWriter
             output.AppendLine();
         }
 
+        // Same placement, different claim: this one says the checks ran but the evidence is
+        // not something a reader can sit and read.
+        if (report.MinificationCaveat is { Length: > 0 } minified)
+        {
+            output.AppendLine($"> **Most of this is minified.** {minified}");
+            output.AppendLine();
+        }
+
         // The single most important sentence in the document.
         output.AppendLine("*A clean result is not proof that an application is safe. Static "
                           + "analysis can show that problems are present; it cannot show that "

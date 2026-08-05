@@ -64,6 +64,18 @@ public sealed record Finding
     public int? Line { get; init; }
 
     /// <summary>
+    /// How far into the line the match sits, in characters.
+    /// </summary>
+    /// <remarks>
+    /// Carried because a line number does not locate anything in a bundle. A minified
+    /// application is one line, so every finding in it reported the same position, and six
+    /// separate problems were indistinguishable from one repeated six times. It also decides
+    /// whether two findings are in the same place, which is what stops them being folded
+    /// together downstream.
+    /// </remarks>
+    public int? Column { get; init; }
+
+    /// <summary>
     /// The matching snippet, for the reader to judge the finding themselves.
     /// </summary>
     /// <remarks>
@@ -123,10 +135,21 @@ public sealed record Finding
     /// <summary>Reference URL, e.g. a CVE or vendor advisory.</summary>
     public string? Reference { get; init; }
 
-    /// <summary>Where in the file this occurred, formatted for display.</summary>
+    /// <summary>
+    /// Where in the file this occurred, formatted for display.
+    /// </summary>
+    /// <remarks>
+    /// The column appears only once the line is too wide for a line number to mean anything,
+    /// which is to say only in bundled code. On anything hand-written it would be noise, and
+    /// there the line already says where to look.
+    /// </remarks>
     public string Location => FilePath is null
         ? "(artifact)"
-        : Line is null ? FilePath : $"{FilePath}:{Line}";
+        : Line is null
+            ? FilePath
+            : Column > Rules.RuleContext.RegionWidth
+                ? $"{FilePath}:{Line}:{Column}"
+                : $"{FilePath}:{Line}";
 
     public Severity SeverityFor(Audience audience) =>
         audience == Audience.EndUser ? UserSeverity : Severity;

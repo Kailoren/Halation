@@ -53,6 +53,45 @@ public sealed class RuleContext
         return index >= 0 && index < _lineStarts.Length ? offset - _lineStarts[index] : 0;
     }
 
+    /// <summary>
+    /// How much of a line counts as one place, for deciding whether two matches describe the
+    /// same thing.
+    /// </summary>
+    /// <remarks>
+    /// Sized so an ordinary line is always one region and never splits, which is what keeps
+    /// this invisible on hand-written code. Same figure, for the same reason, as the average
+    /// line length past which <see cref="Heuristics"/> stops treating a file as written in
+    /// lines at all.
+    /// </remarks>
+    public const int RegionWidth = 200;
+
+    /// <summary>
+    /// The place a match sits, as somewhere two matches can be judged to coincide.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The line, plus which stretch of it, and the second half is the part that matters. Rules
+    /// report once per line because a rule matching twice on one line is describing a single
+    /// problem. That reasoning holds for a line of code and fails completely for a minified
+    /// bundle, where the file is one line: the same rule matching in twenty unrelated places
+    /// collapsed to a single finding.
+    /// </para>
+    /// <para>
+    /// Measured on a real application. Taking a readable bundle, removing only its line breaks
+    /// and changing nothing else, took VC-MAL-002 from six findings to one, VC-MAL-006 from
+    /// twenty to one and VC-MAL-007 from twenty to one, with the raw match counts identical
+    /// throughout. The score moved from 13 to 29 on byte-identical code, because weight
+    /// accumulates per finding. Minification is not something a scan should be able to score
+    /// its way out of.
+    /// </para>
+    /// <para>
+    /// On any normally formatted line the region is always zero and the key is the line number
+    /// exactly as before, so nothing about hand-written code changes.
+    /// </para>
+    /// </remarks>
+    public (int Line, int Region) PlaceOf(int offset) =>
+        (LineAt(offset), OffsetInLine(offset) / RegionWidth);
+
     private bool? _patternCatalogue;
 
     /// <summary>
@@ -218,7 +257,7 @@ public sealed class PatternRule : IRule
         ArgumentNullException.ThrowIfNull(context);
 
         var findings = new List<Finding>();
-        var seenLines = new HashSet<int>();
+        var seenPlaces = new HashSet<(int Line, int Region)>();
 
         MatchCollection matches;
         try
@@ -257,9 +296,11 @@ public sealed class PatternRule : IRule
 
             var line = context.LineAt(match.Index);
 
-            // One finding per line: a rule that matches twice on the same line is reporting
-            // one problem, and duplicates make a report look padded.
-            if (!seenLines.Add(line))
+            // One finding per place: a rule that matches twice in the same place is reporting
+            // one problem, and duplicates make a report look padded. A place is a line, except
+            // in a bundle where the file is one line and that would mean the whole file. See
+            // RuleContext.PlaceOf.
+            if (!seenPlaces.Add(context.PlaceOf(match.Index)))
             {
                 continue;
             }
@@ -281,6 +322,7 @@ public sealed class PatternRule : IRule
                 UserRemediation = UserRemediation,
                 FilePath = context.File.RelativePath,
                 Line = line,
+                Column = context.OffsetInLine(match.Index),
                 Evidence = Redaction.BuildEvidence(context.LineText(line), secret),
                 IsBlocking = IsBlocking,
                 IsCapability = IsCapability,

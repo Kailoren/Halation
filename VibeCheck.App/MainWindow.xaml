@@ -539,6 +539,20 @@
                                            Text="{Binding DependencyCaveat}"/>
                             </Border>
 
+                            <!-- Same placement, different claim. The dependency caveat says a
+                                 check could not run; this says the checks ran but what they
+                                 quote back is a fragment of a bundle nobody can read. An app
+                                 that is 99% minified reported 100% readable and 100/100. -->
+                            <Border Margin="0,12,0,0" Padding="12"
+                                    CornerRadius="{DynamicResource ButtonRadius}"
+                                    Background="{StaticResource PanelRaised}"
+                                    BorderBrush="{StaticResource Medium}" BorderThickness="1"
+                                    Visibility="{Binding MinificationCaveat,
+                                                         Converter={StaticResource NullToVisibility}}">
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource Caption}"
+                                           Text="{Binding MinificationCaveat}"/>
+                            </Border>
+
                             <TextBlock Margin="0,12,0,0" TextWrapping="Wrap" Style="{StaticResource Caption}"
                                        Text="A clean result is not proof that an application is safe. Static analysis can show that problems are present; it cannot show that none are."/>
                         </StackPanel>

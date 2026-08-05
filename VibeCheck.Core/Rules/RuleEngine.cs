@@ -193,7 +193,14 @@ public sealed class RuleEngine
     /// </summary>
     private static List<Finding> Deduplicate(IEnumerable<Finding> findings) =>
         [.. findings
-            .GroupBy(f => (f.RuleId, f.FilePath, f.Line))
+            // By place rather than by line, matching the rule's own test for the same thing.
+            // Keyed on the line alone this folded a bundle's findings back into one after the
+            // rule had correctly told them apart, since a minified file is all line 1.
+            .GroupBy(f => (
+                f.RuleId,
+                f.FilePath,
+                f.Line,
+                Region: (f.Column ?? 0) / RuleContext.RegionWidth))
             .Select(group => group.First())
             .OrderByDescending(f => f.Severity)
             .ThenBy(f => f.Category)

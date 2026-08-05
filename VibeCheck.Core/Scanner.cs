@@ -151,7 +151,8 @@ public sealed class Scanner
         var findings = observed.Where(f => !f.IsCapability).ToList();
 
         var coverage = MergeCoverage(
-            recovery.Coverage, analysis, dependencies, lookup, deepPass, redundancy);
+            recovery.Coverage, analysis, dependencies, lookup, deepPass, redundancy)
+            with { MinifiedPercent = MinifiedShareOf(recovery.Files) };
 
         var report = new ScanReport
         {
@@ -249,6 +250,32 @@ public sealed class Scanner
 
         return await source.LookupAsync(dependencies.Dependencies, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// How much of the recovered code arrived as a bundle rather than as readable text.
+    /// </summary>
+    /// <remarks>
+    /// By bytes rather than by file count, because one bundle and forty small configuration
+    /// files is not 2% minified in any sense a reader cares about. Computed here rather than in
+    /// each backend so every artifact kind answers the question the same way.
+    /// </remarks>
+    private static int MinifiedShareOf(IReadOnlyList<RecoveredFile> files)
+    {
+        long total = 0;
+        long minified = 0;
+
+        foreach (var file in files)
+        {
+            total += file.Content.Length;
+
+            if (file.IsMinified)
+            {
+                minified += file.Content.Length;
+            }
+        }
+
+        return total == 0 ? 0 : (int)Math.Round(minified / (double)total * 100);
     }
 
     /// <summary>

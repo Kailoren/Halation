@@ -55,6 +55,20 @@ public sealed record RecoveredFile
 
     public int LineCount => Content.AsSpan().Count('\n') + 1;
 
+    /// <summary>
+    /// Whether this arrived as a bundle rather than as something a person could read.
+    /// </summary>
+    /// <remarks>
+    /// Measured by shape, because the name does not tell you. An earlier check for
+    /// <c>.min.js</c> and <c>.bundle.js</c> endings missed a real application entirely, whose
+    /// bundles ship as <c>main.js</c> and content-hashed chunk names and were 99% of its code.
+    /// A build tool picks those names; only the line lengths give it away.
+    /// </remarks>
+    public bool IsMinified => Content.Length / LineCount > MinifiedAverageLineLength;
+
+    /// <summary>Average line length past which text was written by a tool, not a person.</summary>
+    public const int MinifiedAverageLineLength = 200;
+
     /// <summary>Maps a file name to its language bucket.</summary>
     public static SourceLanguage LanguageOf(string path)
     {

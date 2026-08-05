@@ -639,7 +639,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                              nameof(AdviseAgainstInstall), nameof(BlockingReasons),
                              nameof(CoveragePercent), nameof(CoverageBasis), nameof(CoverageIsLow),
                              nameof(SummaryLine), nameof(VulnerabilitySummary), nameof(Sha256),
-                             nameof(DependencyCaveat),
+                             nameof(DependencyCaveat), nameof(MinificationCaveat),
                              nameof(DurationLabel), nameof(ScoreCaption),
                          })
                 {
@@ -716,6 +716,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// is why it is bound rather than being made an empty string.
     /// </summary>
     public string? DependencyCaveat => Report?.DependencyCaveat;
+
+    /// <summary>
+    /// Shown beside the score when most of the application ships as a bundle. Bound the same
+    /// way as the caveat above, and null for the same reason.
+    /// </summary>
+    public string? MinificationCaveat => Report?.MinificationCaveat;
 
     public string VulnerabilitySummary => Report is null
         ? string.Empty

@@ -61,6 +61,10 @@ public static class JsonReportWriter
                 basis = report.Coverage.Basis,
                 filesAnalysed = report.Coverage.RecoveredFileCount,
                 bytesRecovered = report.Coverage.RecoveredBytes,
+
+                // Recovered is not readable, and a consumer reading percent alone would take
+                // a fully bundled application for a fully inspectable one.
+                minifiedPercent = report.Coverage.MinifiedPercent,
                 checksNotPossible = report.Coverage.ChecksNotPossible,
             },
 
