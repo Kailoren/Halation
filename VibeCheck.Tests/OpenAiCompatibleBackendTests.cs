@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.Authentication;
 using System.Text;
 using System.Text.Json;
 
@@ -194,6 +195,33 @@ public sealed class OpenAiCompatibleBackendTests : IDisposable
     [InlineData("ftp://example.invalid/v1", false)]
     public void Only_a_local_endpoint_may_be_unencrypted(string url, bool allowed) =>
         Assert.Equal(allowed, OpenAiCompatibleBackend.RejectEndpoint(new Uri(url)) is null);
+
+    /// <summary>
+    /// The floor is this application's, not the operating system's.
+    /// </summary>
+    /// <remarks>
+    /// Left unset, .NET takes the host default, which a machine with an edited policy or an
+    /// older build can set lower than anyone here would choose. Asserted rather than assumed
+    /// because nothing about a working request would reveal that it had been downgraded.
+    /// </remarks>
+    [Fact]
+    public void Deprecated_TLS_versions_are_refused()
+    {
+        using var transport = OpenAiCompatibleBackend.Transport();
+
+        var enabled = transport.SslOptions.EnabledSslProtocols;
+
+        Assert.True(enabled.HasFlag(SslProtocols.Tls13));
+        Assert.True(enabled.HasFlag(SslProtocols.Tls12));
+
+#pragma warning disable SYSLIB0039 // Naming them is the point: these must not be negotiable.
+        Assert.False(enabled.HasFlag(SslProtocols.Tls11));
+        Assert.False(enabled.HasFlag(SslProtocols.Tls));
+#pragma warning restore SYSLIB0039
+
+        // And not "whatever the host prefers", which is what an unset value means.
+        Assert.NotEqual(SslProtocols.None, enabled);
+    }
 
     [Fact]
     public void The_reader_is_told_which_host_their_code_went_to()

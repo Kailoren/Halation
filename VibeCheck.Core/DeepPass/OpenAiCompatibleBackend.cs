@@ -66,7 +66,10 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
         _model = model;
 
         _ownsClient = handler is null;
-        _http = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler: false);
+        _http = handler is null
+            ? new HttpClient(Transport(), disposeHandler: true)
+            : new HttpClient(handler, disposeHandler: false);
+
         _http.Timeout = TimeSpan.FromMinutes(5);
 
         if (!string.IsNullOrWhiteSpace(apiKey))
@@ -95,6 +98,39 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
 
     /// <inheritdoc/>
     public decimal? PriceOf(TokenUsage usage) => null;
+
+    /// <summary>
+    /// The versions of TLS this backend will negotiate.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Stated rather than inherited. Left unset, .NET takes the operating system's default,
+    /// which on a current Windows means 1.2 and 1.3 and on a machine with an edited policy or
+    /// an older build can mean less. The payload is the reader's recovered source code, so the
+    /// floor belongs in this application rather than in whatever the host was configured with
+    /// years ago.
+    /// </para>
+    /// <para>
+    /// <b>Not 1.3 only, deliberately.</b> Requiring it would refuse a real slice of working
+    /// endpoints: self-hosted inference servers behind an older reverse proxy, corporate
+    /// gateways, and TLS-inspecting middleboxes commonly terminate at 1.2. A security tool that
+    /// fails to connect with an opaque error does not make anybody safer, it sends them back to
+    /// pasting their code into a web page. 1.2 with modern cipher suites is not broken, and 1.3
+    /// is preferred automatically wherever the other end can do it.
+    /// </para>
+    /// </remarks>
+    public const System.Security.Authentication.SslProtocols Protocols =
+        System.Security.Authentication.SslProtocols.Tls12
+        | System.Security.Authentication.SslProtocols.Tls13;
+
+    /// <summary>The transport used when the caller did not supply one, with the floor applied.</summary>
+    public static SocketsHttpHandler Transport() => new()
+    {
+        SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+        {
+            EnabledSslProtocols = Protocols,
+        },
+    };
 
     /// <summary>
     /// Whether source code sent to this endpoint would leave the machine in the clear.
