@@ -161,7 +161,7 @@ public sealed class LocalRuntimeTests
     }
 
     [Theory]
-    [InlineData(6, "qwen2.5-coder:3b")]
+    [InlineData(6, "qwen2.5-coder:1.5b")]
     [InlineData(8, "qwen2.5-coder:7b")]
     [InlineData(12, "qwen2.5-coder:14b")]
     [InlineData(16, "qwen2.5-coder:14b")]
@@ -292,6 +292,15 @@ public sealed class LocalRuntimeTests
         // And the name is the only other signal available, so it has to be the load-bearing one.
         Assert.True(LocalModelGuide.IsCloudModel("qwen3-coder:480b-cloud"));
         Assert.True(LocalModelGuide.LooksCodeCapable("qwen3-coder:480b-cloud"));
+    }
+
+    [Fact]
+    public void No_suggestion_carries_a_research_only_licence()
+    {
+        // Qwen publishes this family under Apache 2.0 at every size except 3B, which is under
+        // its research licence. Nothing is distributed here, but a reader scanning their own
+        // commercial application should not be pointed at a model they may not use for it.
+        Assert.DoesNotContain(LocalModelGuide.Choices, c => c.Tag.Contains(":3b", StringComparison.Ordinal));
     }
 
     [Fact]

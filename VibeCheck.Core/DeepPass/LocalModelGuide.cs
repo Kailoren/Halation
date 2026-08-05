@@ -74,12 +74,16 @@ public static class LocalModelGuide
     /// <summary>The suggestions, smallest first.</summary>
     public static IReadOnlyList<LocalModelChoice> Choices { get; } =
     [
+        // 1.5B rather than the 3B, which is the one size in this family published under Qwen's
+        // research licence instead of Apache 2.0. Nothing here is distributed, the reader pulls
+        // the model themselves, but suggesting a research-licensed model to somebody scanning
+        // their commercial application is an avoidable trap to lead them into.
         new(
-            "qwen2.5-coder:3b",
-            "3B",
-            WantsVideoBytes: 4 * GB,
-            DownloadBytes: 19 * GB / 10,
-            "For a card with little memory to spare. It will find noticeably less than the "
+            "qwen2.5-coder:1.5b",
+            "1.5B",
+            WantsVideoBytes: 3 * GB,
+            DownloadBytes: 1 * GB,
+            "For a card with very little memory to spare. It will find noticeably less than the "
             + "larger sizes and will miss reasoning that spans several files."),
 
         new(
