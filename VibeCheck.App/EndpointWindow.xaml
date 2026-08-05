@@ -39,11 +39,74 @@
             </Grid>
         </Border>
 
-        <StackPanel Grid.Row="1" Margin="20">
+        <!-- Scrolls, because this window sizes to its content and the content now includes a
+             detection panel whose height depends on how many models the reader happens to have
+             installed. Without this the buttons leave the bottom of the screen on a short
+             display, which is the same failure the waiting screen had. -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="20">
             <TextBlock Text="Answer the deep pass with another model" Style="{StaticResource Heading}"/>
 
             <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,14"
                        Text="Anything that speaks the OpenAI chat-completions shape can read the files, which covers every hosted provider worth naming and Ollama or LM Studio on this machine. A local model is the only route where the files never leave this computer at all."/>
+
+            <!-- ============ This machine ============
+                 Detected and then handed back for correction. The figure decides which model is
+                 worth running, detection is wrong on any laptop with two adapters, and a number
+                 the reader cannot argue with is just a guess wearing a uniform. -->
+            <TextBlock Text="This machine" Style="{StaticResource Heading}"/>
+
+            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                <TextBlock x:Name="AdapterName" Style="{StaticResource Caption}"
+                           VerticalAlignment="Center" Text="Looking..."/>
+                <TextBlock Text="Video memory:" Style="{StaticResource Caption}"
+                           VerticalAlignment="Center" Margin="14,0,0,0"/>
+                <TextBox x:Name="VideoMemoryBox" Width="56" Height="26" Margin="6,0,0,0"
+                         TextAlignment="Center" TextChanged="OnVideoMemoryChanged"/>
+                <TextBlock Text="GB" Style="{StaticResource Caption}"
+                           VerticalAlignment="Center" Margin="6,0,0,0"/>
+                <TextBlock x:Name="MemorySource" Style="{StaticResource Caption}"
+                           VerticalAlignment="Center" Margin="10,0,0,0"/>
+            </StackPanel>
+
+            <TextBlock x:Name="HardwareAdvice" Style="{StaticResource Caption}"
+                       TextWrapping="Wrap" Margin="0,8,0,0"/>
+
+            <!-- ============ What is already running ============ -->
+            <TextBlock x:Name="DetectionStatus" Style="{StaticResource Caption}"
+                       TextWrapping="Wrap" Margin="0,12,0,0"
+                       Text="Looking for Ollama and LM Studio on this machine..."/>
+
+            <ItemsControl x:Name="DetectedModels" Margin="0,8,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <!-- Wrapping content with a ceiling, rather than a plain string. The
+                             label carries a name, a size and a verdict, and two runtimes running
+                             at once prefix it with a third thing; on one line that runs off the
+                             right edge of the dialog and the verdict is the part that is lost. -->
+                        <Button Style="{StaticResource Btn}" MaxWidth="536"
+                                Margin="0,0,0,6" HorizontalAlignment="Left"
+                                Click="OnUseDetected">
+                            <TextBlock Text="{Binding Label}" TextWrapping="Wrap"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- The one step this application cannot take for the reader, given to them as the
+                 exact line to run rather than as a description of it. -->
+            <StackPanel x:Name="PullRow" Orientation="Horizontal" Margin="0,4,0,0"
+                        Visibility="Collapsed">
+                <TextBox x:Name="PullCommand" IsReadOnly="True" Height="26" Width="280"/>
+                <Button Content="Copy" Style="{StaticResource Btn}" Margin="8,0,0,0"
+                        Click="OnCopyPull"/>
+            </StackPanel>
+
+            <TextBlock x:Name="ContextCaution" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                       Margin="0,8,0,0" Visibility="Collapsed"
+                       Text="One thing to check: the deep pass sends whole files, several times larger than Ollama's traditional default context of 4096 tokens. If yours is still on that default, most of each file is dropped before the model reads it and the scan will look quiet rather than broken. Setting OLLAMA_CONTEXT_LENGTH to 32768 removes the doubt."/>
+
+            <Border Height="1" Background="{StaticResource Edge}" Margin="0,16,0,14"/>
 
             <!-- Buttons rather than a drop-down. Every option is visible without a click, which
                  is the point: the reason this list exists is that nobody remembers Ollama's port
@@ -102,5 +165,6 @@
                         Click="OnSave" IsDefault="True"/>
             </StackPanel>
         </StackPanel>
+        </ScrollViewer>
     </Grid>
 </Window>
