@@ -558,8 +558,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// </remarks>
     public string DeepPassCostLine => _deepPassSource switch
     {
+        // Not "unlimited". Anthropic meters non-interactive use like this separately from chat,
+        // so the honest word is allowance rather than quota: nothing is charged, and it is also
+        // not endless.
         DeepPassSource.LocalCli =>
-            "Spends your Claude subscription's quota. Nothing is charged to you.",
+            "Spends your Claude plan rather than money. Anthropic meters non-interactive use "
+            + "like this on its own allowance, so it is not unlimited.",
 
         DeepPassSource.Endpoint when DeepPassStaysLocal =>
             "Runs on your own hardware. Nothing is charged and nothing is uploaded.",
@@ -607,8 +611,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string LocalCliRouteTooltip =>
         "Where your code goes: to Anthropic, the same as the key route. Claude Code is installed "
         + "on this machine, but the reading does not happen here.\n\n"
-        + "What it costs: quota from the Claude subscription you already pay for. Nothing is "
-        + "charged, and nothing is billed per scan.\n\n"
+        + "What it costs: the Claude plan you already pay for, rather than money. Anthropic "
+        + "meters non-interactive use like this on its own monthly allowance, separate from "
+        + "chat, so a scan spends that allowance rather than nothing at all.\n\n"
         + "What you need: Claude Code installed and signed in.\n\n"
         + "Offered only for an application you built yourself, because Claude Code can act on "
         + "this computer and an API endpoint cannot.";
