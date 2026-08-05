@@ -91,18 +91,24 @@ public partial class EndpointWindow : Window
 
     private GraphicsAdapter? _adapter;
     private long _videoBytes;
+    private long _systemBytes;
     private IReadOnlyList<LocalRuntime> _runtimes = [];
 
     /// <summary>What was detected about the card, with the reader's own figure taking priority.</summary>
     private void ShowHardware()
     {
         _adapter = GraphicsMemory.Detect();
+        _systemBytes = GraphicsMemory.SystemBytes();
 
         var corrected = HardwareStore.Load();
 
         _videoBytes = corrected ?? _adapter?.VideoBytes ?? 0;
 
-        AdapterName.Text = _adapter?.Name ?? "Graphics card not identified";
+        // Named even when there is no card, because system memory is what a model runs in then,
+        // and a machine with plenty of it is in a better position than one without.
+        AdapterName.Text = _adapter is not null
+            ? $"{_adapter.Name}, {LocalModelGuide.Gigabytes(_systemBytes)} system memory"
+            : $"No graphics card found, {LocalModelGuide.Gigabytes(_systemBytes)} system memory";
         VideoMemoryBox.Text = _videoBytes > 0
             ? (_videoBytes / (double)(1024L * 1024 * 1024)).ToString("0.#", CultureInfo.CurrentCulture)
             : string.Empty;
@@ -111,7 +117,7 @@ public partial class EndpointWindow : Window
             : _adapter is not null ? "(detected)"
             : "(not detected, please fill in)";
 
-        HardwareAdvice.Text = LocalModelGuide.Advise(_videoBytes);
+        HardwareAdvice.Text = LocalModelGuide.Advise(_videoBytes, _systemBytes);
     }
 
     /// <summary>
@@ -141,7 +147,7 @@ public partial class EndpointWindow : Window
             ? "(detected)"
             : "(your figure)";
 
-        HardwareAdvice.Text = LocalModelGuide.Advise(_videoBytes);
+        HardwareAdvice.Text = LocalModelGuide.Advise(_videoBytes, _systemBytes);
         ShowDetection();
     }
 
@@ -183,18 +189,29 @@ public partial class EndpointWindow : Window
         {
             foreach (var model in runtime.Models)
             {
+                var cloud = LocalModelGuide.IsCloudModel(model.Id);
                 var fit = LocalModelGuide.Judge(model.Bytes, _videoBytes);
 
                 var label = many ? $"{runtime.Name}  ·  {model.Id}" : model.Id;
 
-                if (model.Bytes > 0)
+                // A cloud model reports no size because it is not here. Left to the ordinary
+                // path it would read "size unknown", which invites the reader to assume it is
+                // simply an unlabelled local model.
+                if (cloud)
                 {
-                    label += $"  ·  {LocalModelGuide.Gigabytes(model.Bytes)}";
+                    label += "  ·  runs on Ollama's servers, your code is uploaded";
                 }
-
-                if (fit != ModelFit.Unknown)
+                else
                 {
-                    label += $"  ·  {LocalModelGuide.Describe(fit)}";
+                    if (model.Bytes > 0)
+                    {
+                        label += $"  ·  {LocalModelGuide.Gigabytes(model.Bytes)}";
+                    }
+
+                    if (fit != ModelFit.Unknown)
+                    {
+                        label += $"  ·  {LocalModelGuide.Describe(fit)}";
+                    }
                 }
 
                 // Said out loud rather than only sorted on. Somebody who pulled a chat model for
@@ -276,13 +293,17 @@ public partial class EndpointWindow : Window
         ModelBox.Text = row.Tag;
 
         // Nothing on this machine wants a key, and one left in the box would be sent to it.
+        // Ollama's cloud models are no exception: they authenticate with the credential the
+        // runtime holds from ollama signin, which never passes through here.
         KeyBox.Clear();
         _carriesStoredKey = _carriesStoredKey && SameHostAsStored(UrlBox.Text);
         RefreshKeyNote();
 
-        PresetNote.Text =
-            "Running on this machine. The files never leave it, nothing is charged, and it works "
-            + "with the network unplugged.";
+        PresetNote.Text = LocalModelGuide.IsCloudModel(row.Tag)
+            ? "This one is not on this machine. Ollama forwards it to ollama.com on your plan, so "
+              + "the files are uploaded. It buys a much larger model than your card could hold."
+            : "Running on this machine. The files never leave it, nothing is charged, and it "
+              + "works with the network unplugged.";
 
         Hide(Problem);
     }

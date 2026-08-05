@@ -22,8 +22,37 @@ public sealed record DeepPassEndpointSettings(Uri Endpoint, string Model, string
     /// <summary>How this endpoint is named on screen: by where the code goes.</summary>
     public string Description => DeepPassEndpoints.Describe(Endpoint, Model);
 
-    /// <summary>Whether the model answering is on this machine, which changes what is uploaded.</summary>
-    public bool IsLocal => Endpoint.IsLoopback;
+    /// <summary>
+    /// Whether this is a local address that forwards to Ollama's cloud regardless.
+    /// </summary>
+    /// <remarks>
+    /// Ollama serves its cloud models from the same loopback port as local ones, attaching the
+    /// reader's ollama.com credentials on the way past. The address says nothing about the
+    /// destination, so the model has to be asked as well.
+    /// </remarks>
+    public bool IsCloudRelay =>
+        Endpoint.IsLoopback && LocalModelGuide.IsCloudModel(Model);
+
+    /// <summary>
+    /// Whether the model answering is on this machine, which decides what is uploaded.
+    /// </summary>
+    /// <remarks>
+    /// Loopback <b>and</b> not a cloud relay. This property is what every privacy sentence in
+    /// the interface is built on, so it has to mean what it says: a request that leaves the
+    /// machine is not local however local the address looks.
+    /// </remarks>
+    public bool IsLocal => Endpoint.IsLoopback && !IsCloudRelay;
+
+    /// <summary>
+    /// Where the files actually go, for the sentences that have to name a destination.
+    /// </summary>
+    /// <remarks>
+    /// Not the host, for the cloud case. "The files will be sent to localhost:11434" is
+    /// technically the address requested and completely misleading about what happens to them.
+    /// </remarks>
+    public string Destination => IsCloudRelay
+        ? "Ollama's cloud at ollama.com"
+        : DeepPassEndpoints.Describe(Endpoint, model: null);
 }
 
 /// <summary>

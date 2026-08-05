@@ -392,9 +392,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// from the other two rather than merely from another provider. Everything else about it is
     /// the reader's own configuration and needs no explaining back to them.
     /// </remarks>
-    public string EndpointSourceStatus => _endpoint is null
-        ? "Not configured. Use Configure above to name one, including a model on this machine."
-        : _endpoint.Description + (_endpoint.IsLocal ? ", on this machine." : ".");
+    public string EndpointSourceStatus => _endpoint switch
+    {
+        null => "Not configured. Use Configure above to name one, including a model on this machine.",
+
+        // Said here rather than left to the address, which reads as local and is not.
+        { IsCloudRelay: true } => _endpoint.Description + ", relayed by Ollama to ollama.com.",
+
+        { IsLocal: true } => _endpoint.Description + ", on this machine.",
+
+        _ => _endpoint.Description + ".",
+    };
 
     /// <summary>Whether the chosen source reads the files without them leaving this computer.</summary>
     /// <remarks>
@@ -556,6 +564,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         DeepPassSource.Endpoint when DeepPassStaysLocal =>
             "Runs on your own hardware. Nothing is charged and nothing is uploaded.",
 
+        DeepPassSource.Endpoint when _endpoint?.IsCloudRelay == true =>
+            "Runs on Ollama's servers against your ollama.com plan, not on this machine. What "
+            + "that costs is between you and them, so the report states tokens rather than money.",
+
         DeepPassSource.Endpoint =>
             "Billed by whoever runs that endpoint, at rates VibeCheck has no way to know. The "
             + "report states the tokens spent rather than inventing what they cost.",
@@ -625,6 +637,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
             + "What you need: Ollama or LM Studio running, with a model downloaded.\n\n"
             + "A model on your own machine is smaller than Claude Opus 5 and will find less. The "
             + "report names what answered, so a quiet result can be read for what it is.",
+
+        // Its own case rather than folded in with the hosted providers, because this one looks
+        // exactly like the local case from the address alone and is not.
+        { IsCloudRelay: true } =>
+            "Where your code goes: to Ollama's servers. The address is this machine, but a model "
+            + "whose name ends in -cloud is not on it: Ollama attaches your ollama.com "
+            + "credentials and forwards the request.\n\n"
+            + "What it costs: your ollama.com plan.\n\n"
+            + "What you need: Ollama installed and signed in with ollama signin.\n\n"
+            + "This buys a far larger model than your own card could hold. It is a fair trade, "
+            + "but it is a trade: this is not the route where nothing is uploaded.",
 
         _ =>
             $"Where your code goes: to {EndpointHost}, over an encrypted connection. VibeCheck "
@@ -717,9 +740,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public string ApiKeyStatus => ApiKeyStore.Describe(ApiKeyStore.Load());
 
-    /// <summary>Just the destination, for sentences that have already said what is sent.</summary>
-    private string EndpointHost =>
-        _endpoint is null ? "that endpoint" : DeepPassEndpoints.Describe(_endpoint.Endpoint, null);
+    /// <summary>
+    /// Just the destination, for sentences that have already said what is sent.
+    /// </summary>
+    /// <remarks>
+    /// Asked of the settings rather than derived from the URL here, because for an Ollama cloud
+    /// model the two are different: the address is this machine and the destination is not.
+    /// </remarks>
+    private string EndpointHost => _endpoint?.Destination ?? "that endpoint";
 
     /// <summary>Stores or clears the key, then refreshes everything that depends on it.</summary>
     public void SetApiKey(string? key)

@@ -187,6 +187,37 @@ public sealed class LocalRuntimeTests
     }
 
     [Fact]
+    public void A_machine_with_no_graphics_card_is_told_it_can_still_do_this()
+    {
+        var advice = LocalModelGuide.Advise(videoBytes: 0, systemBytes: 64 * GB);
+
+        // It runs on the processor. Saying otherwise, or sending them off to a hosted route,
+        // substitutes a judgment about speed for the reason they wanted local in the first
+        // place.
+        Assert.Contains("processor", advice, StringComparison.Ordinal);
+        Assert.Contains("64GB", advice, StringComparison.Ordinal);
+
+        // The reason for the slowness is the actionable part: more memory channels help and
+        // more cores do not, so somebody told only "it is slow" would go and buy the wrong
+        // thing.
+        Assert.Contains("bandwidth rather than core count", advice, StringComparison.Ordinal);
+
+        // And a small model, not the largest that would fit in 64GB of system memory. Without a
+        // card the binding constraint is speed rather than capacity, so the advice inverts.
+        Assert.Contains("qwen2.5-coder:7b", advice, StringComparison.Ordinal);
+        Assert.DoesNotContain("qwen2.5-coder:32b", advice, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Still_says_something_useful_when_the_memory_is_unknown_too()
+    {
+        var advice = LocalModelGuide.Advise(videoBytes: 0, systemBytes: 0);
+
+        Assert.Contains("processor", advice, StringComparison.Ordinal);
+        Assert.DoesNotContain("0GB", advice, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Judges_an_installed_model_against_the_card()
     {
         // 4.7GB of weights on an 8GB card, with room left for the file being read.
@@ -225,6 +256,42 @@ public sealed class LocalRuntimeTests
 
         Assert.Equal(ModelFit.Comfortable, LocalModelGuide.Judge(4_920_753_328, 8 * GB));
         Assert.Equal(ModelFit.Comfortable, LocalModelGuide.Judge(4_683_087_519, 8 * GB));
+    }
+
+    // ---- Cloud models served from a local address ----------------------------
+
+    [Theory]
+
+    // Ollama's own examples. These are served from localhost:11434 like any other model, with
+    // the runtime attaching the reader's ollama.com credentials and forwarding the request.
+    [InlineData("qwen3-coder:480b-cloud", true)]
+    [InlineData("gpt-oss:120b-cloud", true)]
+    [InlineData("deepseek-v3.1:671b-cloud", true)]
+    [InlineData("gpt-oss:20b-cloud", true)]
+
+    // Trailing whitespace is stripped before the check, because this decides whether the
+    // interface claims nothing was uploaded.
+    [InlineData("gpt-oss:120b-cloud  ", true)]
+    [InlineData("QWEN3-CODER:480B-CLOUD", true)]
+
+    // Ordinary local models, including one whose name merely contains the word.
+    [InlineData("qwen2.5-coder:7b", false)]
+    [InlineData("cloud-atlas:7b", false)]
+    [InlineData("llama3.1:8b", false)]
+    [InlineData(null, false)]
+    public void Recognises_a_model_that_is_not_on_this_machine(string? tag, bool expected) =>
+        Assert.Equal(expected, LocalModelGuide.IsCloudModel(tag));
+
+    [Fact]
+    public void A_cloud_model_reports_no_size_and_must_not_be_judged_as_local()
+    {
+        // Ollama lists cloud models with a dash in the size column, which reaches the API as no
+        // size at all. Nothing about that should read as a model that happens to fit.
+        Assert.Equal(ModelFit.Unknown, LocalModelGuide.Judge(0, 8 * GB));
+
+        // And the name is the only other signal available, so it has to be the load-bearing one.
+        Assert.True(LocalModelGuide.IsCloudModel("qwen3-coder:480b-cloud"));
+        Assert.True(LocalModelGuide.LooksCodeCapable("qwen3-coder:480b-cloud"));
     }
 
     [Fact]

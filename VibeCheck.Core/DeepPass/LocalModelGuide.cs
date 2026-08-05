@@ -129,6 +129,29 @@ public static class LocalModelGuide
         : ModelFit.Spills;
 
     /// <summary>
+    /// Whether a tag names one of Ollama's cloud models, which are not on this machine at all.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>This is a privacy check, not a performance one.</b> Ollama serves its cloud models
+    /// through the same <c>localhost:11434</c> as local ones: the daemon sees the <c>-cloud</c>
+    /// suffix, attaches the reader's ollama.com credentials and forwards the request. A loopback
+    /// address is therefore not proof that anything stays on the machine, and treating it as
+    /// proof would have this application state that nothing was uploaded while it uploaded the
+    /// reader's source code. That is the one kind of mistake this whole tool exists not to make.
+    /// </para>
+    /// <para>
+    /// The suffix is the only signal available: cloud models appear in the runtime's own listing
+    /// beside local ones, distinguished by the name and by reporting no size. A local model
+    /// deliberately named to end in <c>-cloud</c> would be misread, and that is the safe
+    /// direction to be wrong in, since it overstates what leaves the machine rather than
+    /// understating it.
+    /// </para>
+    /// </remarks>
+    public static bool IsCloudModel(string? tag) =>
+        tag is not null && tag.TrimEnd().EndsWith("-cloud", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Whether a tag names a model trained on code rather than a general assistant.
     /// </summary>
     /// <remarks>
@@ -169,31 +192,77 @@ public static class LocalModelGuide
     };
 
     /// <summary>
-    /// What this machine can run, in a sentence, including when the answer is "not much".
+    /// What this machine can run, in a sentence, including when there is no usable card.
     /// </summary>
-    public static string Advise(long videoBytes)
+    /// <remarks>
+    /// <para>
+    /// System memory is part of the answer rather than a footnote. A model with no graphics card
+    /// to sit in runs on the processor out of ordinary memory, and that works: it is the reader's
+    /// decision whether it is fast enough, not this application's. An earlier version of this
+    /// sentence told anybody without a card to use one of the hosted routes instead, which
+    /// substituted a judgment about speed for the reader's own reason for wanting local at all.
+    /// </para>
+    /// <para>
+    /// <b>The advice inverts without a card.</b> With video memory the binding constraint is
+    /// capacity, so the largest model that fits is the best one. On a processor the constraint is
+    /// speed, and a machine with 64GB of memory can load a model far larger than it can run in
+    /// any reasonable time, so the right suggestion is a small one.
+    /// </para>
+    /// </remarks>
+    public static string Advise(long videoBytes, long systemBytes = 0)
     {
         if (videoBytes <= 0)
         {
-            return "Set your card's memory above and this will say which model to use. As a "
-                   + "rule, a model needs about its own file size in video memory, plus a "
-                   + "gigabyte or two for the file being read.";
+            return OnTheProcessor(systemBytes);
         }
 
         var gb = videoBytes / (double)GB;
 
         if (Recommend(videoBytes) is not { } choice)
         {
-            return $"With {gb:0.#}GB of video memory, none of the suggestions below will fit "
-                   + "properly. The smallest will still run, mostly on your processor, which "
-                   + "works but can take hours rather than minutes on a large application. One "
-                   + "of the other two routes will serve you better.";
+            return $"With {gb:0.#}GB of video memory, none of the suggestions below fits "
+                   + "entirely on the card. They will still run, with the rest on your "
+                   + "processor, which works but is slow: expect hours rather than minutes on a "
+                   + "large application. The smallest is the one to try.";
         }
 
         return $"With {gb:0.#}GB of video memory, {choice.Tag} is the largest that fits. A model "
                + "needs roughly its own file size in video memory plus a gigabyte or two for the "
                + "file it is reading, so anything larger runs partly on your processor and slows "
                + "down sharply.";
+    }
+
+    /// <summary>
+    /// The no-card case, which is a real way to run this rather than a failure to run it.
+    /// </summary>
+    /// <remarks>
+    /// The reason for the slowness is given because it is the one thing that decides whether a
+    /// better processor would help. Speed here is set by memory bandwidth and by how fast the
+    /// prompt can be read, not by core count, and the deep pass sends whole files, so it is
+    /// heavier on the prompt than most things a model is asked to do. A reader told only "it
+    /// will be slow" would reasonably go and buy more cores and find nothing changed.
+    /// </remarks>
+    private static string OnTheProcessor(long systemBytes)
+    {
+        var smallest = Choices[0];
+        var modest = Choices.Count > 1 ? Choices[1] : Choices[0];
+
+        // Worded as what happens rather than as a claim about what was detected. The box above
+        // can be cleared on a machine that plainly does have a card, and "no graphics card was
+        // found" then contradicts the adapter named two lines higher up.
+        var opening = systemBytes > 0
+            ? $"With no video memory to use, a model runs on your processor, out of the "
+              + $"{systemBytes / (double)GB:0.#}GB of system memory. "
+            : "With no video memory to use, a model runs on your processor, out of ordinary "
+              + "system memory. ";
+
+        return opening
+               + "That works and nothing about it is second class, but it is slow, and slower "
+               + "here than for chat: the deep pass sends whole files to be read, and reading a "
+               + "long prompt is the part a processor is worst at. Speed depends on memory "
+               + "bandwidth rather than core count, so more channels help and more cores mostly "
+               + $"do not. Start with {modest.Tag}, or {smallest.Tag} if that proves too slow, "
+               + "and expect a large application to take hours.";
     }
 
     /// <summary>
