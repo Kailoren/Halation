@@ -145,7 +145,7 @@ not run is never mistaken for one that came back clean.
 
 ## Optional deep pass
 
-<img width="1117" height="819" alt="deepscan" src="https://github.com/user-attachments/assets/2591fb74-a535-4a77-93fb-085d3fd7156b" />
+<img width="1120" height="997" alt="Screenshot 2026-08-06 224153" src="https://github.com/user-attachments/assets/5b003aec-85b2-47b4-94f2-c4d41b038b23" />
 
 The main scan is free, needs no account, and sends nothing but package names. Optionally, a
 second deep pass reads the code and reasons about it, which is what catches the things a pattern
