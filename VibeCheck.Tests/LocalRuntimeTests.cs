@@ -333,6 +333,32 @@ public sealed class LocalRuntimeTests
             // A suggestion whose download is larger than the memory it claims to want would be
             // advice that contradicts itself.
             Assert.True(choice.DownloadBytes < choice.WantsVideoBytes, choice.Tag);
+
+            // The size has to survive as far as something a reader can read. It was carried on
+            // every choice and displayed nowhere for two releases, which is how a figure that
+            // disagreed with the installed one went unnoticed.
+            Assert.True(choice.DownloadBytes > 0, choice.Tag);
+            Assert.NotEqual("size unknown", LocalModelGuide.Gigabytes(choice.DownloadBytes));
         }
+    }
+
+    [Fact]
+    public void A_suggestion_is_sized_the_same_before_and_after_it_is_installed()
+    {
+        // The defect this pins: the download sizes were Ollama's decimal gigabytes written into a
+        // field rendered as binary ones, so the 7B read 4.7GB as a suggestion and 4.4GB once
+        // installed. Judge and the suggestion table have to agree, or the dialog contradicts
+        // itself across a single pull.
+        var seven = LocalModelGuide.Choices.Single(c => c.Tag == "qwen2.5-coder:7b");
+
+        // The real manifest total, which is also what /api/tags reports once it is on disk.
+        const long Installed = 4_683_087_074;
+
+        Assert.Equal(
+            LocalModelGuide.Gigabytes(Installed),
+            LocalModelGuide.Gigabytes(seven.DownloadBytes));
+
+        // And the verdict has to match too: an 8GB card is the case this size exists for.
+        Assert.Equal(ModelFit.Comfortable, LocalModelGuide.Judge(seven.DownloadBytes, 8 * GB));
     }
 }

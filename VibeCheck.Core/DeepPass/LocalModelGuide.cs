@@ -72,6 +72,14 @@ public static class LocalModelGuide
     private const long ContextHeadroom = 3 * GB / 2;
 
     /// <summary>The suggestions, smallest first.</summary>
+    /// <remarks>
+    /// <b>The download sizes are the registry manifests' own byte totals, not round gigabytes.</b>
+    /// They were previously written as the figures <c>ollama list</c> prints, which are decimal
+    /// gigabytes, into a field <see cref="Gigabytes"/> renders as binary ones. The same model then
+    /// read 4.7GB as a suggestion and 4.4GB once installed, which is precisely the confusion that
+    /// method exists to avoid. Taking the byte count means the number a reader is shown before
+    /// pulling matches the one shown afterwards.
+    /// </remarks>
     public static IReadOnlyList<LocalModelChoice> Choices { get; } =
     [
         // 1.5B rather than the 3B, which is the one size in this family published under Qwen's
@@ -82,7 +90,7 @@ public static class LocalModelGuide
             "qwen2.5-coder:1.5b",
             "1.5B",
             WantsVideoBytes: 3 * GB,
-            DownloadBytes: 1 * GB,
+            DownloadBytes: 986_061_602,
             "For a card with very little memory to spare. It will find noticeably less than the "
             + "larger sizes and will miss reasoning that spans several files."),
 
@@ -90,7 +98,7 @@ public static class LocalModelGuide
             "qwen2.5-coder:7b",
             "7B",
             WantsVideoBytes: 13 * GB / 2,
-            DownloadBytes: 47 * GB / 10,
+            DownloadBytes: 4_683_087_074,
             "The usual choice for an 8GB card. Enough to reason about a file properly without "
             + "spilling onto the processor."),
 
@@ -98,7 +106,7 @@ public static class LocalModelGuide
             "qwen2.5-coder:14b",
             "14B",
             WantsVideoBytes: 11 * GB,
-            DownloadBytes: 9 * GB,
+            DownloadBytes: 8_988_123_810,
             "Better at reachability and at guards that are incomplete rather than absent. "
             + "Wants a 12GB card or more."),
 
@@ -106,7 +114,7 @@ public static class LocalModelGuide
             "qwen2.5-coder:32b",
             "32B",
             WantsVideoBytes: 22 * GB,
-            DownloadBytes: 20 * GB,
+            DownloadBytes: 19_851_349_410,
             "The closest a model on your own machine gets to the hosted route. Wants 24GB."),
     ];
 

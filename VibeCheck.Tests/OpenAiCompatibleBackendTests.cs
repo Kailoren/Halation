@@ -322,6 +322,60 @@ public sealed class OpenAiCompatibleBackendTests : IDisposable
 
     // ---- Helpers ------------------------------------------------------------
 
+    // ---- A server that quietly dropped most of the file ---------------------
+
+    /// <summary>A file large enough that no tokeniser could encode it into a few hundred tokens.</summary>
+    private static TriagedFile BigFile() =>
+        File(string.Join("\n", Enumerable.Repeat("var value = request.query.identifier;", 1600)));
+
+    [Fact]
+    public async Task A_prompt_the_endpoint_only_partly_read_is_reported_rather_than_answered()
+    {
+        // Ollama's input ceiling is about half its context, so a default 4096-token context
+        // accepts 2050 tokens, discards the rest of a large file and answers 200 as though
+        // nothing happened. Nothing in the reply says so; the arithmetic is the only evidence.
+        _server.Reply(Answer("[]", promptTokens: 2050, completionTokens: 180));
+
+        using var backend = Backend();
+        var review = await backend.ReviewAsync(BigFile());
+
+        Assert.NotNull(review.Limitation);
+        Assert.Contains("dropped", review.Limitation, StringComparison.Ordinal);
+
+        // The file is reported unread. A review of the tail of a file is not a weaker review, it
+        // is a review of different code, and its findings would describe guards that were cut off
+        // rather than guards that are missing.
+        Assert.Empty(review.Findings);
+    }
+
+    [Fact]
+    public async Task A_plausible_token_count_is_left_alone()
+    {
+        // The floor is generous on purpose: this must not fire because one provider's tokeniser
+        // is denser than another's. Discarding a sound review would be the more expensive
+        // mistake, because nothing downstream would show it had happened.
+        _server.Reply(Answer("[]", promptTokens: 16_000, completionTokens: 180));
+
+        using var backend = Backend();
+        var review = await backend.ReviewAsync(BigFile());
+
+        Assert.Null(review.Limitation);
+    }
+
+    [Fact]
+    public async Task An_endpoint_that_reports_no_usage_is_not_accused_of_truncating()
+    {
+        // Several local servers omit the usage block entirely. A missing counter is not evidence
+        // that anything was dropped, and manufacturing a limitation from an absent field would be
+        // the same error this check exists to prevent, pointing the other way.
+        _server.Reply(Answer("[]"));
+
+        using var backend = Backend();
+        var review = await backend.ReviewAsync(BigFile());
+
+        Assert.Null(review.Limitation);
+    }
+
     private static string Answer(string findingsJson, bool raw = false,
         int promptTokens = 0, int completionTokens = 0)
     {

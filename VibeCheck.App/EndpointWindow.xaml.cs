@@ -247,6 +247,11 @@ public partial class EndpointWindow : Window
         var recommended = LocalModelGuide.Recommend(_videoBytes) ?? LocalModelGuide.Choices[0];
 
         PullCommand.Text = recommended.PullCommand;
+
+        // What the recommendation costs, said where the recommendation is made. A reader deciding
+        // whether to take it is deciding whether to spend the download, and the figure was
+        // carried on the choice all along without ever reaching the screen.
+        PullSize.Text = $"{LocalModelGuide.Gigabytes(recommended.DownloadBytes)} to download";
         ContextCaution.Visibility = _runtimes.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         if (_runtimes.Count == 0)

@@ -100,6 +100,12 @@
                 <TextBox x:Name="PullCommand" IsReadOnly="True" Height="26" Width="280"/>
                 <Button Content="Copy" Style="{StaticResource Btn}" Margin="8,0,0,0"
                         Click="OnCopyPull"/>
+                <!-- Beside the command rather than inside it. The size belongs next to the model
+                     name, where somebody reading the recommendation decides whether to take it,
+                     but the box is copied verbatim to the clipboard and a size appended to the
+                     text would travel with it and stop being a runnable command. -->
+                <TextBlock x:Name="PullSize" Style="{StaticResource Caption}"
+                           VerticalAlignment="Center" Margin="10,0,0,0"/>
             </StackPanel>
 
             <TextBlock x:Name="ContextCaution" Style="{StaticResource Caption}" TextWrapping="Wrap"

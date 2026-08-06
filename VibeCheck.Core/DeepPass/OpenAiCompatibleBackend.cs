@@ -301,7 +301,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
         CancellationToken cancellationToken)
     {
         using var response = await _http
-            .PostAsJsonAsync(_endpoint, BuildBody(triaged, schema), cancellationToken)
+            .PostAsJsonAsync(_endpoint, BuildBody(triaged, schema, out var promptChars), cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
@@ -345,6 +345,15 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
 
         var usage = ReadUsage(root);
 
+        // Before the answer is read, not after. A review of a file the model was only shown the
+        // tail of is not a weaker review, it is a review of different code, and its findings are
+        // worse than none: the guard that makes a pattern safe is usually above the line that
+        // matches, so a truncated file reads as an unguarded one.
+        if (DiscardedInput(promptChars, usage) is { } truncation)
+        {
+            return Failed(triaged, truncation, usage);
+        }
+
         if (string.IsNullOrWhiteSpace(content))
         {
             return Failed(triaged, "the endpoint returned an empty answer", usage);
@@ -360,7 +369,64 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
         };
     }
 
-    private object BuildBody(TriagedFile triaged, bool schema)
+    /// <summary>
+    /// The most characters one token is taken to stand for, used only as a floor.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately generous. Source code and English both tokenise at roughly three to four
+    /// characters per token, so six is comfortably past anything a real tokeniser produces, and
+    /// the check therefore fires only when the shortfall cannot be explained by whose tokeniser
+    /// ran. Being wrong in this direction means missing a mild truncation; being wrong in the
+    /// other would mean discarding a review that was fine, which is the more expensive mistake
+    /// because it is invisible.
+    /// </remarks>
+    private const int MaxCharsPerToken = 6;
+
+    /// <summary>
+    /// Whether the endpoint silently dropped part of the prompt, and how to say so.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The transport cannot report this, so it has to be inferred.</b> A server whose context
+    /// is smaller than the prompt does not refuse the request: it discards the overflow and
+    /// answers 200 with a well-formed reply, and nothing in the chat-completions shape carries a
+    /// truncation flag. The only evidence is arithmetic — a prompt of a known length cannot
+    /// encode into fewer tokens than its characters allow, so a reported count far below that
+    /// floor means the server did not have the whole thing.
+    /// </para>
+    /// <para>
+    /// Measured against Ollama 0.32.6, which was the case that produced this: its input ceiling
+    /// is about half the context, so a default 4096-token context accepted 2050 tokens and threw
+    /// away 87% of a large file, then answered confidently about the remainder. Six findings in
+    /// that scan were of the form "incomplete guard", which is what a file reads like when the
+    /// guard was in the discarded part.
+    /// </para>
+    /// <para>
+    /// Silent when the endpoint reports no usage at all, which several local servers do not.
+    /// Absence of the counter is not evidence of truncation, and inventing a limitation from a
+    /// missing field would be the same error in the other direction.
+    /// </para>
+    /// </remarks>
+    private static string? DiscardedInput(int promptChars, TokenUsage usage)
+    {
+        if (usage.Input <= 0 || promptChars <= 0)
+        {
+            return null;
+        }
+
+        var floor = promptChars / MaxCharsPerToken;
+
+        if (usage.Input >= floor)
+        {
+            return null;
+        }
+
+        return $"the endpoint read {usage.Input:N0} tokens of a prompt that cannot be shorter "
+               + $"than about {floor:N0}, so most of the file was dropped before the model saw "
+               + "it. Raise the context length where the model is served, then scan again";
+    }
+
+    private object BuildBody(TriagedFile triaged, bool schema, out int promptChars)
     {
         // The schema is restated in the prompt whenever it cannot be enforced, so a server with
         // no structured-output support still knows the shape it is being asked for. Belt and
@@ -371,6 +437,12 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
             : DeepPassPrompt.SystemPrompt
               + "\n\nAnswer with JSON only, matching this schema exactly:\n"
               + JsonSerializer.Serialize(DeepPassPrompt.FindingSchema);
+
+        var prompt = DeepPassPrompt.BuildPrompt(triaged);
+
+        // Both halves, because both are sent and a server truncating the request drops from the
+        // whole conversation rather than from the file alone.
+        promptChars = instruction.Length + prompt.Length;
 
         var body = new Dictionary<string, object>
         {
@@ -383,7 +455,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
             ["messages"] = new object[]
             {
                 new { role = "system", content = instruction },
-                new { role = "user", content = DeepPassPrompt.BuildPrompt(triaged) },
+                new { role = "user", content = prompt },
             },
         };
 
