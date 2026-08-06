@@ -16,6 +16,11 @@ domain, or from a local server, without anything being edited. To attach a custo
 add a `CNAME` file to this folder containing the bare hostname and point a DNS `CNAME` record at
 `kailoren.github.io`.
 
+**The one absolute URL in the site is `og:image`.** A social scraper does not resolve a
+relative image path, so those tags name `https://kailoren.github.io/VibeCheck/` in full. If the
+site ever moves to a custom domain, that base has to be updated in all six pages; everything
+else is relative and moves on its own.
+
 `.nojekyll` stops GitHub running the pages through Jekyll first. Nothing here needs it, and
 skipping it makes deploys quicker.
 
