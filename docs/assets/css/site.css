@@ -431,6 +431,16 @@ section {
    full-width under it to line up against. */
 .lede--measure { max-width: 62ch; }
 
+/* The smaller print that follows a table or a grid and qualifies it. Full
+   width for the same reason as .lede: it sits directly under something that
+   spans the column, and a short measure makes it look misplaced rather than
+   readable. */
+.note {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin-top: 1.4rem;
+}
+
 .grid {
   display: grid;
   gap: 1.25rem;
