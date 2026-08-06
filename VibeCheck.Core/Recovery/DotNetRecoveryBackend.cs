@@ -67,6 +67,19 @@ public sealed class DotNetRecoveryBackend : IRecoveryBackend
         var notes = new List<string>();
         var budget = new DecompilationBudget();
 
+        // Separately from the assemblies, because the launcher is not one. See FindLaunchers.
+        if (artifact.IsDirectory)
+        {
+            findings.AddRange(
+                FindLaunchers(artifact.Path, ownership!)
+                    .Select(exe => ExecutableSignature.Check(exe, Display(artifact, exe)))
+                    .OfType<Finding>());
+        }
+        else if (ExecutableSignature.Check(artifact.Path, artifact.Name) is { } unsigned)
+        {
+            findings.Add(unsigned);
+        }
+
         foreach (var path in assemblies)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -114,6 +127,44 @@ public sealed class DotNetRecoveryBackend : IRecoveryBackend
                 .Where(f => ownership.IsApplicationCode(f))
                 .Where(IsManaged)
                 .Take(200)
+                .ToList();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return [];
+        }
+        catch (IOException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// The application's own executables, which the assembly list cannot contain.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>A .NET launcher is a native apphost with no managed metadata</b>, so
+    /// <see cref="FindAssemblies"/> filters it out through <see cref="IsManaged"/> and the
+    /// signature check never saw it. Measured: two real installed folders produced no VC-BIN-010
+    /// at all while the equivalent single-file builds produced one. It is also the only file in
+    /// the folder anybody would sign, and the only one a reader double-clicks.
+    /// </para>
+    /// <para>
+    /// Top directory only. A launcher sits beside the assemblies by convention, and searching
+    /// the whole tree would report on bundled tools the application merely carries, which is the
+    /// same mistake <see cref="FrameworkAssemblyPrefixes"/> exists to avoid. Ownership still
+    /// filters it, so a vendored third-party exe at the root does not count either.
+    /// </para>
+    /// </remarks>
+    private static IReadOnlyList<string> FindLaunchers(string directory, AssemblyOwnership ownership)
+    {
+        try
+        {
+            return Directory
+                .EnumerateFiles(directory, "*.exe", SearchOption.TopDirectoryOnly)
+                .Where(ownership.IsApplicationCode)
+                .Take(10)
                 .ToList();
         }
         catch (UnauthorizedAccessException)

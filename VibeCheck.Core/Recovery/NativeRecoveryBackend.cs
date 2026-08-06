@@ -74,7 +74,6 @@ public sealed class NativeRecoveryBackend : IRecoveryBackend
         var findings = new List<Finding>();
 
         PEHeaders headers;
-        bool hasCertificate;
 
         try
         {
@@ -82,11 +81,6 @@ public sealed class NativeRecoveryBackend : IRecoveryBackend
             using var reader = new PEReader(stream);
 
             headers = reader.PEHeaders;
-
-            // An Authenticode signature lives in the certificate directory. Its presence
-            // does not prove the signature is valid or the publisher trustworthy, so the
-            // finding below is worded as "unsigned", never as "signature verified".
-            hasCertificate = headers.PEHeader?.CertificateTableDirectory.Size > 0;
         }
         catch (BadImageFormatException)
         {
@@ -97,30 +91,11 @@ public sealed class NativeRecoveryBackend : IRecoveryBackend
             return findings;
         }
 
-        if (!hasCertificate)
+        // Shared with the managed backends rather than kept here. This check used to live in
+        // this method alone, so it ran on a C or C++ binary and never on a .NET one.
+        if (ExecutableSignature.Check(artifact.Path, artifact.Name) is { } unsigned)
         {
-            findings.Add(new Finding
-            {
-                RuleId = "VC-BIN-010",
-                Title = "Executable is not digitally signed",
-                Severity = Severity.Medium,
-                UserSeverity = Severity.Medium,
-                UserDescription =
-                    "This program is not digitally signed, so your computer cannot confirm who made it or "
-                    + "that it has not been altered since. This is common for small and hobby projects, but "
-                    + "it does mean you are trusting the download itself.",
-                UserRemediation =
-                    "Only run this if you trust where you got it from. Windows will warn you when you "
-                    + "open it, and that warning is accurate.",
-                Category = FindingCategory.BinaryHygiene,
-                Description =
-                    $"{artifact.Name} carries no Authenticode signature, so there is nothing tying "
-                    + "it to a publisher and no way to tell an original from a modified copy.",
-                Remediation =
-                    "Only run unsigned executables from a source you independently trust. "
-                    + "Developers should sign released builds with a code-signing certificate.",
-                FilePath = artifact.Name,
-            });
+            findings.Add(unsigned);
         }
 
         var characteristics = headers.PEHeader?.DllCharacteristics ?? default;

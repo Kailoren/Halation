@@ -39,6 +39,7 @@ public sealed class ElectronRecoveryBackend : IRecoveryBackend
         return Task.FromResult(new RecoveryResult
         {
             Files = files,
+            Findings = SignatureFindings(artifact),
             Coverage = new CoverageReport
             {
                 Percent = considered == 0
@@ -52,6 +53,48 @@ public sealed class ElectronRecoveryBackend : IRecoveryBackend
                 ChecksNotPossible = BuildLimitations(warnings),
             },
         });
+    }
+
+    /// <summary>
+    /// Whether the application's own launcher is signed.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// An Electron application is a renamed copy of the Electron binary with the real code in an
+    /// asar beside it, so the launcher is a plain native executable and reads exactly like any
+    /// other. This path never asked, which meant a whole ecosystem of downloads was analysed in
+    /// full and never told the reader whether anybody had put their name to the file.
+    /// </para>
+    /// <para>
+    /// Only for a folder. A bare <c>.asar</c> is the code without the program around it, and
+    /// there is no launcher to ask about.
+    /// </para>
+    /// </remarks>
+    private static IReadOnlyList<Finding> SignatureFindings(ArtifactDescriptor artifact)
+    {
+        if (!artifact.IsDirectory)
+        {
+            return [];
+        }
+
+        try
+        {
+            return Directory
+                .EnumerateFiles(artifact.Path, "*.exe", SearchOption.TopDirectoryOnly)
+                .Take(10)
+                .Select(exe => ExecutableSignature.Check(
+                    exe, Path.GetRelativePath(artifact.Path, exe).Replace('\\', '/')))
+                .OfType<Finding>()
+                .ToList();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return [];
+        }
+        catch (IOException)
+        {
+            return [];
+        }
     }
 
     /// <summary>

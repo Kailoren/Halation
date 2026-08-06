@@ -37,6 +37,13 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            // Before the budget check, because whether the publisher signed the file is worth
+            // saying even for a bundle too large to finish unpacking.
+            if (ExecutableSignature.Check(launcher, Display(artifact, launcher)) is { } unsigned)
+            {
+                findings.Add(unsigned);
+            }
+
             if (budget.Exhausted)
             {
                 break;
@@ -66,6 +73,12 @@ public sealed class SingleFileRecoveryBackend : IRecoveryBackend
             Coverage = CoverageBuilder.Build(files, budget, notes, ownership),
         });
     }
+
+    /// <summary>What to call a launcher in the report, relative to the folder that was dropped.</summary>
+    private static string Display(ArtifactDescriptor artifact, string path) =>
+        artifact.IsDirectory
+            ? Path.GetRelativePath(artifact.Path, path).Replace('\\', '/')
+            : Path.GetFileName(path);
 
     /// <summary>
     /// Turns one bundle's entries into recovered source, and returns the ownership manifest it
