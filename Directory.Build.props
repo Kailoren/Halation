@@ -5,7 +5,7 @@
   <PropertyGroup>
     <!-- The suffix is load-bearing rather than decorative: it reaches the report footer through
          Scanner.Version, so a report produced by a beta build says so on its face. -->
-    <Version>0.1.2-beta</Version>
+    <Version>0.1.3-beta</Version>
     <Product>VibeCheck</Product>
     <Authors>Kailoren</Authors>
     <Company>Kailoren</Company>
