@@ -73,27 +73,30 @@ public static class LocalModelGuide
 
     /// <summary>The suggestions, smallest first.</summary>
     /// <remarks>
+    /// <para>
     /// <b>The download sizes are the registry manifests' own byte totals, not round gigabytes.</b>
     /// They were previously written as the figures <c>ollama list</c> prints, which are decimal
     /// gigabytes, into a field <see cref="Gigabytes"/> renders as binary ones. The same model then
     /// read 4.7GB as a suggestion and 4.4GB once installed, which is precisely the confusion that
     /// method exists to avoid. Taking the byte count means the number a reader is shown before
     /// pulling matches the one shown afterwards.
+    /// </para>
+    /// <para>
+    /// <b>1.5B was removed on 2026-08-06 after being measured.</b> Pointed at one real
+    /// application's source it read all eighteen qualifying files, answered every request in
+    /// under a second and a half, and returned <i>nothing at all</i>: no findings, no error and
+    /// no limitation. That is the worst failure this tool has, because a scan by a model that
+    /// cannot do the job is indistinguishable from a scan that found nothing to report. 7B over
+    /// the same code returned twenty-two points to look at. Suggesting a size that produces a
+    /// silent all-clear is worse than suggesting none, so the smallest suggestion now wants a
+    /// 6.5GB card and <see cref="Recommend"/> returns null below that, which the caller states
+    /// in words. 3B is not a replacement: it is the one size in this family published under
+    /// Qwen's research licence rather than Apache 2.0, and leading somebody scanning their
+    /// commercial application towards it is an avoidable trap.
+    /// </para>
     /// </remarks>
     public static IReadOnlyList<LocalModelChoice> Choices { get; } =
     [
-        // 1.5B rather than the 3B, which is the one size in this family published under Qwen's
-        // research licence instead of Apache 2.0. Nothing here is distributed, the reader pulls
-        // the model themselves, but suggesting a research-licensed model to somebody scanning
-        // their commercial application is an avoidable trap to lead them into.
-        new(
-            "qwen2.5-coder:1.5b",
-            "1.5B",
-            WantsVideoBytes: 3 * GB,
-            DownloadBytes: 986_061_602,
-            "For a card with very little memory to spare. It will find noticeably less than the "
-            + "larger sizes and will miss reasoning that spans several files."),
-
         new(
             "qwen2.5-coder:7b",
             "7B",
@@ -256,8 +259,10 @@ public static class LocalModelGuide
     /// </remarks>
     private static string OnTheProcessor(long systemBytes)
     {
+        // The smallest, and no fallback beneath it. There used to be one, and dropping 1.5B took
+        // it away: what is left is the floor at which a local model returns anything useful at
+        // all, so "or the smaller one if that proves too slow" now has nothing to point at.
         var smallest = Choices[0];
-        var modest = Choices.Count > 1 ? Choices[1] : Choices[0];
 
         // Worded as what happens rather than as a claim about what was detected. The box above
         // can be cleared on a machine that plainly does have a card, and "no graphics card was
@@ -273,8 +278,8 @@ public static class LocalModelGuide
                + "here than for chat: the deep pass sends whole files to be read, and reading a "
                + "long prompt is the part a processor is worst at. Speed depends on memory "
                + "bandwidth rather than core count, so more channels help and more cores mostly "
-               + $"do not. Start with {modest.Tag}, or {smallest.Tag} if that proves too slow, "
-               + "and expect a large application to take hours.";
+               + $"do not. Start with {smallest.Tag}, which is the smallest size worth running "
+               + "for this, and expect a large application to take hours.";
     }
 
     /// <summary>

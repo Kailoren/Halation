@@ -161,7 +161,6 @@ public sealed class LocalRuntimeTests
     }
 
     [Theory]
-    [InlineData(6, "qwen2.5-coder:1.5b")]
     [InlineData(8, "qwen2.5-coder:7b")]
     [InlineData(12, "qwen2.5-coder:14b")]
     [InlineData(16, "qwen2.5-coder:14b")]
@@ -176,6 +175,20 @@ public sealed class LocalRuntimeTests
         // it up as one sets somebody up for a scan that runs on the processor all night.
         Assert.Null(LocalModelGuide.Recommend(2 * GB));
         Assert.Contains("none of the suggestions", LocalModelGuide.Advise(2 * GB), StringComparison.Ordinal);
+
+        // 6GB used to be offered 1.5B and is now told nothing fits, which is the honest answer.
+        // Measured 2026-08-06: 1.5B read every qualifying file and returned nothing at all, so
+        // recommending it produced a silent all-clear indistinguishable from a clean scan.
+        Assert.Null(LocalModelGuide.Recommend(6 * GB));
+    }
+
+    [Fact]
+    public void No_suggestion_is_small_enough_to_be_useless()
+    {
+        // The floor the 1.5B measurement established. Anything under a 6GB card gets told that
+        // nothing fits rather than being pointed at a size that answers without reading.
+        Assert.DoesNotContain(LocalModelGuide.Choices, c => c.Tag.Contains("1.5b", StringComparison.Ordinal));
+        Assert.All(LocalModelGuide.Choices, c => Assert.True(c.WantsVideoBytes >= 6 * GB, c.Tag));
     }
 
     [Fact]
