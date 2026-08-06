@@ -49,8 +49,8 @@ public static class PurposeSources
     /// <see cref="PurposeSource.Manifest"/> from the start and enforced nowhere:
     /// <see cref="PurposeSplit"/> asked only whether a capability was in the set, so any
     /// non-reader purpose carrying one would have accounted for it silently. Latent rather than
-    /// live, because nothing constructed one - but adding a second untrusted source is exactly
-    /// how a latent hole becomes a real one.
+    /// live, because nothing constructed one. Adding a second untrusted source is exactly how a
+    /// latent hole becomes a real one.
     /// </remarks>
     public static bool CanAccount(this PurposeSource source) => source == PurposeSource.Reader;
 }

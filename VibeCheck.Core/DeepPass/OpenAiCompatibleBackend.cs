@@ -391,7 +391,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
     /// <b>The transport cannot report this, so it has to be inferred.</b> A server whose context
     /// is smaller than the prompt does not refuse the request: it discards the overflow and
     /// answers 200 with a well-formed reply, and nothing in the chat-completions shape carries a
-    /// truncation flag. The only evidence is arithmetic — a prompt of a known length cannot
+    /// truncation flag. The only evidence is arithmetic: a prompt of a known length cannot
     /// encode into fewer tokens than its characters allow, so a reported count far below that
     /// floor means the server did not have the whole thing.
     /// </para>

@@ -915,7 +915,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// <remarks>
     /// <para>
     /// Dropping a file used to start the scan on the spot, which put the one decision that
-    /// changes what a scan costs - whether the deep pass runs, and what answers it - permanently
+    /// changes what a scan costs (whether the deep pass runs, and what answers it) permanently
     /// out of reach. The settings sit below the drop zone, so by the time a reader had read them
     /// the scan they applied to had already finished, and the only way to apply them was to scan
     /// the same application twice.
@@ -1766,8 +1766,8 @@ public sealed class PurposeQuestion
     /// <summary>How that reason is introduced, so its weight is not overstated.</summary>
     public string? StatedInSourceLine => StatedInSource is null
         ? null
-        : $"The code says why: “{StatedInSource}”  —  that is the author's own "
-          + "note, not a check, so it is worth confirming rather than taking.";
+        : $"The code says why: \"{StatedInSource}\". That is the author's own note, not a "
+          + "check, so it is worth confirming rather than taking.";
 
     public string Prompt => ApplicationKinds.Asked;
 

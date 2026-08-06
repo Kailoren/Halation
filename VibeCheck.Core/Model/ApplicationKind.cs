@@ -156,9 +156,9 @@ public static class ApplicationKinds
     /// </summary>
     /// <remarks>
     /// A developer is describing what they built. Somebody checking a download is describing
-    /// <i>what it claims to be</i>, which they know from wherever they got it - and the gap
-    /// between that claim and what the scan observed is the whole reason the question is worth
-    /// asking of them. Wording it as "what kind of application is it" invites the honest answer
+    /// <i>what it claims to be</i>, which they know from wherever they got it. The gap between
+    /// that claim and what the scan observed is the whole reason the question is worth asking
+    /// of them. Wording it as "what kind of application is it" invites the honest answer
     /// "I don't know, that's why I'm scanning it", and loses the comparison.
     /// </remarks>
     public static string Prompt(Audience audience) => audience == Audience.EndUser

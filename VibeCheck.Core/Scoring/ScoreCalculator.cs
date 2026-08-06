@@ -16,7 +16,7 @@ namespace VibeCheck.Core.Scoring;
 /// <b>Only deterministic findings move the number. The deep pass reports and does not score.</b>
 /// Measured on FleetFinder 2.2.7, one unchanged application: the rules said 99 every time, a
 /// local 7B model made it 41, and Opus 5 made it 75. A number that depends on which model the
-/// reader configured is not a measurement, it is a sample - two people cannot compare reports,
+/// reader configured is not a measurement, it is a sample: two people cannot compare reports,
 /// and one person cannot tell whether their own fix helped or their model changed. Worse, it is
 /// a gaming route of exactly the kind per-audience scores were removed to close: scan with the
 /// weakest model and screenshot the best number.
@@ -24,7 +24,7 @@ namespace VibeCheck.Core.Scoring;
 /// <para>
 /// <b>What the deep pass keeps is the power to withhold the all-clear.</b> Scoring it nowhere and
 /// saying nothing would let a real vulnerability that only it found sit beneath a headline of
-/// 100/100 - the coverage-metric failure this design has hit repeatedly, where the arithmetic is
+/// 100/100, the coverage-metric failure this design has hit repeatedly, where the arithmetic is
 /// right and the words beside it overreach. So inferred findings are counted on the verdict, and
 /// <see cref="Verdict.BandLabel"/> may not claim a clean result while any of them carry weight.
 /// The number stays comparable; the sentence stays true.

@@ -179,7 +179,7 @@ public sealed class RuleEngine
     /// syntax of one language and cannot fire anywhere else. Somebody scanning a Go or PHP
     /// application therefore gets a smaller set of checks than the total implies, and until now
     /// the only trace of that was a row in the checks list reading "could not run" with no reason
-    /// beside it — which reads as the scan having failed rather than as a fact about the code.
+    /// beside it, which reads as the scan having failed rather than as a fact about the code.
     /// </para>
     /// <para>
     /// <b>Counted from what actually ran, not from the catalogue's declarations.</b> A rule that

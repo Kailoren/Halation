@@ -89,7 +89,7 @@ public partial class MainWindow : Window
     /// Takes an artifact and asks about it before scanning.
     /// </summary>
     /// <remarks>
-    /// One path for all three ways in - drop, file picker, folder picker - so the question cannot
+    /// One path for all three ways in (drop, file picker, folder picker), so the question cannot
     /// be reached by one and skipped by another.
     /// </remarks>
     private async void Choose(string path)
@@ -112,19 +112,11 @@ public partial class MainWindow : Window
     // ---- Browse ------------------------------------------------------------
 
     /// <summary>
-    /// One picker covering both files and folders.
-    /// </summary>
-    /// <remarks>
-    /// An installed application is a folder and a downloaded one is usually a single file,
-    /// and the user should not have to decide which kind of picker to ask for. The folder
-    /// dialog is offered first because it is the case a file dialog cannot cover at all.
-    /// </remarks>
-    /// <summary>
     /// Picks a file.
     /// </summary>
     /// <remarks>
     /// One dialog, opened directly. It used to show the folder picker first and reach the file
-    /// picker only when that was cancelled, so choosing a downloaded .exe - the common case -
+    /// picker only when that was cancelled, so choosing a downloaded .exe, the common case,
     /// meant dismissing a dialog that was never wanted. Windows has no picker that takes either,
     /// so the honest arrangement is two buttons and no guessing about which one somebody meant.
     /// </remarks>

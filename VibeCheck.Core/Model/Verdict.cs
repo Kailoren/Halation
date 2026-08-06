@@ -185,7 +185,7 @@ public sealed record Verdict
     /// <b>Beside the number, not below it.</b> The dependency caveat established this: the
     /// caveat moved into the verdict card and the number stayed where it was, because anything
     /// four cards down is invisible to a screenshot. Null when the deep pass added nothing that
-    /// carries weight, on the same principle - a line that appears on every report stops being
+    /// carries weight, on the same principle: a line that appears on every report stops being
     /// read.
     /// </para>
     /// <para>
@@ -285,7 +285,7 @@ public sealed record Verdict
     /// <b>Inferred findings qualify it for the same reason and take precedence.</b> The score
     /// counts deterministic findings only, so an application whose rules found nothing scores at
     /// the top however much the deep pass reported. Left as "no known issues found", the one
-    /// case where the deep pass earns its keep - a real problem no pattern could express - would
+    /// case where the deep pass earns its keep (a real problem no pattern could express) would
     /// be published under a clean headline. Only the top band needs this: every band below it
     /// already says there is something to look at.
     /// </para>

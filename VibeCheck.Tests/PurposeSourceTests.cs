@@ -32,8 +32,8 @@ public class PurposeSourceTests
     {
         // The rule was documented on PurposeSource.Manifest from the start and enforced nowhere:
         // PurposeSplit asked only whether the capability was in the set. Nothing constructed a
-        // non-reader purpose, so it was latent - and adding SourceComment is exactly how a
-        // latent hole becomes a live one.
+        // non-reader purpose, so it was latent. Adding SourceComment is exactly how a latent
+        // hole becomes a live one.
         var claimed = new DeclaredPurpose
         {
             Accounted = new HashSet<Capability> { Capability.BrowserCookies },

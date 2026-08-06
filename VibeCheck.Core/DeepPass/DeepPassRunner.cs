@@ -158,7 +158,7 @@ public static class DeepPassRunner
                 : $"Every one of the {files.Count:N0} files in this application was checked. "
                   + $"{examined} of them were also read a second time by the AI. That second "
                   + "reading is slower, so it is saved for the files that take in information "
-                  + "from outside the application — anything downloaded, opened, or typed in — "
+                  + "from outside the application (anything downloaded, opened, or typed in) "
                   + "and for the code those files hand their results to, because that is where "
                   + $"problems usually start. The remaining {files.Count - examined:N0} were "
                   + "checked in full like the rest; there was simply nothing arriving from "

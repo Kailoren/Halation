@@ -108,7 +108,7 @@ public static class Capabilities
     /// to enumerate correct usage per verb per kind of application, which does not converge:
     /// there is no end to the ways software can be built, and each entry would be a table to
     /// maintain forever and still incomplete. What generalises is the boundary of the
-    /// affirmation - reading a thing is not sending it anywhere - and that is one sentence per
+    /// affirmation: reading a thing is not sending it anywhere. That is one sentence per
     /// capability rather than a matrix. Anything finer is a judgement about specific code, which
     /// is the deep pass's job and is already what it is asked for.
     /// </para>

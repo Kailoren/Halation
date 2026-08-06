@@ -44,10 +44,10 @@ So VibeCheck does not print a verdict of "safe". It reports:
   deterministic checks alone, so the same application scores the same for everybody: what the
   optional AI pass finds is reported in full but never moves it, because a number that changed
   with whichever model you had configured could not be compared with anyone else's. What the AI
-  does keep is the power to withhold the all-clear — a result cannot be labelled clean while its
-  suggestions are sitting underneath. There is **one score**, and it is
-  the worse of the two readings: the artifact is scored both as a question about shipping it
-  and as a question about running it, and the harsher answer is the one both reports print.
+  does keep is the power to withhold the all-clear: a result cannot be labelled clean while its
+  suggestions are sitting underneath. There is **one score**, and it is the worse of the two
+  readings: the artifact is scored both as a question about shipping it and as a question about
+  running it, and the harsher answer is the one both reports print.
   Otherwise an author could scan their own work, switch to the reader it treats more kindly,
   and screenshot a number produced for a question they were not asking. Which findings appear,
   how they are worded, what can be done about them and what order they come in all still change
@@ -198,7 +198,7 @@ never written to a report, and the interface only ever shows it masked.
 
 The AI pass reasons about intent, and **decompiling a binary destroys every comment in it**. On a
 real application whose source was to hand, three findings from a frontier model against the
-decompiled release were checked line by line and all three were wrong — each one answered by a
+decompiled release were checked line by line and all three were wrong, each one answered by a
 comment the author had already written and the decompiler had thrown away. The deterministic
 checks are unaffected, since a pattern does not care about comments.
 
