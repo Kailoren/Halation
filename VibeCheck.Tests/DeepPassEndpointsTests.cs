@@ -91,6 +91,34 @@ public sealed class DeepPassEndpointsTests
         Assert.Equal("https://openrouter.ai/api/v1/chat/completions", openRouter.Url);
     }
 
+    /// <summary>
+    /// Groq and xAI are unrelated companies with near-identical names, and both are offered.
+    /// </summary>
+    /// <remarks>
+    /// Pinned because the failure is silent and lands on the reader: picking the wrong one sends
+    /// a key to a provider they have no account with and answers 401, which reads as a broken
+    /// feature rather than a chosen row. They must stay adjacent, distinctly named, and pointed
+    /// at their own hosts.
+    /// </remarks>
+    [Fact]
+    public void Groq_and_xAI_are_told_apart()
+    {
+        var names = DeepPassEndpoints.Presets.Select(p => p.Name).ToList();
+
+        var groq = DeepPassEndpoints.Presets.Single(p => p.Name == "Groq");
+        var xai = DeepPassEndpoints.Presets.Single(p => p.Name.Contains("xAI", StringComparison.Ordinal));
+
+        Assert.Equal("https://api.groq.com/openai/v1/chat/completions", groq.Url);
+        Assert.Equal("https://api.x.ai/v1/chat/completions", xai.Url);
+
+        // Adjacent, so the list answers the question rather than leaving it to be noticed.
+        Assert.Equal(1, Math.Abs(names.IndexOf(groq.Name) - names.IndexOf(xai.Name)));
+
+        // The name alone has to distinguish them, since that is all a button shows.
+        Assert.Contains("Grok", xai.Name, StringComparison.Ordinal);
+        Assert.DoesNotContain("Grok", groq.Name, StringComparison.Ordinal);
+    }
+
     // ---- What a reader pastes ------------------------------------------------
 
     [Theory]

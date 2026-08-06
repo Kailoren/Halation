@@ -99,6 +99,18 @@ public static class DeepPassEndpoints
             NeedsKey: true,
             "Open-weight models, quickly. Model ids are at console.groq.com."),
 
+        // Directly after Groq on purpose. The two are unrelated companies with near-identical
+        // names, Groq having had it first, and a reader who picks the wrong one gets a 401 from a
+        // provider they have no account with. Adjacent and distinctly labelled, the list answers
+        // the question instead of setting the trap.
+        new(
+            "xAI (Grok)",
+            "https://api.x.ai/v1" + Completions,
+            SuggestedModel: null,
+            NeedsKey: true,
+            "Grok, from xAI. Not the same company as Groq. Keys and current model ids are at "
+            + "console.x.ai."),
+
         new(
             "Together",
             "https://api.together.xyz/v1" + Completions,

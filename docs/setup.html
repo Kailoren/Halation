@@ -241,7 +241,7 @@
       </p>
       <figure>
         <div class="shot" style="--natural:600px">
-          <img src="assets/img/screen-endpoint.png" alt="The VibeCheck endpoint configuration window. It names the detected graphics card and system memory, offers an editable video memory figure, and recommends the largest model that fits, giving the fetch command for both Ollama and LM Studio with the download size. Below that are nine provider presets and the endpoint, model and key fields." width="1200" height="1715" loading="lazy">
+          <img src="assets/img/screen-endpoint.png" alt="The VibeCheck endpoint configuration window. It names the detected graphics card and system memory, offers an editable video memory figure, and recommends the largest model that fits, giving the fetch command for both Ollama and LM Studio with the download size. Below that are ten provider presets and the endpoint, model and key fields." width="1200" height="1715" loading="lazy">
         </div>
         <figcaption class="shot__caption">The endpoint window, sizing a model against the card it found.</figcaption>
       </figure>
@@ -446,7 +446,7 @@
     <section id="hosted">
       <h2>Hosted providers</h2>
       <p>
-        Nine presets fill in the endpoint for you. You still supply the model id and the key,
+        Ten presets fill in the endpoint for you. You still supply the model id and the key,
         because both change more often than a release of this application does.
       </p>
       <div class="table-wrap">
@@ -460,7 +460,8 @@
             <tr><td>OpenAI</td><td>Required</td><td>Keys and current model ids at platform.openai.com.</td></tr>
             <tr><td>OpenRouter</td><td>Required</td><td>Many models behind one key. Ids look like <code>vendor/model</code>.</td></tr>
             <tr><td>Google Gemini</td><td>Required</td><td>Google's own OpenAI-compatible endpoint, not the Gemini API shape.</td></tr>
-            <tr><td>Groq</td><td>Required</td><td>Open-weight models, quickly. Ids at console.groq.com.</td></tr>
+            <tr><td><a href="https://groq.com">Groq</a></td><td>Required</td><td>Open-weight models, quickly. Ids at console.groq.com. <strong>Not xAI</strong>, despite the name.</td></tr>
+            <tr><td><a href="https://x.ai">xAI (Grok)</a></td><td>Required</td><td>Grok, from xAI. A different company to Groq above. Keys and ids at console.x.ai.</td></tr>
             <tr><td>Together</td><td>Required</td><td>Open-weight models. Ids look like <code>vendor/model</code>.</td></tr>
             <tr><td>DeepSeek</td><td>Required</td><td>Keys at platform.deepseek.com.</td></tr>
             <tr><td>Mistral</td><td>Required</td><td>Keys and model ids at console.mistral.ai.</td></tr>
