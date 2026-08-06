@@ -265,14 +265,6 @@ public static class DeepPassPrompt
     }
 
     /// <summary>
-    /// Whether the model said outright that the code did not convince it.
-    /// </summary>
-    /// <remarks>
-    /// Only an explicit "low" is dropped. A missing or unrecognised value is kept, because the
-    /// absence of a confidence claim is not a confession of doubt, and silently discarding on
-    /// a field the model failed to fill would quietly shrink coverage for a formatting reason.
-    /// </remarks>
-    /// <summary>
     /// Reads the author's own stated reasons, if the file carried any.
     /// </summary>
     /// <remarks>
@@ -311,6 +303,14 @@ public static class DeepPassPrompt
         }
     }
 
+    /// <summary>
+    /// Whether the model said outright that the code did not convince it.
+    /// </summary>
+    /// <remarks>
+    /// Only an explicit "low" is dropped. A missing or unrecognised value is kept, because the
+    /// absence of a confidence claim is not a confession of doubt, and silently discarding on
+    /// a field the model failed to fill would quietly shrink coverage for a formatting reason.
+    /// </remarks>
     private static bool IsLowConfidence(JsonElement element) =>
         element.TryGetProperty("confidence", out var confidence)
         && confidence.ValueKind == JsonValueKind.String

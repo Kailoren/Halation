@@ -718,15 +718,9 @@
                                  readable, while nothing whatever is known about the packages
                                  inside it. That was already in the report, four cards down,
                                  which is three further than anybody scrolls before deciding. -->
-            <!-- Level with the number, because the number cannot carry this. The score counts
-                 deterministic findings only, so that two readers using two different models can
-                 compare it at all; the cost is a headline that knows nothing about what the deep
-                 pass found. One unchanged application scored 99 by rules, 41 through a local 7B
-                 and 75 through Opus 5, which is why the number stopped moving with the model and
-                 why this sentence has to sit where the number is. -->
-            <!-- What the reader declared, printed back where the number is. It excused nothing
-                 by itself, but it decided how every capability question was worded, so a quiet
-                 report has to show it. -->
+                            <!-- What the reader declared, printed back where the number is. It
+                                 excused nothing by itself, but it decided how every capability
+                                 question was worded, so a quiet report has to show it. -->
                             <Border Margin="0,12,0,0" Padding="12"
                                     CornerRadius="{DynamicResource ButtonRadius}"
                                     Background="{StaticResource PanelRaised}"
@@ -737,6 +731,13 @@
                                            Text="{Binding DeclaredKindAttribution}"/>
                             </Border>
 
+                            <!-- Level with the number, because the number cannot carry this. The
+                                 score counts deterministic findings only, so that two readers
+                                 using two different models can compare it at all; the cost is a
+                                 headline that knows nothing about what the deep pass found. One
+                                 unchanged application scored 99 by rules, 41 through a local 7B
+                                 and 75 through Opus 5, which is why the number stopped moving
+                                 with the model and why this sentence sits where the number is. -->
                             <Border Margin="0,12,0,0" Padding="12"
                                     CornerRadius="{DynamicResource ButtonRadius}"
                                     Background="{StaticResource PanelRaised}"
