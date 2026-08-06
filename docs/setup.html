@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deep pass setup — VibeCheck</title>
+<meta name="description" content="Setting up the optional deep pass: connect Claude Code, paste an Anthropic API key, or point VibeCheck at any OpenAI-compatible endpoint including Ollama or LM Studio on your own machine. With model recommendations by graphics card.">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<div class="backdrop" aria-hidden="true">
+  <div class="backdrop__grid"></div>
+  <div class="backdrop__sweep"></div>
+  <div class="backdrop__scan"></div>
+  <div class="backdrop__vignette"></div>
+</div>
+
+<header class="nav">
+  <div class="shell nav__inner">
+    <a class="brand" href="index.html">
+      <img src="assets/img/logo.png" alt="" width="26" height="26">
+      <span>VibeCheck</span>
+    </a>
+    <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
+    <ul class="nav__links" id="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="docs.html">Documentation</a></li>
+      <li><a href="setup.html" aria-current="page">Setup</a></li>
+      <li><a href="rules.html">Rules</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="changelog.html">Changelog</a></li>
+      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+    </ul>
+  </div>
+</header>
+
+<div class="page-head">
+  <div class="shell">
+    <div class="section-label">Deep pass setup</div>
+    <h1>Setting up the second opinion</h1>
+    <p class="lede">
+      The deep pass is optional and off by default. When you want it, you bring the credential.
+      Three routes, and they differ in whose account pays, what that costs, and whether anything
+      leaves your machine at all.
+    </p>
+  </div>
+</div>
+
+<main id="content">
+<div class="shell doc">
+
+  <nav class="toc" aria-label="On this page">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#choose">Which route to pick</a></li>
+      <li><a href="#turning-on">Turning it on for a scan</a></li>
+      <li><a href="#claude-code">1 · Claude Code</a></li>
+      <li><a href="#api-key">2 · Anthropic API key</a></li>
+      <li><a href="#endpoint">3 · Any OpenAI endpoint</a></li>
+      <li><a href="#hardware">Your graphics card</a></li>
+      <li><a href="#models">Which local model</a></li>
+      <li><a href="#ollama">Setting up Ollama</a></li>
+      <li><a href="#lm-studio">Setting up LM Studio</a></li>
+      <li><a href="#hosted">Hosted providers</a></li>
+      <li><a href="#sent">What actually gets sent</a></li>
+      <li><a href="#source">Scan source, not a build</a></li>
+      <li><a href="#trouble">When it does not work</a></li>
+    </ul>
+  </nav>
+
+  <div class="doc__body">
+
+    <section id="choose">
+      <h2>Which route to pick</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Route</th>
+              <th scope="col">What it costs</th>
+              <th scope="col">Where your files go</th>
+              <th scope="col">Setup</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Claude Code</strong></td>
+              <td>Nothing extra. Spends your existing subscription allowance.</td>
+              <td>Anthropic</td>
+              <td>None, if you are already signed in</td>
+            </tr>
+            <tr>
+              <td><strong>Anthropic API key</strong></td>
+              <td>A few cents per scan, billed to prepaid credit</td>
+              <td>Anthropic</td>
+              <td>Paste a key</td>
+            </tr>
+            <tr>
+              <td><strong>Hosted endpoint</strong></td>
+              <td>Whatever that provider charges</td>
+              <td>That provider</td>
+              <td>URL, model id, key</td>
+            </tr>
+            <tr>
+              <td><strong>Local model</strong></td>
+              <td>Nothing, ever</td>
+              <td><span style="color:var(--good)">Nowhere. Stays on your machine.</span></td>
+              <td>Install a runtime, pull a model</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        If you have a Claude subscription, use it: it is the best model of the four routes and it
+        costs nothing on top of what you already pay. If privacy matters more than answer quality,
+        run a model locally. The hosted endpoints exist so that neither of those being unavailable
+        means going without.
+      </p>
+      <div class="callout callout--warn">
+        <span class="callout__title">Developer mode only</span>
+        <p>
+          The deep pass is offered when you are reading a report as the person who built the
+          application. Checking something you downloaded runs entirely on your machine, with no
+          account, no key and nothing leaving it. <a href="#sent">Why, in detail</a>.
+        </p>
+      </div>
+    </section>
+
+    <section id="turning-on">
+      <h2>Turning it on for a scan</h2>
+      <p>
+        Whichever route you configure, the deep pass is a tick box on the window that appears
+        after you choose an application and before the scan starts. <strong>It is off every
+        time.</strong> Nothing is sent anywhere until you tick it for that particular scan.
+      </p>
+      <figure>
+        <div class="shot" style="--natural:560px">
+          <img src="assets/img/screen-setup.png" alt="The pre-scan window with an unticked deep pass box, showing the three sources: use my Anthropic API key, use Claude Code on this machine, or use another model at any OpenAI-compatible endpoint." width="1120" height="955" loading="lazy">
+        </div>
+        <figcaption class="shot__caption">The pre-scan window. The three radio buttons are the three routes.</figcaption>
+      </figure>
+      <p>
+        A route that is not configured is shown but cannot be selected, and says what is missing
+        rather than being quietly absent.
+      </p>
+    </section>
+
+    <section id="claude-code">
+      <h2>Route 1 · The Claude Code you already have</h2>
+      <p>
+        <strong>Nothing to configure.</strong> VibeCheck looks for Claude Code when it starts,
+        including the copy bundled inside the Claude desktop app, and asks it whether it is signed
+        in. Claude Code does not need to be running.
+      </p>
+      <ol>
+        <li>Install <a href="https://claude.com/claude-code">Claude Code</a>, or the Claude desktop app, which carries a copy.</li>
+        <li>Sign in to it once, in its own interface.</li>
+        <li>Start VibeCheck. The route reports itself ready, and names the installation it found.</li>
+      </ol>
+      <p>
+        If it is installed but signed out, a <strong>Sign in</strong> button appears and opens
+        Claude Code's own sign-in flow. VibeCheck never sees your credentials; the CLI holds them,
+        exactly as it does when you use it directly.
+      </p>
+      <div class="callout">
+        <span class="callout__title">The check runs once, at startup</span>
+        <p>
+          Sign in to Claude Code while VibeCheck is already open and it will not notice until you
+          press <strong>Sign in</strong> or restart it.
+        </p>
+      </div>
+      <h3>What it costs</h3>
+      <p>
+        This spends the usage allowance of the subscription you already pay for, and nothing is
+        charged on top. A deep pass is a handful of requests, so on a Pro or Max plan it is a
+        small share of a day's allowance — but it does come out of the same pot as your own work
+        with Claude, and a large application read at the file ceiling will make a dent in it. The
+        report says which installation answered and states plainly that no money was charged.
+      </p>
+      <h3>Why this route is fenced in</h3>
+      <p>
+        Claude Code is an agent with shell and filesystem access, where an API endpoint cannot
+        execute anything. So where it is used it gets no tools, safe mode, an empty working
+        directory, no session persistence, and the file content arrives on standard input rather
+        than on a command line other processes can read.
+      </p>
+    </section>
+
+    <section id="api-key">
+      <h2>Route 2 · An Anthropic API key</h2>
+      <ol>
+        <li>Create a key at the <a href="https://console.anthropic.com">Anthropic Console</a>.</li>
+        <li>Buy some credit. The API is prepaid and separate from a Claude subscription.</li>
+        <li>In VibeCheck, press <strong>Set key</strong> on the drop screen and paste it.</li>
+      </ol>
+      <figure>
+        <div class="shot" style="--natural:560px">
+          <img src="assets/img/screen-apikey.png" alt="The VibeCheck API key window, with a masked entry field and a note explaining that the key is encrypted to your Windows account and stored outside the application folder." width="1120" height="605" loading="lazy">
+        </div>
+        <figcaption class="shot__caption">The key is masked on screen and never written into a report.</figcaption>
+      </figure>
+      <div class="callout callout--warn">
+        <span class="callout__title">This costs real money, every scan</span>
+        <p>
+          The API is billed per token against credit you buy up front. <strong>It is a separate
+          product from a Claude subscription</strong>, with separate billing and no bridge between
+          the two, so a Pro or Max plan does not cover it and its allowance is not touched.
+        </p>
+        <p>
+          A typical pass over a dozen files runs to a few cents. The report prints the estimate
+          with the tokens it is based on, so you can see what a scan cost rather than find out at
+          the end of the month.
+        </p>
+      </div>
+      <p>
+        Your key is encrypted to your Windows account and stored outside the application folder.
+        It is never written to a report, and the interface only ever shows it masked.
+      </p>
+    </section>
+
+    <section id="endpoint">
+      <h2>Route 3 · Any OpenAI-compatible endpoint</h2>
+      <p>
+        Anything that speaks the OpenAI chat-completions shape can answer the deep pass, which
+        covers every hosted provider worth naming plus Ollama and LM Studio on your own machine.
+        Press <strong>Configure</strong> on the drop screen.
+      </p>
+      <figure>
+        <div class="shot" style="--natural:600px">
+          <img src="assets/img/screen-endpoint.png" alt="The VibeCheck endpoint configuration window. It names the detected graphics card and system memory, offers an editable video memory figure, recommends the largest model that fits with the exact ollama pull command and its download size, then lists nine provider presets above the endpoint, model and key fields." width="1200" height="1643" loading="lazy">
+        </div>
+        <figcaption class="shot__caption">The endpoint window, sizing a model against the card it found.</figcaption>
+      </figure>
+      <p>The window is three things stacked: what it knows about your machine, a preset to start from, and the three fields that make the request.</p>
+      <ul>
+        <li>
+          <strong>Endpoint.</strong> A base URL is completed to the chat-completions path when you
+          leave the field, so the box always shows the exact address your files will be sent to.
+          Every provider documents a different base URL and none of them is the one the request
+          goes to, which would otherwise be a 404 on the first file of your scan. HTTPS is
+          required unless the model is on this machine.
+        </li>
+        <li>
+          <strong>Model.</strong> The model id exactly as the provider writes it. A request has to
+          name one, and there is no default that would be right for both a local runtime and a
+          hosted provider.
+        </li>
+        <li>
+          <strong>Key.</strong> Left empty for a model on your machine, which has nothing to
+          authenticate. Sent as a bearer token, encrypted to your Windows account, stored outside
+          the application's folder.
+        </li>
+      </ul>
+    </section>
+
+    <section id="hardware">
+      <h2>Telling it about your graphics card</h2>
+      <p>
+        The difference between a local deep pass that takes twenty minutes and one that takes
+        three hours is entirely whether the model fitted in video memory. That is not something
+        you should have to find out by running a scan overnight, so the window works it out first.
+      </p>
+      <p>
+        It names the card it detected and how much system memory the machine has, and puts the
+        video memory figure in an <strong>editable box</strong>. Correct it if the detection is
+        wrong, which happens on laptops with two graphics chips, where the integrated one is often
+        reported first. The label beside the box says whether the number came from detection or
+        from you, and the advice below re-reads as you type.
+      </p>
+      <div class="callout">
+        <span class="callout__title">The rule, not just the table</span>
+        <p>
+          A model needs roughly its own file size in video memory, plus a gigabyte or two for the
+          file it is reading. Anything larger runs partly on your processor and slows down
+          sharply. That arithmetic is the real answer, so you can size a model that is not in the
+          list below rather than being limited to these three.
+        </p>
+      </div>
+      <p>
+        A machine with no graphics card is not refused. System memory is what a model runs in
+        then, and the advice says so.
+      </p>
+    </section>
+
+    <section id="models">
+      <h2>Which local model</h2>
+      <p>
+        One family across every size on purpose. Comparing scans is hard enough without the
+        smallest and largest suggestions being different models that disagree for reasons of their
+        own, and moving up a size should get you more of the same judgment rather than a different
+        one.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Model</th>
+              <th scope="col">Wants</th>
+              <th scope="col">Download</th>
+              <th scope="col">What you get</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>qwen2.5-coder:7b</code></td>
+              <td>6.5 GB video memory</td>
+              <td>4.4 GB</td>
+              <td>The usual choice for an 8 GB card. Enough to reason about a file properly without spilling onto the processor.</td>
+            </tr>
+            <tr>
+              <td><code>qwen2.5-coder:14b</code></td>
+              <td>11 GB video memory</td>
+              <td>8.4 GB</td>
+              <td>Better at reachability, and at guards that are incomplete rather than absent. Wants a 12 GB card or more.</td>
+            </tr>
+            <tr>
+              <td><code>qwen2.5-coder:32b</code></td>
+              <td>22 GB video memory</td>
+              <td>18.5 GB</td>
+              <td>The closest a model on your own machine gets to the hosted route. Wants 24 GB.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout callout--warn">
+        <span class="callout__title">Below 6.5 GB, VibeCheck recommends nothing</span>
+        <p>
+          It says so rather than suggesting something smaller, and that is deliberate. Pointed at
+          one real application's source, <code>qwen2.5-coder:1.5b</code> read all eighteen
+          qualifying files, answered every request in under a second and a half, and returned
+          <strong>nothing at all</strong>: no findings, no error, no limitation. 7B over the same
+          code returned twenty-two points to look at.
+        </p>
+        <p>
+          A silent all-clear from a model that cannot do the job is the worst failure this tool
+          has, because the report is indistinguishable from one that genuinely found nothing.
+          Suggesting a size that produces one is worse than suggesting none.
+        </p>
+      </div>
+      <p>
+        3B is not a smaller replacement either. It is the one size in this family published under
+        a research licence rather than Apache 2.0, and pointing somebody scanning their commercial
+        application at it is an avoidable trap.
+      </p>
+      <p>
+        If you already have models installed, the window lists them with a verdict against your
+        card — comfortable, tight, or spills onto the processor — and sorts code-trained models
+        above general chat ones.
+      </p>
+      <div class="callout callout--warn">
+        <span class="callout__title">Ollama's cloud models are not local</span>
+        <p>
+          Ollama serves them through the same <code>localhost:11434</code> as local ones: the
+          daemon sees the <code>-cloud</code> suffix, attaches your ollama.com credentials, and
+          forwards the request. A loopback address is not proof that anything stayed on your
+          machine, so VibeCheck reads the suffix and says so rather than claiming nothing was
+          uploaded while your source code was.
+        </p>
+      </div>
+    </section>
+
+    <section id="ollama">
+      <h2>Setting up Ollama</h2>
+      <ol>
+        <li>Install <a href="https://ollama.com">Ollama</a>. It runs as a background service on <code>localhost:11434</code>.</li>
+        <li>Pull a model. VibeCheck shows the exact command for the size that fits your card, with a copy button:
+          <pre><code>ollama pull qwen2.5-coder:7b</code></pre>
+        </li>
+        <li>In the endpoint window, press the <strong>Ollama</strong> preset. It fills in
+          <code>http://localhost:11434/v1/chat/completions</code> and leaves the key empty.</li>
+        <li>Put the model tag in the <strong>Model</strong> field, exactly as you pulled it.</li>
+        <li>Save.</li>
+      </ol>
+      <div class="callout callout--warn">
+        <span class="callout__title">Raise the context length first</span>
+        <p>
+          The deep pass sends whole files, up to sixty thousand characters each. Ollama's default
+          context is far shorter than that, and a model that silently truncates its input answers
+          about a fragment of your file while appearing to have read all of it. Set:
+        </p>
+        <pre><code>OLLAMA_CONTEXT_LENGTH=32768</code></pre>
+        <p>
+          as a system environment variable and restart Ollama. VibeCheck compares the reported
+          prompt tokens against the characters it sent and reports a mismatch, so a truncated read
+          is caught rather than trusted — but it is better not to have one.
+        </p>
+      </div>
+    </section>
+
+    <section id="lm-studio">
+      <h2>Setting up LM Studio</h2>
+      <ol>
+        <li>Install <a href="https://lmstudio.ai">LM Studio</a> and download a model through its own interface.</li>
+        <li>Open the <strong>Developer</strong> tab and start the local server. It listens on <code>localhost:1234</code>.</li>
+        <li>Copy the model id exactly as LM Studio lists it. It is usually longer than an Ollama tag and is not interchangeable with one.</li>
+        <li>In the endpoint window, press the <strong>LM Studio</strong> preset, paste the model id, leave the key empty, and save.</li>
+      </ol>
+      <p>
+        Check the context length LM Studio loaded the model with, for the same reason as above. It
+        is set per model when the model is loaded, rather than globally.
+      </p>
+    </section>
+
+    <section id="hosted">
+      <h2>Hosted providers</h2>
+      <p>
+        Nine presets fill in the endpoint for you. You still supply the model id and the key,
+        because both change more often than a release of this application does.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Preset</th><th scope="col">Key</th><th scope="col">Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Ollama</td><td>Not needed</td><td>On this machine. Nothing uploaded, nothing charged.</td></tr>
+            <tr><td>LM Studio</td><td>Not needed</td><td>On this machine. Start its local server first.</td></tr>
+            <tr><td>OpenAI</td><td>Required</td><td>Keys and current model ids at platform.openai.com.</td></tr>
+            <tr><td>OpenRouter</td><td>Required</td><td>Many models behind one key. Ids look like <code>vendor/model</code>.</td></tr>
+            <tr><td>Google Gemini</td><td>Required</td><td>Google's own OpenAI-compatible endpoint, not the Gemini API shape.</td></tr>
+            <tr><td>Groq</td><td>Required</td><td>Open-weight models, quickly. Ids at console.groq.com.</td></tr>
+            <tr><td>Together</td><td>Required</td><td>Open-weight models. Ids look like <code>vendor/model</code>.</td></tr>
+            <tr><td>DeepSeek</td><td>Required</td><td>Keys at platform.deepseek.com.</td></tr>
+            <tr><td>Mistral</td><td>Required</td><td>Keys and model ids at console.mistral.ai.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Anything else that speaks the same shape works too. Type its URL in; the preset buttons are
+        a convenience, not a list of what is allowed.
+      </p>
+      <div class="callout">
+        <span class="callout__title">Pick a model that can read code</span>
+        <p>
+          The deep pass asks a model to reason about whether a guard is complete and whether
+          untrusted input reaches a dangerous call. A small general-purpose chat model will answer
+          confidently and badly. Prefer the largest code-capable model your budget allows, and
+          treat the <a href="#models">local model warning above</a> as applying to hosted models of
+          similar size.
+        </p>
+      </div>
+    </section>
+
+    <section id="sent">
+      <h2>What actually gets sent</h2>
+      <p>
+        The files that handle input the application does not control, plus any file that calls
+        into one a rule flagged. Not the whole application, and not only the lines a rule matched.
+        Both bounds are deliberate:
+      </p>
+      <ul>
+        <li>
+          Sending only flagged lines would mean the pass could deepen findings you already have and
+          never discover one in code no rule happened to hit. Tested against a real application,
+          the two issues the pattern rules missed were both in files with zero findings.
+        </li>
+        <li>
+          Reading one hop of callers is what makes reachability answerable. The same application
+          had an unbounded stack allocation recorded as a local-only crash risk; it was reachable
+          from a remote HTTP response, and the file that proved it was one call away.
+        </li>
+      </ul>
+      <p>
+        At most <strong>40 files per scan</strong>, whichever route answers, so neither your
+        allowance nor your credit can run away on one large application. The report lists exactly
+        which files were read, what answered, and what the pass cost.
+      </p>
+      <h3>Why downloads do not get a deep pass</h3>
+      <p>
+        For the API and endpoint routes that is a decision about what the window offers. For the
+        Claude Code route it is <strong>a refusal enforced in the core</strong>, and the reason is
+        worth stating: feeding source recovered from software you do not trust into an agent that
+        can act on your machine is the attack this tool exists to warn people about. The scanned
+        program never has to run, because getting VibeCheck to read it becomes the attack instead.
+      </p>
+    </section>
+
+    <section id="source">
+      <h2>Point it at your source, not your release build</h2>
+      <p>
+        The AI pass reasons about intent, and <strong>decompiling a binary destroys every comment
+        in it</strong>. On a real application whose source was to hand, three findings from a
+        frontier model against the decompiled release were checked line by line and all three were
+        wrong, each one answered by a comment the author had already written and the decompiler had
+        thrown away.
+      </p>
+      <p>
+        The deterministic checks are unaffected, since a pattern does not care about comments. So
+        the pattern half gives the same answer either way; the AI half is a much better instrument
+        when the reasoning is still in the file.
+      </p>
+    </section>
+
+    <section id="trouble">
+      <h2>When it does not work</h2>
+      <h3>Everything returns nothing, with no error</h3>
+      <p>
+        Almost always a model too small for the job. See the
+        <a href="#models">warning above</a>: a model that cannot do this answers instantly and
+        returns an empty list, which reads exactly like a clean result. Try a larger one before
+        concluding your code is fine.
+      </p>
+      <h3>404 on the first file</h3>
+      <p>
+        The endpoint is a base URL rather than the chat-completions path. Leave the field and let
+        VibeCheck complete it, then check the box shows the full address. OpenRouter is the common
+        trap: its path really is <code>/api/v1</code> and not <code>/v1</code>.
+      </p>
+      <h3>401 or 403</h3>
+      <p>
+        The key is missing, wrong, or has no credit against it. Local runtimes need no key at all;
+        if you pasted one for Ollama or LM Studio, clear it.
+      </p>
+      <h3>The model answers about only part of a file</h3>
+      <p>
+        The context length is too short and the input is being truncated. Raise it, as under
+        <a href="#ollama">Ollama</a> above. VibeCheck reports the mismatch when it can detect one.
+      </p>
+      <h3>Claude Code is installed but not detected</h3>
+      <p>
+        The check runs at startup only. Press <strong>Sign in</strong>, or restart VibeCheck. If it
+        is installed and signed in and still not found, that is worth
+        <a href="https://github.com/kailoren/vibecheck/issues">an issue</a> with the way you
+        installed it.
+      </p>
+      <h3>A scan disagrees with the last one</h3>
+      <p>
+        Expected, and it is why the deep pass cannot move the score. Models are not deterministic,
+        and two runs over identical code can return different suggestions. The number beside them
+        comes from the pattern and dependency checks alone, so that part does not move.
+      </p>
+    </section>
+
+  </div>
+</div>
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <div class="footer__inner">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:0.8rem">
+          <img src="assets/img/logo.png" alt="" width="26" height="26">
+          <span>VibeCheck</span>
+        </a>
+        <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
+          A drag-and-drop security scanner for AI-generated applications.
+        </p>
+      </div>
+      <div>
+        <h4>Documentation</h4>
+        <ul>
+          <li><a href="docs.html">How it works</a></li>
+          <li><a href="setup.html">Deep pass setup</a></li>
+          <li><a href="rules.html">Rule reference</a></li>
+          <li><a href="faq.html">Frequently asked</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__note">
+      <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
+      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/site.js"></script>
+<script src="assets/js/toc.js"></script>
+</body>
+</html>

@@ -100,8 +100,12 @@ body {
   overflow-x: hidden;
 }
 
+/* height:auto matters here. Every screenshot carries width and height
+   attributes so the space is reserved before it loads, and without this the
+   attribute height survives the CSS width and the picture is stretched. */
 img {
   max-width: 100%;
+  height: auto;
   display: block;
 }
 
@@ -415,11 +419,17 @@ section {
   background: linear-gradient(90deg, var(--edge), transparent);
 }
 
+/* Runs the full width of the content it introduces. Capped at a comfortable
+   measure it sat in the left half of the column with the cards beneath it
+   spanning the whole width, which read as a mistake rather than as a measure. */
 .lede {
   font-size: clamp(1.05rem, 1.7vw, 1.22rem);
   color: var(--muted);
-  max-width: 62ch;
 }
+
+/* For the places a narrow measure is still right: a paragraph with nothing
+   full-width under it to line up against. */
+.lede--measure { max-width: 62ch; }
 
 .grid {
   display: grid;
@@ -886,26 +896,37 @@ tbody tr:hover { background: rgba(249, 240, 2, 0.03); }
 
 /* ---- Screenshots -------------------------------------------------------- */
 
+/* Every screenshot is rendered at 2x, so its natural CSS size is half its
+   pixel width. Each one carries that figure as --natural and is never drawn
+   larger, because past 1:1 a window capture only gets blurrier. Squeezed into
+   a half-width column instead, a capture of a whole application window is
+   illegible, which is what these were doing before. */
 .shot {
   position: relative;
   border: 1px solid var(--edge);
   background: var(--panel);
   overflow: hidden;
+  max-width: var(--natural, 100%);
+  margin-inline: auto;
 }
 
-.shot img { width: 100%; }
-
-.shot--tall {
-  max-height: 620px;
-  overflow: hidden;
+.shot img {
+  width: 100%;
+  height: auto;
 }
 
-.shot--tall::after {
+/* Crops a long capture rather than shrinking it, so what is shown stays
+   readable. The fade says the picture continues. */
+.shot--crop {
+  max-height: var(--crop, 640px);
+}
+
+.shot--crop::after {
   content: '';
   position: absolute;
   inset: auto 0 0 0;
-  height: 140px;
-  background: linear-gradient(transparent, var(--bg));
+  height: 130px;
+  background: linear-gradient(transparent, rgba(5, 5, 5, 0.96));
   pointer-events: none;
 }
 
@@ -914,7 +935,14 @@ tbody tr:hover { background: rgba(249, 240, 2, 0.03); }
   font-size: 0.78rem;
   color: var(--muted);
   margin-top: 0.7rem;
+  text-align: center;
 }
+
+figure {
+  margin: 0 0 2rem;
+}
+
+figure .shot__caption { margin-top: 0.8rem; }
 
 /* ---- Callout ------------------------------------------------------------ */
 

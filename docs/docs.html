@@ -29,6 +29,7 @@
     <ul class="nav__links" id="nav-links">
       <li><a href="index.html">Home</a></li>
       <li><a href="docs.html" aria-current="page">Documentation</a></li>
+      <li><a href="setup.html">Setup</a></li>
       <li><a href="rules.html">Rules</a></li>
       <li><a href="faq.html">FAQ</a></li>
       <li><a href="changelog.html">Changelog</a></li>
@@ -66,7 +67,6 @@
       <li><a href="#deep-pass">The deep pass</a></li>
       <li><a href="#privacy">What leaves your machine</a></li>
       <li><a href="#self">Scanning a scanner</a></li>
-      <li><a href="#progress">The progress bar</a></li>
       <li><a href="#updates">Updates</a></li>
       <li><a href="#building">Building from source</a></li>
     </ul>
@@ -365,77 +365,25 @@
         guard that exists but is incomplete, whether untrusted input can actually reach a
         dangerous operation, two individually harmless pieces of code that are unsafe together.
       </p>
-      <p>It is off unless you turn it on, per scan. There are three ways to power it.</p>
-
-      <h3>Connect the Claude Code you already have</h3>
       <p>
-        VibeCheck looks for Claude Code at startup, including the copy bundled inside the Claude
-        desktop app, and asks whether it is signed in. Claude Code does not need to be running.
-        <strong>This spends the usage allowance of the subscription you already pay for</strong>,
-        with nothing charged on top. VibeCheck never sees your credentials; the CLI holds them.
+        It is off unless you turn it on, per scan, and you bring your own credential. There are
+        three routes: the Claude Code you already have, an Anthropic API key, or any
+        OpenAI-compatible endpoint including a model running on your own machine.
       </p>
       <p>
-        The check runs once, at startup. Sign in while VibeCheck is already open and it will not
-        notice until you press <strong>Sign in</strong> or restart it.
+        Findings from this pass are labelled <code>AI</code>, carry a confidence level, and
+        low-confidence ones are dropped rather than hedged. <strong>None of them can move the
+        score or trigger a do-not-install verdict</strong>, because the strongest claim in a
+        report must not depend on whether the reader happened to have a key.
       </p>
-
-      <h3>Bring your own Anthropic API key</h3>
-      <p>
-        <strong>This costs real money, every scan.</strong> The API is billed per token against
-        credit you buy up front and is a separate product from a Claude subscription, so a Pro
-        or Max plan does not cover it. A typical pass over a dozen files runs to a few cents,
-        and the report prints the estimate with the tokens it is based on.
-      </p>
-      <p>
-        Your key is encrypted to your Windows account and stored outside the application folder.
-        It is never written to a report, and the interface only ever shows it masked.
-      </p>
-
-      <h3>Any OpenAI-compatible endpoint</h3>
-      <p>
-        Point it at a hosted provider, or at Ollama or LM Studio running on your own machine, in
-        which case nothing leaves the building at all. VibeCheck detects a local runtime and
-        offers advice about which models your hardware can carry.
-      </p>
-
-      <h3>Point it at your source, not your release build</h3>
-      <p>
-        The AI pass reasons about intent, and <strong>decompiling a binary destroys every
-        comment in it</strong>. On a real application whose source was to hand, three findings
-        from a frontier model against the decompiled release were checked line by line and all
-        three were wrong, each one answered by a comment the author had written and the
-        decompiler had thrown away. The deterministic checks are unaffected, since a pattern
-        does not care about comments.
-      </p>
-
-      <h3>Both credentialed routes are for applications you built</h3>
-      <p>
-        The deep pass is offered in developer mode only. For the Claude Code route that is
-        <strong>enforced in the core</strong>, and the reason is worth stating: Claude Code is an
-        agent with shell and filesystem access, and an API endpoint cannot execute anything.
-        Feeding source recovered from software you do not trust into something that can act on
-        your machine is the attack this tool exists to warn people about. The scanned program
-        never has to run, because getting VibeCheck to read it becomes the attack instead.
-      </p>
-      <p>
-        Where the agent is used it is fenced in: no tools, safe mode, an empty working directory,
-        no session persistence, and the file content arrives on standard input rather than on a
-        command line other processes can read.
-      </p>
-
-      <h3>What is sent, and its bounds</h3>
-      <p>
-        The files that handle input the application does not control, plus any file that calls
-        into one a rule flagged. Not the whole application, and not only the lines a rule
-        matched. Both bounds are deliberate: sending only flagged lines would mean the pass could
-        deepen findings you already have and never discover one in code no rule happened to hit,
-        and reading one hop of callers is what makes reachability answerable.
-      </p>
-      <p>
-        At most <strong>40 files per scan</strong>, whichever route answers. Findings are
-        labelled <code>AI</code>, carry a confidence level, and low-confidence ones are dropped
-        rather than hedged. None of them can move the score or trigger a do-not-install verdict.
-      </p>
+      <div class="callout">
+        <span class="callout__title">Setting it up</span>
+        <p>
+          Each route, what it costs, what it sends and how to configure it is on its own page:
+          <a href="setup.html">Deep pass setup</a>. That page also covers picking a local model
+          for your graphics card.
+        </p>
+      </div>
     </section>
 
     <section id="privacy">
@@ -477,27 +425,6 @@
           credential wherever it lives, including in the source of a security tool.
         </p>
       </div>
-    </section>
-
-    <section id="progress">
-      <h2>The progress bar takes longer than the scan</h2>
-      <p>
-        A scan of a typical application finishes in a second or two, and in testing nobody
-        believed it. So the readout is paced: between five and twenty seconds depending on how
-        much there was to look at.
-      </p>
-      <p>
-        <strong>The work is not slowed and nothing is invented.</strong> The bar shows the lower
-        of two figures, how far the scan has actually got and how far there has been time to
-        read, so it can never claim progress that has not happened and never finishes before its
-        stages can be read. A scan that genuinely takes longer, such as one running the deep
-        pass, is not padded at all.
-      </p>
-      <p>
-        The duration in the report is the real one, so a report saying <code>0.8s</code> after a
-        twelve second bar is not a contradiction. The receipt records the work; the bar reports
-        it at reading speed.
-      </p>
     </section>
 
     <section id="updates">
@@ -560,6 +487,7 @@ dotnet run --project VibeCheck.App</code></pre>
         <h4>Documentation</h4>
         <ul>
           <li><a href="docs.html">How it works</a></li>
+          <li><a href="setup.html">Deep pass setup</a></li>
           <li><a href="rules.html">Rule reference</a></li>
           <li><a href="faq.html">Frequently asked</a></li>
           <li><a href="changelog.html">Changelog</a></li>

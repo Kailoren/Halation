@@ -2,6 +2,10 @@
 
 Static HTML, no build step. GitHub Pages serves this folder as it stands.
 
+Six pages: `index`, `docs`, `setup`, `rules`, `faq`, `changelog`. The navigation and footer are
+repeated in each file rather than shared, because there is no build step to share them with;
+changing a nav item means changing it in six places.
+
 ## Publishing it
 
 In the repository's **Settings → Pages**, set the source to **Deploy from a branch**, branch

@@ -32,6 +32,7 @@
     <ul class="nav__links" id="nav-links">
       <li><a href="index.html" aria-current="page">Home</a></li>
       <li><a href="docs.html">Documentation</a></li>
+      <li><a href="setup.html">Setup</a></li>
       <li><a href="rules.html">Rules</a></li>
       <li><a href="faq.html">FAQ</a></li>
       <li><a href="changelog.html">Changelog</a></li>
@@ -53,7 +54,7 @@
         failures AI code generators actually produce, and tells you what it could not reach.
       </p>
       <div class="btn-row">
-        <a class="btn btn--primary" href="https://github.com/kailoren/vibecheck/releases/latest">Download for Windows</a>
+        <a class="btn btn--primary" href="https://github.com/kailoren/vibecheck/releases/latest/download/VibeCheck.exe">Download for Windows</a>
         <a class="btn btn--ghost" href="docs.html">Read the documentation</a>
       </div>
       <div class="hero__meta">
@@ -196,7 +197,7 @@
 
     <div class="grid grid--2" style="align-items:start;margin-top:2rem">
       <div class="reveal">
-        <div class="card card--raised">
+        <div class="card card--raised" style="height:100%">
           <div class="score">
             <span class="score__value" data-count-to="11" data-count-from="100">11/100</span>
             <span class="score__band">Critical issues</span>
@@ -226,25 +227,31 @@
           </div>
         </div>
 
-        <p style="margin-top:1.6rem;color:var(--muted);font-size:0.95rem">
+      </div>
+
+      <div class="reveal">
+        <p style="margin-top:0">
           The worst finding picks a band and the accumulated weight positions the score inside
           it, so each further finding moves the number less than the one before. Scores do not
           bottom out at zero: three criticals and forty of them are different situations, and
           zero would assert that nothing about the application is acceptable, which no static
           scan can know.
         </p>
-        <p style="color:var(--muted);font-size:0.95rem">
-          <a href="docs.html#scoring">How the score is calculated</a>
+        <p>
+          Coverage sits beside the number rather than inside it, and so does anything that could
+          not be checked at all, because a clean line under a check that never ran is the one
+          way a report can mislead while every figure in it is correct.
         </p>
-      </div>
-
-      <div class="reveal">
-        <div class="shot shot--tall">
-          <img src="assets/img/screen-results.png" alt="The VibeCheck results screen showing a score of 11 out of 100 labelled Critical issues, a coverage card reading 100% readable, and a findings list naming a live Stripe secret key, a Supabase service_role key, SQL queries built by string concatenation, and four dependencies with known vulnerabilities." width="2240" height="2360" loading="lazy">
-        </div>
-        <p class="shot__caption">The developer's report. The end user's names the same evidence differently.</p>
+        <p><a href="docs.html#scoring">How the score is calculated</a></p>
       </div>
     </div>
+
+    <figure class="reveal" style="margin-top:3rem">
+      <div class="shot shot--crop" style="--natural:1120px;--crop:760px">
+        <img src="assets/img/screen-results.png" alt="The VibeCheck results screen showing a score of 11 out of 100 labelled Critical issues, a coverage card reading 100% readable, and a findings list naming a live Stripe secret key, a Supabase service_role key, SQL queries built by string concatenation, and four dependencies with known vulnerabilities." width="2240" height="2360" loading="lazy">
+      </div>
+      <figcaption class="shot__caption">The developer's report. The end user's names the same evidence differently.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -300,35 +307,54 @@
     <div class="section-label reveal">Optional deep pass</div>
     <h2 class="reveal">A second opinion that reads the code</h2>
 
-    <div class="grid grid--2" style="align-items:center;margin-top:2rem">
-      <div class="reveal">
+    <p class="lede reveal">
+      The main scan is free, needs no account, and sends nothing but package names. Optionally, a
+      second pass reads the code and reasons about it, which is what catches the things a pattern
+      cannot express: a guard that exists but is incomplete, whether untrusted input can actually
+      reach a dangerous operation, two individually harmless pieces of code that are unsafe
+      together.
+    </p>
+
+    <div class="grid grid--3 reveal" style="margin-top:2.5rem">
+      <div class="card feature">
+        <span class="feature__icon">ROUTE 1 · NO EXTRA COST</span>
+        <h3>The Claude Code you already have</h3>
         <p>
-          The main scan is free, needs no account, and sends nothing but package names.
-          Optionally, a second pass reads the code and reasons about it, which is what catches
-          the things a pattern cannot express: a guard that exists but is incomplete, whether
-          untrusted input can actually reach a dangerous operation, two individually harmless
-          pieces of code that are unsafe together.
+          Detected at startup, including the copy inside the Claude desktop app. Spends the
+          allowance of the subscription you already pay for, and nothing is charged on top.
         </p>
-        <p>
-          It is off unless you turn it on, per scan, and you bring your own credential. Connect
-          the Claude Code you already have and it spends the subscription you already pay for;
-          paste an Anthropic API key and it bills that; or point it at any OpenAI-compatible
-          endpoint, including a model running on your own machine.
-        </p>
-        <p style="color:var(--muted);font-size:0.95rem">
-          Findings from this pass are labelled, carry a confidence level, cannot move the score,
-          and can never trigger a do-not-install verdict. The strongest claim in a report must
-          not depend on whether the reader happened to have a key.
-        </p>
-        <p><a href="docs.html#deep-pass">How the deep pass works, and what it sends</a></p>
       </div>
-      <div class="reveal">
-        <div class="shot">
-          <img src="assets/img/screen-setup.png" alt="The VibeCheck pre-scan window, offering a deep pass tick box with three sources: an Anthropic API key, Claude Code on this machine, or any OpenAI-compatible endpoint." width="1120" height="955" loading="lazy">
-        </div>
-        <p class="shot__caption">Asked before the scan, so the choice applies to this one.</p>
+      <div class="card feature">
+        <span class="feature__icon">ROUTE 2 · BILLED PER SCAN</span>
+        <h3>An Anthropic API key</h3>
+        <p>
+          Billed per token against credit you buy up front. A pass over a dozen files runs to a
+          few cents, and the report prints the estimate with the tokens behind it.
+        </p>
+      </div>
+      <div class="card feature">
+        <span class="feature__icon">ROUTE 3 · YOUR CHOICE</span>
+        <h3>Any OpenAI-compatible endpoint</h3>
+        <p>
+          Nine providers preset, or Ollama and LM Studio on your own machine, which is the one
+          route where the files never leave the building at all.
+        </p>
       </div>
     </div>
+
+    <p class="reveal" style="margin-top:2rem;color:var(--muted);font-size:0.95rem;max-width:76ch">
+      Findings from this pass are labelled, carry a confidence level, cannot move the score, and
+      can never trigger a do-not-install verdict. The strongest claim in a report must not depend
+      on whether the reader happened to have a key.
+    </p>
+    <p class="reveal"><a href="setup.html">Setting up each route, step by step</a></p>
+
+    <figure class="reveal" style="margin-top:2.5rem">
+      <div class="shot" style="--natural:560px">
+        <img src="assets/img/screen-setup.png" alt="The VibeCheck pre-scan window, offering a deep pass tick box with three sources: an Anthropic API key, Claude Code on this machine, or any OpenAI-compatible endpoint." width="1120" height="955" loading="lazy">
+      </div>
+      <figcaption class="shot__caption">Asked before the scan, so the choice applies to this one.</figcaption>
+    </figure>
   </div>
 </section>
 
@@ -383,11 +409,12 @@
         trust, being able to read it is part of the offer.
       </p>
       <div class="btn-row" style="justify-content:center;margin-top:2rem">
-        <a class="btn btn--primary" href="https://github.com/kailoren/vibecheck/releases/latest">Download for Windows</a>
+        <a class="btn btn--primary" href="https://github.com/kailoren/vibecheck/releases/latest/download/VibeCheck.exe">Download for Windows</a>
         <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck">Read the source</a>
       </div>
       <p style="margin-top:1.6rem;font-family:var(--mono);font-size:0.8rem;color:var(--muted)">
-        Windows 10 or 11 · one self-contained file · no runtime to install
+        Windows 10 or 11 · one self-contained file · no runtime to install<br>
+        <a href="https://github.com/kailoren/vibecheck/releases">All releases, including betas</a>
       </p>
     </div>
 
@@ -421,6 +448,7 @@
         <h4>Documentation</h4>
         <ul>
           <li><a href="docs.html">How it works</a></li>
+          <li><a href="setup.html">Deep pass setup</a></li>
           <li><a href="rules.html">Rule reference</a></li>
           <li><a href="faq.html">Frequently asked</a></li>
           <li><a href="changelog.html">Changelog</a></li>
