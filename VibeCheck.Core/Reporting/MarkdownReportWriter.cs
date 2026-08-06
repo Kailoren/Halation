@@ -187,7 +187,7 @@ public static class MarkdownReportWriter
         // was examined, and printing one for an artifact that yielded nothing is the most
         // misleading thing this report could do.
         output.AppendLine(verdict.HasMeaningfulScore
-            ? $"### {verdict.Score}/100 — {verdict.BandLabel}"
+            ? $"### {verdict.Score}/100 · {verdict.BandLabel}"
             : $"### {verdict.BandLabel}");
         output.AppendLine();
 
@@ -398,8 +398,8 @@ public static class MarkdownReportWriter
                 // far weaker statement than one that examined four hundred, and printing a
                 // bare tick would flatten the two.
                 output.AppendLine(state == CheckState.NotChecked
-                    ? $"- {id}{check.Title} — nothing it applies to was recovered"
-                    : $"- {id}{check.Title} — {check.FilesExamined:N0} file"
+                    ? $"- {id}{check.Title}: nothing it applies to was recovered"
+                    : $"- {id}{check.Title}: {check.FilesExamined:N0} file"
                       + $"{(check.FilesExamined == 1 ? "" : "s")} examined");
             }
 

@@ -3,7 +3,7 @@
 
 # VibeCheck
 [![License](https://img.shields.io/github/license/kailoren/vibecheck?style=plastic)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/kailoren/vibecheck?style=plastic)](https://github.com/kailoren/fleetfinder/releases/latest)
+[![Release](https://img.shields.io/github/v/release/kailoren/vibecheck?style=plastic)](https://github.com/kailoren/vibecheck/releases/latest)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?style=plastic)
 
 A drag-and-drop security scanner for AI-generated applications.
@@ -40,18 +40,18 @@ will read cleaner than a sloppy honest one.
 So VibeCheck does not print a verdict of "safe". It reports:
 
 - **A score out of 100**, capped by the single worst issue found. Fifty passing checks cannot
-  lift an app that ships a live API key out of the red band. The number comes from the
-  deterministic checks alone, so the same application scores the same for everybody: what the
-  optional AI pass finds is reported in full but never moves it, because a number that changed
-  with whichever model you had configured could not be compared with anyone else's. What the AI
-  does keep is the power to withhold the all-clear: a result cannot be labelled clean while its
-  suggestions are sitting underneath. There is **one score**, and it is the worse of the two
-  readings: the artifact is scored both as a question about shipping it and as a question about
-  running it, and the harsher answer is the one both reports print.
+  lift an app that ships a live API key out of the red band. There is **one score**, and it is
+  the worse of the two readings: the artifact is scored both as a question about shipping it
+  and as a question about running it, and the harsher answer is the one both reports print.
   Otherwise an author could scan their own work, switch to the reader it treats more kindly,
   and screenshot a number produced for a question they were not asking. Which findings appear,
   how they are worded, what can be done about them and what order they come in all still change
   with the reader. Only the number does not, and the report says what both readings were.
+- **A number that means the same thing in everybody's report.** The score comes from the
+  deterministic checks alone. Whatever the optional AI pass finds is reported in full and never
+  moves it, because a number that changed with whichever model you had configured could not be
+  compared with anyone else's. What the AI keeps is the power to withhold the all-clear: a
+  result cannot be labelled clean while its suggestions are sitting underneath it.
 - **A coverage figure**, kept deliberately separate from the score, saying how much of the
   application could actually be read. A clean result at 12% coverage is a different claim
   from a clean result at 95%. Coverage measures what was *understood*, not what was written

@@ -149,20 +149,19 @@ public static class DeepPassRunner
         limitations.Add(
             triage.HitCeiling
                 ? $"Every one of the {files.Count:N0} files in this application was checked. "
-                  + $"{examined} of them were also read a second time by the AI, but "
-                  + $"{triage.Qualified:N0} were worth reading that way. There is a limit on how "
-                  + $"many can be sent, and it stopped the pass early, so "
-                  + $"{triage.Qualified - triaged.Count:N0} files that take in information from "
-                  + "outside the application did not get that second look. Raising the limit "
-                  + "would cover them."
+                  + $"{triage.Qualified:N0} of them were worth a second reading by the AI, and "
+                  + $"{examined} got one. There is a limit on how many can be sent and it "
+                  + $"stopped the pass early, so {triage.Qualified - triaged.Count:N0} files "
+                  + "that take in information from outside the application did not get that "
+                  + "second look. Raising the limit would cover them."
                 : $"Every one of the {files.Count:N0} files in this application was checked. "
                   + $"{examined} of them were also read a second time by the AI. That second "
                   + "reading is slower, so it is saved for the files that take in information "
                   + "from outside the application (anything downloaded, opened, or typed in) "
                   + "and for the code those files hand their results to, because that is where "
                   + $"problems usually start. The remaining {files.Count - examined:N0} were "
-                  + "checked in full like the rest; there was simply nothing arriving from "
-                  + "outside them for the AI to follow.");
+                  + "checked in full like the rest; there was nothing arriving from outside "
+                  + "them for the AI to follow.");
 
         // Stated once, here, rather than repeated on every finding. A hedge attached to each
         // item stops being read and starts reading as a tool that does not trust its own

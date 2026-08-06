@@ -1767,7 +1767,7 @@ public sealed class PurposeQuestion
     public string? StatedInSourceLine => StatedInSource is null
         ? null
         : $"The code says why: \"{StatedInSource}\". That is the author's own note, not a "
-          + "check, so it is worth confirming rather than taking.";
+          + "check, so it is worth confirming rather than taking on trust.";
 
     public string Prompt => ApplicationKinds.Asked;
 

@@ -208,11 +208,15 @@ public sealed class RuleEngine
             .Order(StringComparer.Ordinal)
             .ToList();
 
+        // "written in" rather than "is", because one of the names is a phrase rather than a
+        // language. "The code here is languages these checks do not name individually" is what
+        // a Go or PHP project produced, which is the reader this sentence was added for.
         var written = languages.Count switch
         {
             0 => string.Empty,
-            1 => $" The code here is {languages[0]}.",
-            _ => $" The code here is {string.Join(", ", languages[..^1])} and {languages[^1]}.",
+            1 => $" The code here is written in {languages[0]}.",
+            _ => $" The code here is written in {string.Join(", ", languages[..^1])} "
+                 + $"and {languages[^1]}.",
         };
 
         return $"{idle} of the {_rules.Count} checks did not apply to any file in this "
