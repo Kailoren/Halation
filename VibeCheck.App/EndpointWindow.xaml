@@ -97,6 +97,8 @@
                  exact line to run rather than as a description of it. -->
             <StackPanel x:Name="PullRow" Orientation="Horizontal" Margin="0,4,0,0"
                         Visibility="Collapsed">
+                <TextBlock x:Name="PullLabel" Style="{StaticResource Caption}" Width="72"
+                           VerticalAlignment="Center" Visibility="Collapsed"/>
                 <TextBox x:Name="PullCommand" IsReadOnly="True" Height="26" Width="280"/>
                 <Button Content="Copy" Style="{StaticResource Btn}" Margin="8,0,0,0"
                         Click="OnCopyPull"/>
@@ -106,6 +108,19 @@
                      text would travel with it and stop being a runnable command. -->
                 <TextBlock x:Name="PullSize" Style="{StaticResource Caption}"
                            VerticalAlignment="Center" Margin="10,0,0,0"/>
+            </StackPanel>
+
+            <!-- A second command, shown only when neither runtime is running and the reader has
+                 therefore not yet chosen which to install. Two commands rather than a guess:
+                 whichever one they pick, the line above or below it is the one that works. Each
+                 keeps its own box so a copy stays a runnable command. -->
+            <StackPanel x:Name="PullRowAlt" Orientation="Horizontal" Margin="0,6,0,0"
+                        Visibility="Collapsed">
+                <TextBlock x:Name="PullLabelAlt" Style="{StaticResource Caption}" Width="72"
+                           VerticalAlignment="Center"/>
+                <TextBox x:Name="PullCommandAlt" IsReadOnly="True" Height="26" Width="280"/>
+                <Button Content="Copy" Style="{StaticResource Btn}" Margin="8,0,0,0"
+                        Click="OnCopyPullAlt"/>
             </StackPanel>
 
             <TextBlock x:Name="ContextCaution" Style="{StaticResource Caption}" TextWrapping="Wrap"

@@ -17,20 +17,41 @@ public enum ModelFit
 }
 
 /// <summary>One model worth suggesting, and the machine it suits.</summary>
-/// <param name="Tag">The tag to pull and to name in a request.</param>
+/// <param name="Tag">Ollama's tag for it, which is also what a request to Ollama must name.</param>
+/// <param name="LmStudioTag">
+/// The same model as LM Studio's catalogue names it. <b>The two are not interchangeable</b>:
+/// Ollama writes <c>qwen2.5-coder:7b</c> and LM Studio writes <c>qwen/qwen2.5-coder-7b</c>, and
+/// each runtime rejects the other's spelling. All three were checked against the live catalogues
+/// rather than inferred from the pattern.
+/// </param>
 /// <param name="Label">How it is described in a sentence.</param>
 /// <param name="WantsVideoBytes">Video memory below which this is the wrong choice.</param>
 /// <param name="DownloadBytes">Roughly what pulling it costs in disk and bandwidth.</param>
 /// <param name="Note">What the reader gains or gives up at this size.</param>
 public sealed record LocalModelChoice(
     string Tag,
+    string LmStudioTag,
     string Label,
     long WantsVideoBytes,
     long DownloadBytes,
     string Note)
 {
-    /// <summary>The command that fetches it, which is the only step this application cannot do.</summary>
-    public string PullCommand => $"ollama pull {Tag}";
+    /// <summary>
+    /// The command that fetches it, which is the only step this application cannot do.
+    /// </summary>
+    /// <remarks>
+    /// Takes the runtime because there is no neutral answer. This used to be Ollama's command
+    /// unconditionally, including on the screen that had just told the reader LM Studio was the
+    /// one running here, which handed them a line that does nothing.
+    /// </remarks>
+    public string PullCommandFor(string? runtimeName) =>
+        LocalRuntimeProbe.IsLmStudio(runtimeName)
+            ? $"lms get {LmStudioTag}"
+            : $"ollama pull {Tag}";
+
+    /// <summary>What this model is called in the runtime that will be asked for it.</summary>
+    public string TagFor(string? runtimeName) =>
+        LocalRuntimeProbe.IsLmStudio(runtimeName) ? LmStudioTag : Tag;
 }
 
 /// <summary>
@@ -99,6 +120,7 @@ public static class LocalModelGuide
     [
         new(
             "qwen2.5-coder:7b",
+            "qwen/qwen2.5-coder-7b",
             "7B",
             WantsVideoBytes: 13 * GB / 2,
             DownloadBytes: 4_683_087_074,
@@ -107,6 +129,7 @@ public static class LocalModelGuide
 
         new(
             "qwen2.5-coder:14b",
+            "qwen/qwen2.5-coder-14b",
             "14B",
             WantsVideoBytes: 11 * GB,
             DownloadBytes: 8_988_123_810,
@@ -115,6 +138,7 @@ public static class LocalModelGuide
 
         new(
             "qwen2.5-coder:32b",
+            "qwen/qwen2.5-coder-32b",
             "32B",
             WantsVideoBytes: 22 * GB,
             DownloadBytes: 19_851_349_410,
@@ -224,6 +248,43 @@ public static class LocalModelGuide
     /// any reasonable time, so the right suggestion is a small one.
     /// </para>
     /// </remarks>
+    /// <summary>
+    /// The caution about context length, worded for whichever runtime is actually answering.
+    /// </summary>
+    /// <remarks>
+    /// The two configure it in completely different places, so one sentence cannot serve both.
+    /// This was Ollama's environment variable unconditionally, which told somebody running LM
+    /// Studio to set a variable it does not read. Both are named when neither is detected,
+    /// because then the reader has not yet chosen.
+    /// </remarks>
+    public static string ContextCautionFor(IEnumerable<string>? runtimeNames)
+    {
+        var names = runtimeNames?.ToArray() ?? [];
+
+        var ollama = names.Length == 0 || names.Any(n =>
+            string.Equals(n, LocalRuntimeProbe.OllamaName, StringComparison.OrdinalIgnoreCase));
+
+        var lmStudio = names.Length == 0 || names.Any(LocalRuntimeProbe.IsLmStudio);
+
+        const string Why =
+            "One thing to check: the deep pass sends whole files, several times larger than the "
+            + "context length these runtimes load a model with by default. If yours is left at "
+            + "that default, most of each file is dropped before the model reads it and the scan "
+            + "will look quiet rather than broken. ";
+
+        return (ollama, lmStudio) switch
+        {
+            (true, false) => Why + "Setting OLLAMA_CONTEXT_LENGTH to 32768 removes the doubt.",
+
+            (false, true) =>
+                Why + "LM Studio sets this per model as it loads, so raise the context length on "
+                + "the model's own settings before starting the server.",
+
+            _ => Why + "For Ollama, set OLLAMA_CONTEXT_LENGTH to 32768. For LM Studio, raise the "
+                + "context length on the model's own settings, which it applies as the model loads.",
+        };
+    }
+
     public static string Advise(long videoBytes, long systemBytes = 0)
     {
         if (videoBytes <= 0)

@@ -335,8 +335,23 @@ public sealed class LocalRuntimeTests
 
         foreach (var choice in LocalModelGuide.Choices)
         {
-            Assert.StartsWith("ollama pull ", choice.PullCommand, StringComparison.Ordinal);
-            Assert.EndsWith(choice.Tag, choice.PullCommand, StringComparison.Ordinal);
+            // Each runtime gets its own command and its own spelling of the model. Neither
+            // accepts the other's, so a single command was wrong for one of the two readers.
+            var ollama = choice.PullCommandFor(LocalRuntimeProbe.OllamaName);
+            var lmStudio = choice.PullCommandFor(LocalRuntimeProbe.LmStudioName);
+
+            Assert.StartsWith("ollama pull ", ollama, StringComparison.Ordinal);
+            Assert.EndsWith(choice.Tag, ollama, StringComparison.Ordinal);
+
+            Assert.StartsWith("lms get ", lmStudio, StringComparison.Ordinal);
+            Assert.EndsWith(choice.LmStudioTag, lmStudio, StringComparison.Ordinal);
+
+            // The two spellings must actually differ, or one of them is a copied placeholder.
+            Assert.NotEqual(choice.Tag, choice.LmStudioTag);
+
+            // An unknown or absent runtime falls back to Ollama rather than to nothing, since
+            // that is the older and more widely installed of the two.
+            Assert.Equal(ollama, choice.PullCommandFor(null));
 
             // Smallest first, which Recommend depends on being meaningful and the dialog shows
             // in this order.
@@ -373,5 +388,42 @@ public sealed class LocalRuntimeTests
 
         // And the verdict has to match too: an 8GB card is the case this size exists for.
         Assert.Equal(ModelFit.Comfortable, LocalModelGuide.Judge(seven.DownloadBytes, 8 * GB));
+    }
+
+    /// <summary>
+    /// The context advice names the runtime that is answering, because the two set it in
+    /// completely different places.
+    /// </summary>
+    /// <remarks>
+    /// The defect this pins: the caution was Ollama's environment variable unconditionally, so a
+    /// reader running LM Studio was told to set a variable it never reads, on the same screen
+    /// that had correctly identified LM Studio as the one running.
+    /// </remarks>
+    [Fact]
+    public void The_context_caution_names_the_runtime_that_answered()
+    {
+        var ollama = LocalModelGuide.ContextCautionFor([LocalRuntimeProbe.OllamaName]);
+
+        Assert.Contains("OLLAMA_CONTEXT_LENGTH", ollama, StringComparison.Ordinal);
+        Assert.DoesNotContain("LM Studio", ollama, StringComparison.Ordinal);
+
+        var lmStudio = LocalModelGuide.ContextCautionFor([LocalRuntimeProbe.LmStudioName]);
+
+        Assert.Contains("LM Studio", lmStudio, StringComparison.Ordinal);
+        Assert.DoesNotContain("OLLAMA_CONTEXT_LENGTH", lmStudio, StringComparison.Ordinal);
+
+        // Nothing detected means the reader has not chosen yet, so both are named rather than
+        // one being guessed at.
+        foreach (var undecided in new[]
+                 {
+                     LocalModelGuide.ContextCautionFor(null),
+                     LocalModelGuide.ContextCautionFor([]),
+                     LocalModelGuide.ContextCautionFor(
+                         [LocalRuntimeProbe.OllamaName, LocalRuntimeProbe.LmStudioName]),
+                 })
+        {
+            Assert.Contains("OLLAMA_CONTEXT_LENGTH", undecided, StringComparison.Ordinal);
+            Assert.Contains("LM Studio", undecided, StringComparison.Ordinal);
+        }
     }
 }

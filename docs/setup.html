@@ -241,7 +241,7 @@
       </p>
       <figure>
         <div class="shot" style="--natural:600px">
-          <img src="assets/img/screen-endpoint.png" alt="The VibeCheck endpoint configuration window. It names the detected graphics card and system memory, offers an editable video memory figure, recommends the largest model that fits with the exact ollama pull command and its download size, then lists nine provider presets above the endpoint, model and key fields." width="1200" height="1643" loading="lazy">
+          <img src="assets/img/screen-endpoint.png" alt="The VibeCheck endpoint configuration window. It names the detected graphics card and system memory, offers an editable video memory figure, and recommends the largest model that fits, giving the fetch command for both Ollama and LM Studio with the download size. Below that are nine provider presets and the endpoint, model and key fields." width="1200" height="1715" loading="lazy">
         </div>
         <figcaption class="shot__caption">The endpoint window, sizing a model against the card it found.</figcaption>
       </figure>
@@ -336,6 +336,22 @@
           </tbody>
         </table>
       </div>
+      <div class="callout">
+        <span class="callout__title">The two runtimes spell the same model differently</span>
+        <p>
+          Ollama writes <code>qwen2.5-coder:7b</code> and LM Studio writes
+          <code>qwen/qwen2.5-coder-7b</code>, and neither accepts the other's spelling. VibeCheck
+          gives you the command for whichever runtime is answering, and both when neither is, so
+          you should not have to translate between them.
+        </p>
+        <p>
+          It matters in the <strong>Model</strong> field too: paste an Ollama tag into a
+          configuration pointing at LM Studio and the request fails on a model that does not
+          exist. Picking a detected model from the list avoids the question entirely, because
+          that fills in the endpoint and the identifier together.
+        </p>
+      </div>
+
       <div class="callout callout--warn">
         <span class="callout__title">Below 6.5 GB, VibeCheck recommends nothing</span>
         <p>
@@ -412,7 +428,11 @@
           <em>"no valid installation could be found"</em> even though the application is plainly
           installed.
         </li>
-        <li>Download a model through its interface. For an 8 GB card, a 7B coder model.</li>
+        <li>
+          Download a model. For an 8 GB card, a 7B coder model. Either through its interface, or
+          with the command VibeCheck gives you:
+          <pre><code>lms get qwen/qwen2.5-coder-7b</code></pre>
+        </li>
         <li>Open the <strong>Developer</strong> tab and start the local server. It listens on <code>localhost:1234</code>.</li>
         <li>Copy the model id exactly as LM Studio lists it. It is usually longer than an Ollama tag and is not interchangeable with one.</li>
         <li>In the endpoint window, press the <strong>LM Studio</strong> preset, paste the model id, leave the key empty, and save.</li>

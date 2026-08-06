@@ -246,20 +246,44 @@ public partial class EndpointWindow : Window
 
         var recommended = LocalModelGuide.Recommend(_videoBytes) ?? LocalModelGuide.Choices[0];
 
-        PullCommand.Text = recommended.PullCommand;
-
         // What the recommendation costs, said where the recommendation is made. A reader deciding
         // whether to take it is deciding whether to spend the download, and the figure was
         // carried on the choice all along without ever reaching the screen.
         PullSize.Text = $"{LocalModelGuide.Gigabytes(recommended.DownloadBytes)} to download";
+
+        ContextCaution.Text = LocalModelGuide.ContextCautionFor(_runtimes.Select(r => r.Name));
         ContextCaution.Visibility = _runtimes.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // A command per runtime the reader could plausibly run it in. The two spell the same
+        // model differently and neither accepts the other's spelling, so one command was always
+        // wrong for somebody: for whoever was not running Ollama when one was detected, and for
+        // half the readers when none was. With nothing detected the choice has not been made yet,
+        // so both are offered rather than one being guessed at.
+        var offer = _runtimes.Count == 0
+            ? new[] { LocalRuntimeProbe.OllamaName, LocalRuntimeProbe.LmStudioName }
+            : [.. _runtimes.Select(r => r.Name)];
+
+        PullCommand.Text = recommended.PullCommandFor(offer[0]);
+        PullLabel.Text = offer[0];
+
+        // Labelled only when there is something to tell apart.
+        PullLabel.Visibility = offer.Length > 1 ? Visibility.Visible : Visibility.Collapsed;
+
+        if (offer.Length > 1)
+        {
+            PullLabelAlt.Text = offer[1];
+            PullCommandAlt.Text = recommended.PullCommandFor(offer[1]);
+        }
+
+        PullRowAlt.Visibility = offer.Length > 1 ? Visibility.Visible : Visibility.Collapsed;
 
         if (_runtimes.Count == 0)
         {
             DetectionStatus.Text =
-                "Neither Ollama nor LM Studio is answering on this machine. Install one, run the "
+                "Neither Ollama nor LM Studio is answering on this machine. Install one, run its "
                 + "command below to fetch a model, then open this window again. Nothing about "
                 + "your code leaves the machine on that route.";
+
             PullRow.Visibility = Visibility.Visible;
 
             return;
@@ -313,11 +337,15 @@ public partial class EndpointWindow : Window
         Hide(Problem);
     }
 
-    private void OnCopyPull(object sender, RoutedEventArgs e)
+    private void OnCopyPull(object sender, RoutedEventArgs e) => Copy(PullCommand.Text);
+
+    private void OnCopyPullAlt(object sender, RoutedEventArgs e) => Copy(PullCommandAlt.Text);
+
+    private static void Copy(string text)
     {
         try
         {
-            Clipboard.SetText(PullCommand.Text);
+            Clipboard.SetText(text);
         }
         catch (System.Runtime.InteropServices.COMException)
         {

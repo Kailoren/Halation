@@ -37,13 +37,28 @@ public sealed record LocalRuntime(string Name, Uri Endpoint, IReadOnlyList<Local
 /// </remarks>
 public static class LocalRuntimeProbe
 {
+    /// <summary>The two runtimes, named once so nothing has to spell them again.</summary>
+    /// <remarks>
+    /// Constants rather than literals because these names are matched on, not only displayed:
+    /// which runtime is answering decides which command a reader is given, and a comparison
+    /// against a hand-typed string is a defect waiting for a rename.
+    /// </remarks>
+    public const string OllamaName = "Ollama";
+
+    /// <inheritdoc cref="OllamaName"/>
+    public const string LmStudioName = "LM Studio";
+
+    /// <summary>Whether this runtime is LM Studio, which spells and fetches models differently.</summary>
+    public static bool IsLmStudio(string? runtimeName) =>
+        string.Equals(runtimeName, LmStudioName, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Where the two runtimes listen, and whether Ollama's extra endpoint is worth asking.</summary>
     private sealed record Candidate(string Name, int Port, bool Ollama);
 
     private static readonly Candidate[] Candidates =
     [
-        new("Ollama", 11434, Ollama: true),
-        new("LM Studio", 1234, Ollama: false),
+        new(OllamaName, 11434, Ollama: true),
+        new(LmStudioName, 1234, Ollama: false),
     ];
 
     /// <summary>
