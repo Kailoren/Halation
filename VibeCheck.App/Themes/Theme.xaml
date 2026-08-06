@@ -27,10 +27,9 @@
     <!-- ====================================================================
          Palette
 
-         After gwannon/Cyberpunk-2077-theme-css, with the departures from that source noted
-         where they happen. Yellow is the accent rather than the background: black on yellow
-         suits a landing page and drowns a several-thousand-word report, and it swamps the
-         severity ramp.
+         Near-black with a yellow accent and a lime edge. Yellow is the accent rather than the
+         background: black on yellow suits a landing page, drowns a several-thousand-word
+         report, and swamps the severity ramp.
 
          The severity colours are the load-bearing ones. They carry meaning rather than
          decoration, and they are the one place where a change alters what a glance

@@ -330,10 +330,8 @@ Three things it has to keep doing:
 
 ## The shipped theme as a worked example
 
-`Theme.xaml` beside this file is built from
-[gwannon/Cyberpunk-2077-theme-css](https://github.com/gwannon/Cyberpunk-2077-theme-css). It is
-worth reading as a model of the two things a theme has to get right: it says where it departed
-from its source and why, and it leaves `Unknown` alone.
+`Theme.xaml` beside this file is worth reading as a model of the two things a theme has to get
+right: it says why each colour is the colour it is, and it leaves `Unknown` alone.
 
 It is also the worked example for everything above. It fills all three decoration slots, sets
 all three glows, templates `Card`, `Btn` and `DropZone` outright, and animates a backdrop, and
