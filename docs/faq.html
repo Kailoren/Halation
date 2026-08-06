@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frequently asked — VibeCheck</title>
+<meta name="description" content="Does it upload my code, can it tell me an application is safe, why did my correct application score badly, and what the catch is on a free tool.">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<div class="backdrop" aria-hidden="true">
+  <div class="backdrop__grid"></div>
+  <div class="backdrop__sweep"></div>
+  <div class="backdrop__scan"></div>
+  <div class="backdrop__vignette"></div>
+</div>
+
+<header class="nav">
+  <div class="shell nav__inner">
+    <a class="brand" href="index.html">
+      <img src="assets/img/logo.png" alt="" width="26" height="26">
+      <span>VibeCheck</span>
+    </a>
+    <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
+    <ul class="nav__links" id="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="docs.html">Documentation</a></li>
+      <li><a href="rules.html">Rules</a></li>
+      <li><a href="faq.html" aria-current="page">FAQ</a></li>
+      <li><a href="changelog.html">Changelog</a></li>
+      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+    </ul>
+  </div>
+</header>
+
+<div class="page-head">
+  <div class="shell">
+    <div class="section-label">Frequently asked</div>
+    <h1>The questions worth answering</h1>
+    <p class="lede">
+      Including the awkward ones. A tool that asks to be trusted about software should be
+      straight about its own limits.
+    </p>
+  </div>
+</div>
+
+<main id="content">
+<div class="shell doc">
+
+  <nav class="toc" aria-label="On this page">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#upload">Does it upload my code?</a></li>
+      <li><a href="#safe">Can it tell me something is safe?</a></li>
+      <li><a href="#bad-score">My working app scored badly</a></li>
+      <li><a href="#perfect-score">It scored 100 and I don't believe it</a></li>
+      <li><a href="#compare">Can I compare two applications?</a></li>
+      <li><a href="#free">It's free. What's the catch?</a></li>
+      <li><a href="#platforms">Mac and Linux?</a></li>
+      <li><a href="#ci">Can I run it in CI?</a></li>
+      <li><a href="#smartscreen">Why does SmartScreen warn?</a></li>
+      <li><a href="#malware">Is this an antivirus?</a></li>
+      <li><a href="#deep-pass">Do I need the deep pass?</a></li>
+      <li><a href="#unreadable">It couldn't read my application</a></li>
+      <li><a href="#osv">Why OSV and not the NVD?</a></li>
+      <li><a href="#slow-bar">Why is the bar slower than the scan?</a></li>
+      <li><a href="#wrong">I think a finding is wrong</a></li>
+    </ul>
+  </nav>
+
+  <div class="doc__body">
+
+    <section id="upload">
+      <h2>Does it upload my code?</h2>
+      <p>
+        No. The analysis runs where the file already is. The only thing the main scan sends is
+        the list of package names and versions your application declares, to check them against
+        published advisories, and that can be switched off entirely.
+      </p>
+      <p>
+        The one exception is opt-in and obvious: if you tick the deep pass, the files it reads go
+        to the provider you chose and paid for. It is off by default, asked per scan, and the
+        report lists exactly which files were sent.
+      </p>
+    </section>
+
+    <section id="safe">
+      <h2>Can it tell me an application is safe?</h2>
+      <p>
+        <strong>No, and it will never say so.</strong> Static analysis can demonstrate that bad
+        patterns are present. It cannot demonstrate that none are.
+      </p>
+      <p>
+        A deliberately malicious application will usually read cleaner than a sloppy honest one,
+        because someone hiding something writes carefully. So the best result VibeCheck prints is
+        "No known issues found", which is a statement about the checks that ran, not about the
+        application. There is a test in the codebase asserting that no band label ever contains
+        the words "safe" or "install".
+      </p>
+    </section>
+
+    <section id="bad-score">
+      <h2>My application works fine and it scored badly</h2>
+      <p>Three things are worth checking, in order.</p>
+      <ol>
+        <li>
+          <strong>Is it a dependency finding?</strong> Those are published advisories against the
+          exact versions you ship. They say nothing about whether your code reaches the
+          vulnerable path, and they are usually fixed by an upgrade rather than by a change to
+          your own code.
+        </li>
+        <li>
+          <strong>Is it under "What this application can do"?</strong> Updating itself and
+          starting with Windows are capabilities, not defects. They are listed separately and
+          score nothing.
+        </li>
+        <li>
+          <strong>Is it a real finding you had not thought about?</strong> One critical caps the
+          score at 39 no matter how much else passed, deliberately. A live API key in a shipped
+          bundle is not offset by fifty things done correctly.
+        </li>
+      </ol>
+      <p>
+        If a capability is central to what your application is for, VibeCheck asks about it
+        directly rather than making you argue with a number, and prints your answer back in the
+        report.
+      </p>
+    </section>
+
+    <section id="perfect-score">
+      <h2>It scored 100 and I don't believe it</h2>
+      <p>
+        Check the coverage figure, and check whether the report says a class of check could not
+        run. A shipped application with no lock file cannot have its dependencies checked at all,
+        and that caveat is printed beside the score for exactly this reason.
+      </p>
+      <p>
+        100 means the checks that ran found nothing. It does not mean much when very few of them
+        could run, which is why coverage is never folded into the number.
+      </p>
+    </section>
+
+    <section id="compare">
+      <h2>Can I compare two applications by their scores?</h2>
+      <p>
+        Cautiously, and only at similar coverage. Two source trees both read at 95% are roughly
+        comparable. A source tree at 95% and a native binary at 4% are not: the second was barely
+        read, which is why it gets no score at all rather than a flattering one.
+      </p>
+      <p>
+        The number itself is designed to be comparable in one specific way: it comes from the
+        deterministic checks alone, so it means the same thing in everybody's report regardless
+        of what AI model, if any, they had configured.
+      </p>
+    </section>
+
+    <section id="free">
+      <h2>It's free. What's the catch?</h2>
+      <p>
+        There isn't one. One build, everything unlocked, MIT licensed, no account, no licence
+        keys, no tiers, no telemetry.
+      </p>
+      <p>
+        The only thing that costs money is the optional deep pass, and that money does not come
+        here: you bring your own credential and pay your own provider, or run a model on your own
+        machine and pay nobody. There is no hosted relay, deliberately, which also means there is
+        no server holding a list of what anyone scanned.
+      </p>
+    </section>
+
+    <section id="platforms">
+      <h2>Is there a Mac or Linux version?</h2>
+      <p>
+        Not today. The interface is WPF, which is Windows-only. The analysis engine underneath it
+        is a plain .NET library with no Windows dependency, so a port is possible in principle,
+        but nothing is in progress.
+      </p>
+    </section>
+
+    <section id="ci">
+      <h2>Can I run it in CI?</h2>
+      <p>
+        Not yet, honestly. VibeCheck is a desktop application. You can pass it a path on the
+        command line, which opens it with that scan already running and is useful for a
+        "Send to" shortcut, but it opens a window and it does not set an exit code or write a
+        report to a pipe. There is no headless mode.
+      </p>
+      <p>
+        Reports export to Markdown and JSON from the results screen, so the data is available;
+        it just needs a person to press the button today.
+      </p>
+    </section>
+
+    <section id="smartscreen">
+      <h2>Why does Windows warn me when I download it?</h2>
+      <p>
+        Because the release is not code-signed yet. SmartScreen is telling you it cannot identify
+        the publisher, which is true and is a fair thing to tell you.
+      </p>
+      <p>
+        Signing is the next thing on the list. In the meantime the source is public, the build is
+        one <code>dotnet publish</code> away from it, and you are welcome to build it yourself
+        rather than trust a download.
+      </p>
+      <p>
+        The same missing signature is why VibeCheck will not install its own updates. It applies
+        to itself the rule it applies to everyone else.
+      </p>
+    </section>
+
+    <section id="malware">
+      <h2>Is this an antivirus?</h2>
+      <p>
+        No, and it is not a substitute for one. An antivirus recognises known-bad files and
+        watches what a program does while it runs. VibeCheck reads code and reports patterns,
+        without ever executing anything.
+      </p>
+      <p>
+        There is some overlap: a handful of checks look for behaviour with few honest uses, such
+        as reading saved browser passwords or cryptocurrency wallet storage, and those are the
+        only ones that can advise against installing on their own. But novel malware that does
+        nothing on that list will pass, and that is a real limit rather than a caveat.
+      </p>
+    </section>
+
+    <section id="deep-pass">
+      <h2>Do I need the deep pass?</h2>
+      <p>
+        No. The main scan is the product; the deep pass is a second opinion. It earns its place
+        on questions a pattern cannot express, such as whether a guard is complete or whether
+        untrusted input actually reaches a dangerous call.
+      </p>
+      <p>
+        It is worth most when you have the source, and worth least against a decompiled binary,
+        because decompiling destroys every comment and the AI half reasons about intent. It
+        cannot move the score, and it cannot trigger a do-not-install verdict.
+      </p>
+    </section>
+
+    <section id="unreadable">
+      <h2>It said it couldn't read my application</h2>
+      <p>
+        Then it will say that rather than report an empty result, which is the intended
+        behaviour. The likely causes:
+      </p>
+      <ul>
+        <li><strong>A native binary.</strong> Go, Rust, C and C++ executables have nothing to decompile. Nothing can read those, not just this.</li>
+        <li><strong>An Inno Setup installer</strong>, or an NSIS one using solid compression. Not supported yet.</li>
+        <li><strong>An obfuscated build.</strong> It decompiles into thousands of files of <code>a.b(c)</code>, which are not understood and so do not count towards coverage.</li>
+      </ul>
+      <p>
+        If you wrote the application, scan the source tree instead of the release. You will get
+        full coverage and a much better deep pass.
+      </p>
+    </section>
+
+    <section id="osv">
+      <h2>Why OSV.dev and not the NVD?</h2>
+      <p>
+        OSV is built around package ecosystems, which is the shape of the question being asked:
+        "is this exact version of this exact package known to be vulnerable". It answers in one
+        batched request, has no API key, and does the version-range matching itself, so there is
+        no semver arithmetic here to get subtly wrong.
+      </p>
+      <p>
+        Findings still carry CVE identifiers and link through to the NVD entry, so you land in
+        the same place; the lookup route is just better suited.
+      </p>
+    </section>
+
+    <section id="slow-bar">
+      <h2>Why does the progress bar take longer than the scan?</h2>
+      <p>
+        Because a scan finishes in a second or two and, in testing, nobody believed one had
+        happened. The readout is paced between five and twenty seconds depending on how much
+        there was to read.
+      </p>
+      <p>
+        The work is not slowed and nothing is invented: the bar shows the lower of how far the
+        scan has really got and how far there has been time to read, so it can never claim
+        progress that has not happened. The duration printed in the report is the real one.
+      </p>
+    </section>
+
+    <section id="wrong">
+      <h2>I think a finding is wrong</h2>
+      <p>
+        Please report it. False positives are treated as defects rather than noise, because a
+        developer told three times that <code>apiKey = process.env.API_KEY</code> is a hardcoded
+        credential stops reading, and the true positive goes unread with them.
+      </p>
+      <p>
+        Quote the rule identifier and the line it fired on.
+        <a href="https://github.com/kailoren/vibecheck/issues">Open an issue</a>.
+      </p>
+    </section>
+
+  </div>
+</div>
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <div class="footer__inner">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:0.8rem">
+          <img src="assets/img/logo.png" alt="" width="26" height="26">
+          <span>VibeCheck</span>
+        </a>
+        <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
+          A drag-and-drop security scanner for AI-generated applications.
+        </p>
+      </div>
+      <div>
+        <h4>Documentation</h4>
+        <ul>
+          <li><a href="docs.html">How it works</a></li>
+          <li><a href="rules.html">Rule reference</a></li>
+          <li><a href="faq.html">Frequently asked</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__note">
+      <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
+      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/site.js"></script>
+<script src="assets/js/toc.js"></script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation — VibeCheck</title>
+<meta name="description" content="How VibeCheck reads an application, how the score is calculated, what the optional deep pass sends, and what never leaves your machine.">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<div class="backdrop" aria-hidden="true">
+  <div class="backdrop__grid"></div>
+  <div class="backdrop__sweep"></div>
+  <div class="backdrop__scan"></div>
+  <div class="backdrop__vignette"></div>
+</div>
+
+<header class="nav">
+  <div class="shell nav__inner">
+    <a class="brand" href="index.html">
+      <img src="assets/img/logo.png" alt="" width="26" height="26">
+      <span>VibeCheck</span>
+    </a>
+    <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
+    <ul class="nav__links" id="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="docs.html" aria-current="page">Documentation</a></li>
+      <li><a href="rules.html">Rules</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="changelog.html">Changelog</a></li>
+      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+    </ul>
+  </div>
+</header>
+
+<div class="page-head">
+  <div class="shell">
+    <div class="section-label">Documentation</div>
+    <h1>How VibeCheck works</h1>
+    <p class="lede">
+      What it reads, what it can and cannot conclude from what it read, and what leaves your
+      machine while it does. Written for both readers the tool serves.
+    </p>
+  </div>
+</div>
+
+<main id="content">
+<div class="shell doc">
+
+  <nav class="toc" aria-label="On this page">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#install">Installing</a></li>
+      <li><a href="#readers">Two readers</a></li>
+      <li><a href="#pipeline">How a scan runs</a></li>
+      <li><a href="#recovery">Recovering the source</a></li>
+      <li><a href="#languages">Languages and packages</a></li>
+      <li><a href="#dependencies">Dependency checks</a></li>
+      <li><a href="#scoring">How the score works</a></li>
+      <li><a href="#coverage">Coverage</a></li>
+      <li><a href="#capabilities">Capabilities and purpose</a></li>
+      <li><a href="#deep-pass">The deep pass</a></li>
+      <li><a href="#privacy">What leaves your machine</a></li>
+      <li><a href="#self">Scanning a scanner</a></li>
+      <li><a href="#progress">The progress bar</a></li>
+      <li><a href="#updates">Updates</a></li>
+      <li><a href="#building">Building from source</a></li>
+    </ul>
+  </nav>
+
+  <div class="doc__body">
+
+    <section id="install">
+      <h2>Installing</h2>
+      <p>
+        VibeCheck is a single self-contained <code>VibeCheck.exe</code> for Windows 10 and 11.
+        There is no runtime to install, no installer, and nothing written outside your own user
+        folder. Download it, put it wherever you keep things, and run it.
+      </p>
+      <div class="callout callout--warn">
+        <span class="callout__title">SmartScreen will warn you</span>
+        <p>
+          Releases are not yet code-signed, so Windows will say the publisher is unknown. That
+          is a statement about the certificate, not about the file. Code signing is the next
+          thing on the list; until then, the source is public and the build is reproducible from
+          it.
+        </p>
+      </div>
+      <p>
+        Settings live in <code>%LOCALAPPDATA%\VibeCheck</code>. That is where the audience
+        choice, the window position and, if you set one, your encrypted API key are kept.
+        Deleting that folder resets the application to a first run.
+      </p>
+    </section>
+
+    <section id="readers">
+      <h2>Two readers</h2>
+      <p>
+        A report answers one of two questions, and you choose which on first run. They are not
+        the same question in two voices, because the disagreement is in the severity rather than
+        the wording.
+      </p>
+      <ul>
+        <li>
+          <strong>Before you ship.</strong> The risk in shipping this. Carries rule identifiers,
+          advisory links and remediation.
+        </li>
+        <li>
+          <strong>Before you install.</strong> The risk to you in running it. Drops the
+          identifiers, and leads with what the application can do to your machine.
+        </li>
+      </ul>
+      <p>
+        A committed private key is critical for whoever ships an application and close to
+        nothing for whoever runs it, because it is the author's own key. Shell-opening an
+        unvalidated URL is a shrug for a developer and a program starting on the reader's
+        machine. Reusing one severity ladder for both would get one of them wrong every time.
+      </p>
+      <h3>There is still only one number</h3>
+      <p>
+        Every artifact is scored both ways and <strong>the worse of the two readings is the one
+        both reports print</strong>. Otherwise an author could scan their own work, switch to
+        the reader that treats them more kindly, and screenshot a number produced for a question
+        they were not asking. The report says what both readings were and which one governed.
+      </p>
+      <p>
+        You can switch reader on the results screen without rescanning. Both severities were
+        computed during the scan.
+      </p>
+    </section>
+
+    <section id="pipeline">
+      <h2>How a scan runs</h2>
+      <p>Six stages, in this order:</p>
+      <ol>
+        <li><strong>Detect</strong> what kind of artifact this is.</li>
+        <li><strong>Recover</strong> as much readable source from it as that kind allows.</li>
+        <li><strong>Rules</strong>: 39 pattern checks across five families over everything recovered.</li>
+        <li><strong>Dependencies</strong>: the packages it declares, matched against published advisories.</li>
+        <li><strong>Score</strong>: a band chosen by the worst finding, positioned by the rest.</li>
+        <li><strong>Report</strong>: findings, capabilities, coverage, and what could not be checked.</li>
+      </ol>
+      <p>
+        Nothing is executed at any point. An installer is read, never run; a decompiled assembly
+        is turned into text, never loaded.
+      </p>
+    </section>
+
+    <section id="recovery">
+      <h2>Recovering the source</h2>
+      <p>
+        Recovery is the binding constraint on everything downstream. A rule cannot fire on code
+        nobody could read.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Artifact</th><th scope="col">Recovery</th><th scope="col">Depth</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Source folder, zip, or repository</td><td>read directly</td><td>full</td></tr>
+            <tr><td>.NET executable or library</td><td>decompiled with ILSpy</td><td>full, near-original C#</td></tr>
+            <tr><td>.NET single-file bundle</td><td>unpacked from memory, then decompiled</td><td>full</td></tr>
+            <tr><td>Electron application or <code>.asar</code></td><td>unpacked</td><td>full, often unminified</td></tr>
+            <tr><td>NSIS installer</td><td>unpacked, then as above</td><td>full for Electron and .NET payloads</td></tr>
+            <tr><td>Java archive</td><td>decompiled</td><td>good</td></tr>
+            <tr><td>Python bundle</td><td>readable modules only</td><td>partial, and said so</td></tr>
+            <tr><td>Native Windows binary</td><td>not possible</td><td>signing and hardening flags only</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Installers</h3>
+      <p>
+        Almost nothing is downloaded as a bare executable. An installer is a native stub with
+        the application attached, so reading only the stub writes off everything worth checking.
+        VibeCheck unpacks NSIS installers, which is what <code>electron-builder</code> produces,
+        and hands each payload to the recovery it deserves.
+      </p>
+      <p>
+        Installers built with Inno Setup, and NSIS installers using solid compression, cannot be
+        unpacked yet. Those say so rather than reporting an empty result.
+      </p>
+      <h3>What cannot be read</h3>
+      <p>
+        A compiled native binary yields nothing, whatever produced it. A Go or Rust executable
+        has nothing to decompile. The report says that in those words, so a low coverage figure
+        means "this was not examined" and never "this was examined and was clean".
+      </p>
+    </section>
+
+    <section id="languages">
+      <h2>Languages and packages</h2>
+      <p>
+        Source is read for C#, JavaScript, TypeScript, Python, Java and Kotlin, plus JSON, YAML,
+        TOML, XML, HTML, Vue, Svelte, XAML, shell scripts and <code>.env</code> files. Go, Rust,
+        PHP, Ruby, Swift, Dart, C, C++, Objective-C, SQL, GraphQL, Razor, Astro, Scala, Elixir,
+        Clojure, F# and Haskell are read too.
+      </p>
+      <div class="callout">
+        <span class="callout__title">An honest limit</span>
+        <p>
+          <strong>33 of the 39 rules carry no language filter</strong>, so a Go or Rust file gets
+          every secret, configuration and malicious-behaviour check. What it does not get is the
+          injection rules keyed to C# and JavaScript syntax: SQL built by joining strings is
+          caught in Go and missed in PHP, because PHP concatenates with <code>.</code> and the
+          pattern was written for <code>+</code>. That is a reason to write more patterns, not a
+          closed door.
+        </p>
+      </div>
+      <p>Dependencies are resolved from every lock format worth reading:</p>
+      <ul>
+        <li><strong>npm</strong> — <code>package-lock.json</code>, <code>yarn.lock</code> (classic and Berry), <code>pnpm-lock.yaml</code>, and vendored <code>node_modules</code> manifests</li>
+        <li><strong>NuGet</strong> — <code>*.deps.json</code>, <code>packages.lock.json</code></li>
+        <li><strong>PyPI</strong> — <code>requirements.txt</code>, <code>Pipfile.lock</code>, <code>poetry.lock</code></li>
+        <li><strong>Go</strong> — <code>go.sum</code></li>
+        <li><strong>crates.io</strong> — <code>Cargo.lock</code></li>
+        <li><strong>Packagist</strong> — <code>composer.lock</code></li>
+        <li><strong>RubyGems</strong> — <code>Gemfile.lock</code></li>
+        <li><strong>Maven</strong> — <code>gradle.lockfile</code></li>
+      </ul>
+      <p>
+        A lock file is the only artifact that says what a project actually installed rather than
+        what it asked for, which is the difference between a dependency that can be checked and
+        one that cannot. A shipped Electron application has no lock file, so a
+        <code>package.json</code> under <code>node_modules/</code> is read as the published
+        manifest of the package actually present, which is better evidence than a range.
+      </p>
+    </section>
+
+    <section id="dependencies">
+      <h2>Dependency checks</h2>
+      <p>
+        Out-of-date dependencies are one of the most common real problems in shipped
+        applications, so VibeCheck checks them against <a href="https://osv.dev">OSV.dev</a>
+        <strong>at the moment you scan</strong>. Findings cite CVE identifiers and link through
+        to the advisory.
+      </p>
+      <p>
+        <strong>What is sent</strong>: the package names and versions the application declares,
+        and nothing else. No source, no file contents, nothing identifying you or the artifact.
+      </p>
+      <p>
+        <strong>This is the one part of a scan that needs a network.</strong> With no connection,
+        dependencies are not checked and the report says so rather than reporting no known
+        vulnerabilities. There is no offline database to download: bundling one was tried and
+        removed, because a vulnerability database is out of date the day it ships and a stale
+        answer here is worse than an absent one.
+      </p>
+      <p>
+        When a whole class of check could not run, that is said <em>beside the score</em> rather
+        than four sections below it. An application can otherwise score 100 under "no known
+        issues found" while nothing whatever is known about the packages inside it.
+      </p>
+    </section>
+
+    <section id="scoring">
+      <h2>How the score works</h2>
+      <p>
+        The worst finding selects a band, and the accumulated weight of everything else
+        positions the score inside that band with diminishing returns.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Worst finding</th><th scope="col">Band</th><th scope="col">Label</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><span class="chip chip--critical">Critical</span></td><td>10–39</td><td>Critical issues</td></tr>
+            <tr><td><span class="chip chip--high">High</span></td><td>40–69</td><td>Serious issues</td></tr>
+            <tr><td><span class="chip chip--medium">Medium</span></td><td>70–89</td><td>Some issues</td></tr>
+            <tr><td><span class="chip chip--low">Low</span></td><td>90–99</td><td>Minor issues</td></tr>
+            <tr><td><span class="chip chip--good">Nothing</span></td><td>100</td><td>No known issues found</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Capped, never averaged</h3>
+      <p>
+        One critical caps the score at 39 no matter how much else passed. This is the failure it
+        was built against: fifty passing header checks lifting an application that ships a live
+        key into the nineties.
+      </p>
+      <h3>Floored, too</h3>
+      <p>
+        Scores do not bottom out at zero. Before the floor existed, three criticals and forty of
+        them scored identically, and zero asserted that nothing about the application was
+        acceptable, which no static scan can know. It also fixed a mislabel: five highs used to
+        score 0 and be reported as "critical issues", naming a severity that had not been found.
+      </p>
+      <h3>Deterministic only</h3>
+      <p>
+        The score comes from the pattern and dependency checks alone. Whatever the optional AI
+        pass finds is reported in full and never moves the number, because a score that changed
+        with whichever model you had configured could not be compared with anyone else's.
+      </p>
+      <p>
+        What the AI pass keeps is the power to <strong>withhold the all-clear</strong>: a result
+        cannot be labelled "No known issues found" while its suggestions sit underneath it. It
+        reads "Nothing from the checks · N AI suggestions to review" instead.
+      </p>
+      <h3>Blocking is separate from the score</h3>
+      <p>
+        An explicit "do not install" comes only from specific high-confidence deterministic
+        rules, never from a low score, and never from the deep pass. It is reserved for findings
+        that endanger the <em>installing user</em> — credential harvesting, wallet theft — not
+        the developer. A leaked key is critical but never blocking.
+      </p>
+    </section>
+
+    <section id="coverage">
+      <h2>Coverage</h2>
+      <p>
+        Coverage says how much of the application could actually be read, and it is kept
+        deliberately separate from the score. A clean result at 12% coverage is a different
+        claim from a clean result at 95%.
+      </p>
+      <p>
+        <strong>Below 5% coverage no score is produced at all.</strong> The band becomes "Could
+        not analyse", rendered grey rather than green, because an artifact that was never read
+        must not look like one that passed.
+      </p>
+      <p>
+        Coverage measures what was <em>understood</em>, not what was written out. An obfuscated
+        application decompiles into thousands of files of <code>a.b(c)</code>, none of which
+        count, so it gets no score rather than a good one. The denominator includes code that is
+        present but unreadable, not only the files that were attempted.
+      </p>
+    </section>
+
+    <section id="capabilities">
+      <h2>Capabilities and purpose</h2>
+      <p>
+        Updating itself and starting with Windows are how a great many correct programs work.
+        Charging them a band of score was a scanner calling a feature a fault, so they are
+        reported separately under "What this application can do", scored nowhere, and shown open
+        by default to somebody deciding whether to run a download.
+      </p>
+      <p>
+        For a reader deciding whether to install, these can be the most useful lines in the
+        report: an application that replaces its own code is one whose future behaviour no scan
+        of it describes.
+      </p>
+      <h3>Purpose is affirmed per capability</h3>
+      <p>
+        Reading a browser cookie database is what a password stealer does and what a cleaner
+        does. Rather than asking you to pick from a list of application kinds, which invites
+        picking a flattering one, VibeCheck asks about what it actually observed:
+        <em>"This application reads your browser cookies. Does it have a reason to?"</em>
+      </p>
+      <p>
+        The report prints your answer back verbatim, so a screenshot of a quiet report still
+        shows what bought the quiet. The top band is qualified to "Nothing beyond what you
+        accounted for" rather than "No known issues found".
+      </p>
+    </section>
+
+    <section id="deep-pass">
+      <h2>The optional deep pass</h2>
+      <p>
+        The main scan is free, needs no account, and sends nothing but package names. The deep
+        pass reads the code and reasons about it, which catches what a pattern cannot express: a
+        guard that exists but is incomplete, whether untrusted input can actually reach a
+        dangerous operation, two individually harmless pieces of code that are unsafe together.
+      </p>
+      <p>It is off unless you turn it on, per scan. There are three ways to power it.</p>
+
+      <h3>Connect the Claude Code you already have</h3>
+      <p>
+        VibeCheck looks for Claude Code at startup, including the copy bundled inside the Claude
+        desktop app, and asks whether it is signed in. Claude Code does not need to be running.
+        <strong>This spends the usage allowance of the subscription you already pay for</strong>,
+        with nothing charged on top. VibeCheck never sees your credentials; the CLI holds them.
+      </p>
+      <p>
+        The check runs once, at startup. Sign in while VibeCheck is already open and it will not
+        notice until you press <strong>Sign in</strong> or restart it.
+      </p>
+
+      <h3>Bring your own Anthropic API key</h3>
+      <p>
+        <strong>This costs real money, every scan.</strong> The API is billed per token against
+        credit you buy up front and is a separate product from a Claude subscription, so a Pro
+        or Max plan does not cover it. A typical pass over a dozen files runs to a few cents,
+        and the report prints the estimate with the tokens it is based on.
+      </p>
+      <p>
+        Your key is encrypted to your Windows account and stored outside the application folder.
+        It is never written to a report, and the interface only ever shows it masked.
+      </p>
+
+      <h3>Any OpenAI-compatible endpoint</h3>
+      <p>
+        Point it at a hosted provider, or at Ollama or LM Studio running on your own machine, in
+        which case nothing leaves the building at all. VibeCheck detects a local runtime and
+        offers advice about which models your hardware can carry.
+      </p>
+
+      <h3>Point it at your source, not your release build</h3>
+      <p>
+        The AI pass reasons about intent, and <strong>decompiling a binary destroys every
+        comment in it</strong>. On a real application whose source was to hand, three findings
+        from a frontier model against the decompiled release were checked line by line and all
+        three were wrong, each one answered by a comment the author had written and the
+        decompiler had thrown away. The deterministic checks are unaffected, since a pattern
+        does not care about comments.
+      </p>
+
+      <h3>Both credentialed routes are for applications you built</h3>
+      <p>
+        The deep pass is offered in developer mode only. For the Claude Code route that is
+        <strong>enforced in the core</strong>, and the reason is worth stating: Claude Code is an
+        agent with shell and filesystem access, and an API endpoint cannot execute anything.
+        Feeding source recovered from software you do not trust into something that can act on
+        your machine is the attack this tool exists to warn people about. The scanned program
+        never has to run, because getting VibeCheck to read it becomes the attack instead.
+      </p>
+      <p>
+        Where the agent is used it is fenced in: no tools, safe mode, an empty working directory,
+        no session persistence, and the file content arrives on standard input rather than on a
+        command line other processes can read.
+      </p>
+
+      <h3>What is sent, and its bounds</h3>
+      <p>
+        The files that handle input the application does not control, plus any file that calls
+        into one a rule flagged. Not the whole application, and not only the lines a rule
+        matched. Both bounds are deliberate: sending only flagged lines would mean the pass could
+        deepen findings you already have and never discover one in code no rule happened to hit,
+        and reading one hop of callers is what makes reachability answerable.
+      </p>
+      <p>
+        At most <strong>40 files per scan</strong>, whichever route answers. Findings are
+        labelled <code>AI</code>, carry a confidence level, and low-confidence ones are dropped
+        rather than hedged. None of them can move the score or trigger a do-not-install verdict.
+      </p>
+    </section>
+
+    <section id="privacy">
+      <h2>What leaves your machine</h2>
+      <p>All analysis happens where the file already is. Three things can travel, and that is the whole list:</p>
+      <ul>
+        <li><strong>Package names and versions</strong> to OSV.dev, to be matched against advisories. Switchable off.</li>
+        <li><strong>A release-list request to GitHub</strong> at startup, which sends nothing about you or the machine and compares versions locally. Switchable off on the drop screen.</li>
+        <li><strong>The deep pass's files</strong>, only if you tick it, only to the provider you chose.</li>
+      </ul>
+      <p>
+        Your code is never uploaded by the main scan. Neither is the artifact, its file names,
+        its hash, or your report. The status bar states what leaves the machine on every screen,
+        not only the one where there is nothing to send yet.
+      </p>
+    </section>
+
+    <section id="self">
+      <h2>Scanning a scanner</h2>
+      <p>
+        A detection tool is a program whose source contains, in quotation marks, every string it
+        looks for. Pointed at its own published build VibeCheck used to score 16/100 and advise
+        against installing itself, on nine findings that were all its own rule table read as the
+        behaviour the rules describe. Antivirus signatures, WAF rules and linter configurations
+        all have this shape.
+      </p>
+      <p>
+        A match is discounted when it sits inside a string literal <strong>and</strong> that
+        string is either being handed to a regex constructor or surrounded by enough other
+        pattern definitions to be a catalogue of them. Ordinary code satisfies neither. Measured
+        across four hand-written applications, nothing was discounted in any of them.
+      </p>
+      <div class="callout">
+        <span class="callout__title">The count is on the receipt</span>
+        <p>
+          A tool that quietly removes its own findings is asking to be trusted about the one
+          thing nobody can check, so the report says how many matches it discounted and why.
+          <strong>Secrets are exempt</strong>: a credential in quotation marks is a leaked
+          credential wherever it lives, including in the source of a security tool.
+        </p>
+      </div>
+    </section>
+
+    <section id="progress">
+      <h2>The progress bar takes longer than the scan</h2>
+      <p>
+        A scan of a typical application finishes in a second or two, and in testing nobody
+        believed it. So the readout is paced: between five and twenty seconds depending on how
+        much there was to look at.
+      </p>
+      <p>
+        <strong>The work is not slowed and nothing is invented.</strong> The bar shows the lower
+        of two figures, how far the scan has actually got and how far there has been time to
+        read, so it can never claim progress that has not happened and never finishes before its
+        stages can be read. A scan that genuinely takes longer, such as one running the deep
+        pass, is not padded at all.
+      </p>
+      <p>
+        The duration in the report is the real one, so a report saying <code>0.8s</code> after a
+        twelve second bar is not a contradiction. The receipt records the work; the bar reports
+        it at reading speed.
+      </p>
+    </section>
+
+    <section id="updates">
+      <h2>Updates</h2>
+      <p>
+        On startup VibeCheck asks GitHub for the public release list and compares it with the
+        build you are running. A newer one gets a strip across the top of the window. Nothing
+        about you or the machine is sent, and the whole check can be switched off.
+      </p>
+      <p>
+        <strong>It will not install a build it cannot verify.</strong> VibeCheck's own
+        <code>VC-MAL-007</code> tells other applications that an updater must check what it
+        downloaded against a signature, and not against a hash served from the same place as the
+        file, so this one is held to that. Until releases are code-signed there is no publisher
+        to hold a download to, so the strip announces the version and links to the release page
+        rather than offering to install it. The refusal is stated on screen rather than the
+        button quietly being absent.
+      </p>
+      <p>
+        Prereleases are offered only to somebody already running one. A release build is never
+        moved onto a beta because the number happens to be larger.
+      </p>
+    </section>
+
+    <section id="building">
+      <h2>Building from source</h2>
+      <p>Requires the .NET 10 SDK.</p>
+      <pre><code>git clone https://github.com/kailoren/vibecheck
+cd vibecheck
+dotnet test
+dotnet run --project VibeCheck.App</code></pre>
+      <p>A release build is a single self-contained executable with no runtime to install:</p>
+      <pre><code>dotnet publish VibeCheck.App -p:PublishProfile=win-x64 -o &lt;output folder&gt;</code></pre>
+      <p>
+        The solution is three projects: <code>VibeCheck.Core</code> holds the whole analysis
+        engine and is platform-neutral, <code>VibeCheck.App</code> is the WPF interface, and
+        <code>VibeCheck.Tests</code> covers both. The only third-party analysis dependency is
+        <a href="https://github.com/icsharpcode/ILSpy">ICSharpCode.Decompiler</a>, the ILSpy
+        engine.
+      </p>
+    </section>
+
+  </div>
+</div>
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <div class="footer__inner">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:0.8rem">
+          <img src="assets/img/logo.png" alt="" width="26" height="26">
+          <span>VibeCheck</span>
+        </a>
+        <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
+          A drag-and-drop security scanner for AI-generated applications.
+        </p>
+      </div>
+      <div>
+        <h4>Documentation</h4>
+        <ul>
+          <li><a href="docs.html">How it works</a></li>
+          <li><a href="rules.html">Rule reference</a></li>
+          <li><a href="faq.html">Frequently asked</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__note">
+      <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
+      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/site.js"></script>
+<script src="assets/js/toc.js"></script>
+</body>
+</html>

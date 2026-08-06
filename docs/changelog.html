@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog — VibeCheck</title>
+<meta name="description" content="What changed in each release of VibeCheck, and what is still to come.">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<div class="backdrop" aria-hidden="true">
+  <div class="backdrop__grid"></div>
+  <div class="backdrop__sweep"></div>
+  <div class="backdrop__scan"></div>
+  <div class="backdrop__vignette"></div>
+</div>
+
+<header class="nav">
+  <div class="shell nav__inner">
+    <a class="brand" href="index.html">
+      <img src="assets/img/logo.png" alt="" width="26" height="26">
+      <span>VibeCheck</span>
+    </a>
+    <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
+    <ul class="nav__links" id="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="docs.html">Documentation</a></li>
+      <li><a href="rules.html">Rules</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="changelog.html" aria-current="page">Changelog</a></li>
+      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+    </ul>
+  </div>
+</header>
+
+<div class="page-head">
+  <div class="shell">
+    <div class="section-label">Changelog</div>
+    <h1>What changed, and when</h1>
+    <p class="lede">
+      VibeCheck is in early development. Every release so far is a beta, and the version numbers
+      say so. The full commit history is on
+      <a href="https://github.com/kailoren/vibecheck/commits/main">GitHub</a>.
+    </p>
+  </div>
+</div>
+
+<main id="content">
+<div class="shell shell--narrow" style="padding-block:clamp(2.5rem,5vw,4rem)">
+
+  <div class="callout reveal">
+    <span class="callout__title">Still to come</span>
+    <p>
+      <strong>Code signing</strong>, which is what stops SmartScreen warning on download and what
+      lets the updater install anything on its own. After that: more injection patterns for the
+      languages currently read without them, and saved scan history so a result can be compared
+      with the last one.
+    </p>
+  </div>
+
+  <div style="margin-top:3rem">
+
+    <div class="release reveal">
+      <div class="release__head">
+        <h2 class="release__version">0.1.3-beta</h2>
+        <span class="release__date">6 August 2026</span>
+      </div>
+      <p>
+        The release that made the score mean the same thing in everybody's report, and stopped
+        the interface asking questions after it was too late to answer them.
+      </p>
+      <ul>
+        <li>
+          <strong>The score is deterministic only.</strong> One unchanged application scored 99,
+          41 and 75 through three different AI backends. A number that moves with the reader's
+          model is a sample rather than a measurement, so assisted findings are now reported in
+          full and take no part in the arithmetic. They keep one power: a result cannot be
+          labelled clean while its suggestions sit underneath it.
+        </li>
+        <li>
+          <strong>A setup step before the scan.</strong> Dropping a file used to start the scan on
+          the spot, which meant the deep pass settings under the drop zone only ever applied to
+          the <em>next</em> one. Browsing became two buttons, because Windows has no dialog that
+          accepts either a file or a folder.
+        </li>
+        <li>
+          <strong>Advice for the reader who accounts for a capability.</strong> A cleaner's author
+          confirming a reason to read browser cookies used to be answered with "Do not run this
+          application" directly under the sentence recording their confirmation.
+        </li>
+        <li>
+          <strong>Signature checks now cover .NET and Electron builds</strong>, and a
+          catalogue-signed file is no longer reported as unsigned.
+        </li>
+        <li>
+          <strong>Quoted author comments are verified against the file</strong> before being
+          printed as the author's words. The feature fabricated all three of its answers on its
+          first live run against a local model.
+        </li>
+        <li>Silent prompt truncation is detected on the endpoint route, where an input ceiling can be half the advertised context.</li>
+        <li>A Go or PHP project used to be told "The code here is languages these checks do not name individually", a broken sentence shown to exactly the reader it was written for.</li>
+      </ul>
+    </div>
+
+    <div class="release reveal">
+      <div class="release__head">
+        <h2 class="release__version">0.1.2-beta</h2>
+        <span class="release__date">5 August 2026</span>
+      </div>
+      <p>The release that cleared the last three things standing between this and being usable by other people.</p>
+      <ul>
+        <li>
+          <strong>Purpose-aware severity.</strong> Reading a browser cookie database is what a
+          password stealer does and what a cleaner does, so the tool used to tell the author of a
+          cleaner not to install their own work. It now asks about the specific behaviour it
+          observed, and prints the answer back in the report.
+        </li>
+        <li>
+          <strong>The deep pass reaches beyond Anthropic.</strong> Any OpenAI-compatible endpoint,
+          hosted or local, with Ollama and LM Studio detection and hardware-aware advice about
+          which models a machine can carry.
+        </li>
+        <li><strong>Windows Store packaging proved out</strong>, with no size penalty and no settings migration needed for anyone moving from a downloaded build.</li>
+        <li>The application now knows whether it is running from a package, because two file-layout heuristics both lie inside one.</li>
+      </ul>
+    </div>
+
+    <div class="release reveal">
+      <div class="release__head">
+        <h2 class="release__version">0.1.0-beta</h2>
+        <span class="release__date">3 August 2026</span>
+      </div>
+      <p>The first packaged build. Most of what the tool is now was decided in the fortnight around it.</p>
+      <ul>
+        <li><strong>Two readers</strong>, each getting the severity, wording and remedy that answers their own question, with one shared number that is the harsher of the two readings.</li>
+        <li><strong>Scores gained a floor as well as a cap.</strong> Before this, three criticals and forty of them scored identically at zero, and five highs scored 0 while being reported as "critical issues".</li>
+        <li><strong>Capabilities stopped being defects.</strong> Updating itself and starting with Windows are how a great many correct programs work; charging them a band of score was the scanner calling a feature a fault.</li>
+        <li><strong>A scanner stopped scanning itself.</strong> Pointed at its own build it scored 16/100 and advised against installing itself, on nine findings that were all its own rule table read as the behaviour the rules describe.</li>
+        <li><strong>Windows installers are unpacked</strong>, because almost nothing is downloaded as a bare executable and reading only the stub writes off everything worth checking. One 102 MB installer went from "could not analyse" to 285 application files.</li>
+        <li><strong>Dependencies resolve from vendored manifests</strong>, not only lock files. One shipped application read as 100/100 with no known issues while carrying four separately vulnerable packages.</li>
+        <li><strong>Language coverage widened</strong> so a Go, Rust, PHP or Ruby project is read at all. Those used to report "no readable text files were found" and no score, which is invisible rather than clean.</li>
+        <li><strong>The progress readout is paced</strong>, because scans finished in a second and nobody believed them.</li>
+        <li><strong>The Cyberpunk theme</strong>, and with it the ability for a theme to own shape and motion rather than only colour.</li>
+      </ul>
+    </div>
+
+    <p style="color:var(--unknown);font-size:0.9rem;margin-top:2rem">
+      There is no 0.1.1. The number was spent during packaging and the release it was meant for
+      never shipped.
+    </p>
+
+  </div>
+</div>
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <div class="footer__inner">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:0.8rem">
+          <img src="assets/img/logo.png" alt="" width="26" height="26">
+          <span>VibeCheck</span>
+        </a>
+        <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
+          A drag-and-drop security scanner for AI-generated applications.
+        </p>
+      </div>
+      <div>
+        <h4>Documentation</h4>
+        <ul>
+          <li><a href="docs.html">How it works</a></li>
+          <li><a href="rules.html">Rule reference</a></li>
+          <li><a href="faq.html">Frequently asked</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__note">
+      <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
+      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/site.js"></script>
+</body>
+</html>

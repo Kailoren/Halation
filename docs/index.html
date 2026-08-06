@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VibeCheck — a security scanner for AI-generated applications</title>
+<meta name="description" content="Drag any application in. VibeCheck recovers what source it can, checks it against the vulnerability classes AI code generators actually produce, and reports what it found and what it could not reach. Free, MIT licensed, runs entirely on your machine.">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="assets/css/site.css">
+<meta property="og:title" content="VibeCheck — a security scanner for AI-generated applications">
+<meta property="og:description" content="Drop an app in. It recovers what source it can, checks it, and says what it could not reach.">
+<meta property="og:type" content="website">
+</head>
+<body>
+
+<a class="skip" href="#how">Skip to content</a>
+
+<div class="backdrop" aria-hidden="true">
+  <div class="backdrop__grid"></div>
+  <div class="backdrop__sweep"></div>
+  <div class="backdrop__scan"></div>
+  <div class="backdrop__vignette"></div>
+</div>
+
+<header class="nav">
+  <div class="shell nav__inner">
+    <a class="brand" href="index.html">
+      <img src="assets/img/logo.png" alt="" width="26" height="26">
+      <span>VibeCheck</span>
+    </a>
+    <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
+    <ul class="nav__links" id="nav-links">
+      <li><a href="index.html" aria-current="page">Home</a></li>
+      <li><a href="docs.html">Documentation</a></li>
+      <li><a href="rules.html">Rules</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="changelog.html">Changelog</a></li>
+      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+    </ul>
+  </div>
+</header>
+
+<main>
+
+<!-- ==================================================================== -->
+<section class="hero">
+  <div class="shell hero__inner">
+    <div>
+      <span class="hero__eyebrow">v0.1.3-beta · MIT · Windows</span>
+      <h1>Vibe coded.<br><span class="accent">Vibe checked.</span></h1>
+      <p class="hero__sub">
+        Drag any application in. VibeCheck recovers what source it can, checks it against the
+        failures AI code generators actually produce, and tells you what it could not reach.
+      </p>
+      <div class="btn-row">
+        <a class="btn btn--primary" href="https://github.com/kailoren/vibecheck/releases/latest">Download for Windows</a>
+        <a class="btn btn--ghost" href="docs.html">Read the documentation</a>
+      </div>
+      <div class="hero__meta">
+        <span><b>39</b> deterministic checks</span>
+        <span><b>8</b> package ecosystems</span>
+        <span><b>0</b> lines of your code uploaded</span>
+      </div>
+    </div>
+
+    <div class="reticle">
+      <span class="reticle__corner"></span>
+      <span class="reticle__corner"></span>
+      <span class="reticle__corner"></span>
+      <span class="reticle__corner"></span>
+      <div class="dropzone">
+        <div class="dropzone__icon"></div>
+        <div class="dropzone__title">Drop an application here</div>
+        <p class="dropzone__hint">An executable, an installed folder, a zip, or a source project</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="how">
+  <div class="shell">
+    <div class="section-label reveal">How a scan runs</div>
+    <h2 class="reveal">It reads the application, not the download page</h2>
+    <p class="lede reveal">
+      Most tools that check a program look at what it says about itself. VibeCheck takes the
+      binary apart and reads the code inside it, then says how much of it it managed to reach.
+    </p>
+
+    <div class="pipeline reveal" aria-label="Scan stages: detect, recover, rules, dependencies, score, report">
+      <div class="pipeline__stage">detect</div>
+      <div class="pipeline__stage">recover</div>
+      <div class="pipeline__stage">rules</div>
+      <div class="pipeline__stage">dependencies</div>
+      <div class="pipeline__stage">score</div>
+      <div class="pipeline__stage">report</div>
+    </div>
+
+    <div class="table-wrap reveal" style="margin-top:2.5rem">
+      <table>
+        <caption class="sr-only">How much source is recovered from each kind of artifact</caption>
+        <thead>
+          <tr><th scope="col">Artifact</th><th scope="col">Recovery</th><th scope="col">Depth</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Source folder, zip, or repository</td><td>read directly</td><td>full</td></tr>
+          <tr><td>.NET executable or library</td><td>decompiled (ILSpy)</td><td>full, near-original C#</td></tr>
+          <tr><td>Electron application or <code>.asar</code></td><td>unpacked</td><td>full, often unminified</td></tr>
+          <tr><td>NSIS installer</td><td>unpacked, then as above</td><td>full for Electron and .NET payloads</td></tr>
+          <tr><td>Java archive</td><td>decompiled</td><td>good</td></tr>
+          <tr><td>Native Windows binary</td><td>not possible</td><td>signing and hardening flags only</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="reveal" style="margin-top:1.4rem;color:var(--muted);font-size:0.95rem;max-width:70ch">
+      Installers matter more than that table makes them look, because almost nothing is
+      downloaded as a bare executable. An installer is a native stub with the application
+      attached, so reading only the stub writes off everything worth checking. Nothing is
+      executed and nothing is written to disk: the installer is read, never run.
+    </p>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="honesty">
+  <div class="shell">
+    <div class="section-label reveal">What it will not tell you</div>
+    <h2 class="reveal">It cannot say an application is safe</h2>
+    <p class="lede reveal">
+      Static analysis can demonstrate that bad patterns are present. It can never demonstrate
+      that none are, and a deliberately malicious application will read cleaner than a sloppy
+      honest one. So VibeCheck never prints a verdict of "safe", and the rest of the design
+      exists to stop a reassuring-looking report undoing that.
+    </p>
+
+    <div class="grid grid--2" style="margin-top:2.5rem">
+      <div class="card reveal">
+        <div class="guarantee">
+          <h3>The score is capped by the worst finding</h3>
+          <p>
+            Never averaged. Fifty passing checks cannot lift an application that ships a live
+            API key out of the red band.
+          </p>
+        </div>
+        <div class="guarantee">
+          <h3>Coverage is separate from the score</h3>
+          <p>
+            A clean result at 12% coverage is a different claim from a clean result at 95%.
+            Below 5% no score is produced at all.
+          </p>
+        </div>
+        <div class="guarantee">
+          <h3>A check that could not run is never reported as clean</h3>
+          <p>
+            Timed-out rules, unreachable advisory services and unreadable bundles are all
+            listed as unchecked, in their own section rather than a footnote.
+          </p>
+        </div>
+      </div>
+
+      <div class="card card--flip reveal">
+        <div class="guarantee">
+          <h3>One number, and it is the harsher of two readings</h3>
+          <p>
+            Every artifact is scored both as a question about shipping it and as a question
+            about running it, and the worse answer is the one both reports print. Otherwise an
+            author could switch to the reader that treats them more kindly and screenshot that.
+          </p>
+        </div>
+        <div class="guarantee">
+          <h3>The number means the same thing in everybody's report</h3>
+          <p>
+            It comes from the deterministic checks alone. Whatever the optional AI pass finds
+            is reported in full and never moves it, because a score that changed with whichever
+            model you had configured could not be compared with anyone else's.
+          </p>
+        </div>
+        <div class="guarantee">
+          <h3>"Do not install" comes from evidence, not from a low score</h3>
+          <p>
+            Only a handful of high-confidence deterministic rules can raise it, and the AI pass
+            never can.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="report">
+  <div class="shell">
+    <div class="section-label reveal">The report</div>
+    <h2 class="reveal">A number, and everything behind it</h2>
+
+    <div class="grid grid--2" style="align-items:start;margin-top:2rem">
+      <div class="reveal">
+        <div class="card card--raised">
+          <div class="score">
+            <span class="score__value" data-count-to="11" data-count-from="100">11/100</span>
+            <span class="score__band">Critical issues</span>
+          </div>
+          <p style="margin-top:1rem;color:var(--muted);font-size:0.95rem">
+            A real scan of a small demonstration project: five hardcoded credentials and
+            injection flaws of the kind a code generator writes without being asked, plus four
+            dependencies with published advisories against the exact versions it pins.
+          </p>
+
+          <div class="ramp" aria-hidden="true">
+            <div class="ramp__row">
+              <span class="ramp__label" style="color:var(--critical)">Critical</span>
+              <span class="ramp__track"><span class="ramp__fill" data-width="100%" style="background:var(--critical)"></span></span>
+              <span class="ramp__count">5</span>
+            </div>
+            <div class="ramp__row">
+              <span class="ramp__label" style="color:var(--high)">High</span>
+              <span class="ramp__track"><span class="ramp__fill" data-width="72%" style="background:var(--high)"></span></span>
+              <span class="ramp__count">7</span>
+            </div>
+            <div class="ramp__row">
+              <span class="ramp__label" style="color:var(--medium)">Medium</span>
+              <span class="ramp__track"><span class="ramp__fill" data-width="34%" style="background:var(--medium)"></span></span>
+              <span class="ramp__count">3</span>
+            </div>
+          </div>
+        </div>
+
+        <p style="margin-top:1.6rem;color:var(--muted);font-size:0.95rem">
+          The worst finding picks a band and the accumulated weight positions the score inside
+          it, so each further finding moves the number less than the one before. Scores do not
+          bottom out at zero: three criticals and forty of them are different situations, and
+          zero would assert that nothing about the application is acceptable, which no static
+          scan can know.
+        </p>
+        <p style="color:var(--muted);font-size:0.95rem">
+          <a href="docs.html#scoring">How the score is calculated</a>
+        </p>
+      </div>
+
+      <div class="reveal">
+        <div class="shot shot--tall">
+          <img src="assets/img/screen-results.png" alt="The VibeCheck results screen showing a score of 11 out of 100 labelled Critical issues, a coverage card reading 100% readable, and a findings list naming a live Stripe secret key, a Supabase service_role key, SQL queries built by string concatenation, and four dependencies with known vulnerabilities." width="2240" height="2360" loading="lazy">
+        </div>
+        <p class="shot__caption">The developer's report. The end user's names the same evidence differently.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="audiences">
+  <div class="shell">
+    <div class="section-label reveal">Two readers</div>
+    <h2 class="reveal">The same evidence answers two different questions</h2>
+    <p class="lede reveal">
+      A committed private key is critical for whoever ships an application and close to nothing
+      for whoever runs it, because it is the author's key. Shell-opening an unvalidated URL is
+      the other way round. So the report answers one of two questions, chosen by the reader.
+    </p>
+
+    <div class="grid grid--2 reveal" style="margin-top:2rem">
+      <div class="card feature">
+        <span class="feature__icon">BEFORE YOU SHIP</span>
+        <h3>The risk in shipping this</h3>
+        <p>
+          Run your own application through it as a final check. AI-generated code has been
+          measured at roughly 2.7 times the vulnerability rate of hand-written code, and the
+          failures are predictable: keys committed to the bundle, row-level security left off,
+          API routes with no authentication, dependencies years out of date. This report carries
+          rule identifiers, advisory links, and how to fix each finding.
+        </p>
+      </div>
+      <div class="card card--flip feature">
+        <span class="feature__icon">BEFORE YOU INSTALL</span>
+        <h3>The risk in running it</h3>
+        <p>
+          Run something you downloaded through it. For Electron and .NET applications VibeCheck
+          recovers the real code from the shipped binary and reads that, rather than trusting
+          the description on a download page. This report drops the identifiers and says what
+          the application can do to the machine it lands on.
+        </p>
+      </div>
+    </div>
+
+    <div class="callout reveal" style="margin-top:2rem">
+      <span class="callout__title">Only the wording changes</span>
+      <p>
+        Which findings appear, how they are worded, what can be done about them and what order
+        they come in all change with the reader. The number does not, and the report states
+        what both readings were.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="deep-pass">
+  <div class="shell">
+    <div class="section-label reveal">Optional deep pass</div>
+    <h2 class="reveal">A second opinion that reads the code</h2>
+
+    <div class="grid grid--2" style="align-items:center;margin-top:2rem">
+      <div class="reveal">
+        <p>
+          The main scan is free, needs no account, and sends nothing but package names.
+          Optionally, a second pass reads the code and reasons about it, which is what catches
+          the things a pattern cannot express: a guard that exists but is incomplete, whether
+          untrusted input can actually reach a dangerous operation, two individually harmless
+          pieces of code that are unsafe together.
+        </p>
+        <p>
+          It is off unless you turn it on, per scan, and you bring your own credential. Connect
+          the Claude Code you already have and it spends the subscription you already pay for;
+          paste an Anthropic API key and it bills that; or point it at any OpenAI-compatible
+          endpoint, including a model running on your own machine.
+        </p>
+        <p style="color:var(--muted);font-size:0.95rem">
+          Findings from this pass are labelled, carry a confidence level, cannot move the score,
+          and can never trigger a do-not-install verdict. The strongest claim in a report must
+          not depend on whether the reader happened to have a key.
+        </p>
+        <p><a href="docs.html#deep-pass">How the deep pass works, and what it sends</a></p>
+      </div>
+      <div class="reveal">
+        <div class="shot">
+          <img src="assets/img/screen-setup.png" alt="The VibeCheck pre-scan window, offering a deep pass tick box with three sources: an Anthropic API key, Claude Code on this machine, or any OpenAI-compatible endpoint." width="1120" height="955" loading="lazy">
+        </div>
+        <p class="shot__caption">Asked before the scan, so the choice applies to this one.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="privacy">
+  <div class="shell">
+    <div class="section-label reveal">What leaves your machine</div>
+    <h2 class="reveal">Package names. That is the list.</h2>
+
+    <div class="grid grid--3 reveal" style="margin-top:2rem">
+      <div class="card feature">
+        <span class="feature__icon">SENT</span>
+        <h3>The packages you declare</h3>
+        <p>
+          Names and versions go to <a href="https://osv.dev">OSV.dev</a> to be matched against
+          published advisories at the moment you scan, because a vulnerability database bundled
+          into a release is out of date the day it ships. No source, no file contents, nothing
+          identifying you. It can be switched off.
+        </p>
+      </div>
+      <div class="card feature">
+        <span class="feature__icon">SENT ONLY IF YOU ASK</span>
+        <h3>The files the deep pass reads</h3>
+        <p>
+          Off unless you tick it, per scan, to a provider you chose and pay for. At most 40
+          files, and the report lists exactly which ones were read and what answered.
+        </p>
+      </div>
+      <div class="card feature">
+        <span class="feature__icon">NEVER SENT</span>
+        <h3>Everything else</h3>
+        <p>
+          The application, its source, its file names, its hash, your report and anything about
+          you or the machine. The analysis runs where the file already is.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================================== -->
+<section id="download">
+  <div class="shell shell--narrow" style="text-align:center">
+    <div class="card card--glow card--raised reveal" style="padding:clamp(2rem,5vw,3.2rem)">
+      <div class="section-label" style="justify-content:center">
+        <span>Free, and staying that way</span>
+      </div>
+      <h2>One build. Everything unlocked.</h2>
+      <p class="lede" style="margin-inline:auto">
+        No licence keys, no tiers, no account. MIT licensed, and the source is the whole tool
+        rather than a wrapper around a service. For something people point at files they do not
+        trust, being able to read it is part of the offer.
+      </p>
+      <div class="btn-row" style="justify-content:center;margin-top:2rem">
+        <a class="btn btn--primary" href="https://github.com/kailoren/vibecheck/releases/latest">Download for Windows</a>
+        <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck">Read the source</a>
+      </div>
+      <p style="margin-top:1.6rem;font-family:var(--mono);font-size:0.8rem;color:var(--muted)">
+        Windows 10 or 11 · one self-contained file · no runtime to install
+      </p>
+    </div>
+
+    <div class="callout callout--warn reveal" style="margin-top:2rem;text-align:left">
+      <span class="callout__title">Early development</span>
+      <p>
+        This is a beta, and releases are not yet code-signed, so Windows SmartScreen will warn
+        when you download one. That is also what stops VibeCheck installing its own updates: it
+        holds itself to the rule it applies to everyone else, which is that a download is
+        installed only when a signature validates.
+      </p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <div class="footer__inner">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:0.8rem">
+          <img src="assets/img/logo.png" alt="" width="26" height="26">
+          <span>VibeCheck</span>
+        </a>
+        <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
+          A drag-and-drop security scanner for AI-generated applications.
+        </p>
+      </div>
+      <div>
+        <h4>Documentation</h4>
+        <ul>
+          <li><a href="docs.html">How it works</a></li>
+          <li><a href="rules.html">Rule reference</a></li>
+          <li><a href="faq.html">Frequently asked</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__note">
+      <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
+      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/site.js"></script>
+</body>
+</html>

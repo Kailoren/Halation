@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rule reference — VibeCheck</title>
+<meta name="description" content="Every deterministic check VibeCheck runs, what it looks for, how severely it is rated for each of the two readers, and what to do about it.">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<div class="backdrop" aria-hidden="true">
+  <div class="backdrop__grid"></div>
+  <div class="backdrop__sweep"></div>
+  <div class="backdrop__scan"></div>
+  <div class="backdrop__vignette"></div>
+</div>
+
+<header class="nav">
+  <div class="shell nav__inner">
+    <a class="brand" href="index.html">
+      <img src="assets/img/logo.png" alt="" width="26" height="26">
+      <span>VibeCheck</span>
+    </a>
+    <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
+    <ul class="nav__links" id="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="docs.html">Documentation</a></li>
+      <li><a href="rules.html" aria-current="page">Rules</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="changelog.html">Changelog</a></li>
+      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+    </ul>
+  </div>
+</header>
+
+<div class="page-head">
+  <div class="shell">
+    <div class="section-label">Rule reference</div>
+    <h1>Every check, and what it is for</h1>
+    <p class="lede">
+      The deterministic checks, exactly as the scanner holds them. Each is rated twice, once for
+      whoever ships an application and once for whoever runs it, because the same evidence does
+      not mean the same thing to both.
+    </p>
+  </div>
+</div>
+
+<main id="content">
+  <div class="shell">
+
+    <section style="padding-block:clamp(2rem,4vw,3rem) 0">
+      <h2>What the identifiers mean</h2>
+      <p class="lede" style="margin-bottom:1.5rem">
+        A report full of codes asks the reader to take on trust that the scanner has a filing
+        system. Here is the system.
+      </p>
+      <div class="grid grid--2" id="families">
+        <p class="empty">Loading the catalogue…</p>
+      </div>
+      <p style="margin-top:1.25rem;color:var(--muted);font-size:0.93rem;max-width:75ch">
+        The five families below are the pattern checks, and they are listed individually. The
+        other five describe checks produced by the recovery, packaging and dependency stages
+        rather than by the pattern table, so they have no fixed list: a dependency finding is
+        whatever OSV reported about the packages your application happens to ship.
+      </p>
+    </section>
+
+    <div class="filters" role="search">
+      <label class="sr-only" for="rule-search">Search the rules</label>
+      <input class="filters__search" id="rule-search" type="search"
+             placeholder="Search rules, e.g. &quot;key&quot;, &quot;SQL&quot;, &quot;cookies&quot;" autocomplete="off">
+      <div id="family-filters" style="display:flex;flex-wrap:wrap;gap:0.4rem"></div>
+      <span class="filters__count" id="rule-count"></span>
+    </div>
+
+    <div class="rules" id="rules">
+      <p class="empty">Loading the catalogue…</p>
+    </div>
+
+    <noscript>
+      <p class="empty">
+        This page builds its list from the scanner's own rule catalogue, which needs scripting.
+        The same data is in
+        <a href="https://github.com/kailoren/vibecheck/tree/main/VibeCheck.Core/Rules">VibeCheck.Core/Rules</a>
+        in the source.
+      </p>
+    </noscript>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <div class="footer__inner">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:0.8rem">
+          <img src="assets/img/logo.png" alt="" width="26" height="26">
+          <span>VibeCheck</span>
+        </a>
+        <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
+          A drag-and-drop security scanner for AI-generated applications.
+        </p>
+      </div>
+      <div>
+        <h4>Documentation</h4>
+        <ul>
+          <li><a href="docs.html">How it works</a></li>
+          <li><a href="rules.html">Rule reference</a></li>
+          <li><a href="faq.html">Frequently asked</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__note">
+      <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
+      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/site.js"></script>
+<script src="assets/js/rules.js"></script>
+</body>
+</html>
