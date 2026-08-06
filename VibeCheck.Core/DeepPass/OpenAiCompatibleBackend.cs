@@ -365,6 +365,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
         {
             Findings = answer.Findings,
             LowConfidenceDiscarded = answer.LowConfidenceDiscarded,
+            Explains = answer.Explains,
             Usage = usage,
         };
     }

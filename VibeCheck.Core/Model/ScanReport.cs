@@ -106,6 +106,18 @@ public sealed record ScanReport
     /// </summary>
     public string? DeepPassBackend { get; init; }
 
+    /// <summary>
+    /// Reasons the application's own source gave for a capability, found by the deep pass.
+    /// </summary>
+    /// <remarks>
+    /// Used to put the author's own note in front of the reader when the capability question is
+    /// asked, so somebody who wrote down why two lines above the code is asked to confirm it
+    /// rather than retype it. It answers nothing by itself: the text came out of the artifact
+    /// being examined. Empty for a decompiled build, where the comments no longer exist.
+    /// </remarks>
+    public IReadOnlyDictionary<Capability, string> SourceExplanations { get; init; } =
+        new Dictionary<Capability, string>();
+
     /// <summary>Version of the scanner that produced this report.</summary>
     public required string ScannerVersion { get; init; }
 

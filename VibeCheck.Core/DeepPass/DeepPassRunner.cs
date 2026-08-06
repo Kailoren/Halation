@@ -95,6 +95,7 @@ public static class DeepPassRunner
         var examined = 0;
         var fellBack = 0;
         var discarded = 0;
+        var explains = new Dictionary<Capability, string>();
 
         foreach (var file in triaged)
         {
@@ -115,6 +116,13 @@ public static class DeepPassRunner
             usage += review.Usage;
             discarded += review.LowConfidenceDiscarded;
             examined++;
+
+            // First file to explain a capability wins, so a reason quoted where the thing is
+            // actually done is not replaced by a passing mention somewhere else.
+            foreach (var (capability, reason) in review.Explains)
+            {
+                explains.TryAdd(capability, reason);
+            }
 
             if (review.ServedByFallback)
             {
@@ -191,6 +199,7 @@ public static class DeepPassRunner
             Findings = findings,
             Limitations = limitations,
             FilesExamined = examined,
+            Explains = explains,
             Usage = usage,
             Backend = client.Description,
             Billed = client.BillsTheReader,

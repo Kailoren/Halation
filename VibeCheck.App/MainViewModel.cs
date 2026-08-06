@@ -1492,7 +1492,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             foreach (var capability in Scanner.QuestionsFor(_strict).Except(_answered))
             {
-                Questions.Add(new PurposeQuestion(capability, DeclaredKind, Answer));
+                Questions.Add(new PurposeQuestion(
+                    capability,
+                    DeclaredKind,
+                    _strict.SourceExplanations.GetValueOrDefault(capability),
+                    Answer));
             }
         }
 
@@ -1709,12 +1713,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
 public sealed class PurposeQuestion
 {
     public PurposeQuestion(
-        Capability capability, ApplicationKind kind, Action<Capability, bool> answer)
+        Capability capability,
+        ApplicationKind kind,
+        string? statedInSource,
+        Action<Capability, bool> answer)
     {
         ArgumentNullException.ThrowIfNull(answer);
 
         Capability = capability;
         Kind = kind;
+        StatedInSource = statedInSource;
         HasReasonCommand = new RelayCommand(_ => answer(capability, true));
         NoReasonCommand = new RelayCommand(_ => answer(capability, false));
     }
@@ -1737,6 +1745,29 @@ public sealed class PurposeQuestion
     /// Core so the window and the exported report cannot ask the same question differently.
     /// </remarks>
     public string Context => Kind.Context(Capability);
+
+    /// <summary>
+    /// The reason the application's own source gave, when the deep pass found one.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Shown, not acted on. Somebody who wrote down two lines above the code why it reads
+    /// cookies should be asked to confirm their own note rather than retype it, and a reader
+    /// checking a download is owed the fact that the application has an answer ready.
+    /// </para>
+    /// <para>
+    /// It stays a question because a comment ships inside the thing being examined, and an
+    /// application that wanted to look harmless would carry exactly such a comment. Only the
+    /// reader's own affirmation takes a finding out of the arithmetic.
+    /// </para>
+    /// </remarks>
+    public string? StatedInSource { get; }
+
+    /// <summary>How that reason is introduced, so its weight is not overstated.</summary>
+    public string? StatedInSourceLine => StatedInSource is null
+        ? null
+        : $"The code says why: “{StatedInSource}”  —  that is the author's own "
+          + "note, not a check, so it is worth confirming rather than taking.";
 
     public string Prompt => ApplicationKinds.Asked;
 

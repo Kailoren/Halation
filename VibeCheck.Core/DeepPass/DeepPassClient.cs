@@ -62,6 +62,13 @@ public sealed record FileReview
     /// <summary>Findings dropped for being low confidence, counted rather than hidden.</summary>
     public int LowConfidenceDiscarded { get; init; }
 
+    /// <summary>
+    /// Capabilities this file's own comments explain, and the reason given. A prefill for the
+    /// question put to the reader, never an answer to it.
+    /// </summary>
+    public IReadOnlyDictionary<Capability, string> Explains { get; init; } =
+        new Dictionary<Capability, string>();
+
     /// <summary>Set when the file was not fully examined, and why.</summary>
     /// <remarks>
     /// Scrubbed on the way in rather than on the way out. Most of what lands here is an
@@ -104,6 +111,18 @@ public sealed record DeepPassResult
     }
 
     public int FilesExamined { get; init; }
+
+    /// <summary>
+    /// Capabilities the source's own comments explain, gathered across every file read.
+    /// </summary>
+    /// <remarks>
+    /// Offered to the reader as the answer their code already gives, for them to confirm or
+    /// reject. It settles nothing by itself: the text came out of the application being
+    /// examined. See <see cref="PurposeSource.SourceComment"/>. Always empty for a decompiled
+    /// artifact, because decompilation destroys comments.
+    /// </remarks>
+    public IReadOnlyDictionary<Capability, string> Explains { get; init; } =
+        new Dictionary<Capability, string>();
 
     public TokenUsage Usage { get; init; } = new();
 
@@ -311,6 +330,7 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
         {
             Findings = answer.Findings,
             LowConfidenceDiscarded = answer.LowConfidenceDiscarded,
+            Explains = answer.Explains,
             Usage = usage,
             ServedByFallback = servedByFallback,
         };

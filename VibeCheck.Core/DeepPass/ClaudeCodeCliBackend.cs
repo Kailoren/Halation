@@ -290,6 +290,7 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
             {
                 Findings = answer.Findings,
                 LowConfidenceDiscarded = answer.LowConfidenceDiscarded,
+                Explains = answer.Explains,
                 Usage = usage,
                 ServedByFallback = SubstituteModelAnswered(root),
                 Limitation = ToolUseAttempted(root)

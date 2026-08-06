@@ -33,6 +33,17 @@ public sealed record DeepPassAnswer
     /// can say they existed rather than leaving their absence to look like a clean file.
     /// </summary>
     public int LowConfidenceDiscarded { get; init; }
+
+    /// <summary>
+    /// Capabilities the file's own comments explain, and the reason given.
+    /// </summary>
+    /// <remarks>
+    /// A prefill for the question, never an answer to it: the text came out of the artifact
+    /// being examined. See <see cref="PurposeSource.SourceComment"/>. Normally empty, and always
+    /// empty for decompiled code, where the comments no longer exist.
+    /// </remarks>
+    public IReadOnlyDictionary<Capability, string> Explains { get; init; } =
+        new Dictionary<Capability, string>();
 }
 
 public static class DeepPassPrompt
@@ -75,8 +86,33 @@ public static class DeepPassPrompt
                         additionalProperties = false,
                     },
                 },
+                // What the author already said about a capability, so the reader is asked to
+                // confirm their own note rather than retype it. Never an answer: it ships inside
+                // the artifact. See PurposeSource.SourceComment.
+                explains = new
+                {
+                    type = "array",
+                    items = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            capability = new
+                            {
+                                type = "string",
+                                @enum = Enum.GetNames<Capability>(),
+                            },
+                            reason = new { type = "string" },
+                        },
+                        required = new[] { "capability", "reason" },
+                        additionalProperties = false,
+                    },
+                },
             }),
-            ["required"] = JsonSerializer.SerializeToElement(new[] { "findings" }),
+
+            // Both listed: a strict schema with additionalProperties false requires every
+            // declared property to be required, and an empty array is the normal answer.
+            ["required"] = JsonSerializer.SerializeToElement(new[] { "findings", "explains" }),
             ["additionalProperties"] = JsonSerializer.SerializeToElement(false),
         };
 
@@ -107,6 +143,19 @@ public static class DeepPassPrompt
         - user_impact: that same finding written for that reader, in plain language. No rule
           names, no CWE or CVE numbers, no jargon. Say what it could mean for them, and say
           plainly when the honest answer is that this is the author's problem and not theirs.
+
+        Separately from findings, fill "explains". Some code does something that looks alarming
+        out of context and the author has already written down why, in a comment or a docstring
+        beside it. When this file both does one of the named things and says why, record the
+        capability and quote or closely paraphrase the author's own reason.
+
+        - This is not a finding and not an endorsement. It is repeated back to the person running
+          the scan so they can confirm or reject it, because a comment ships inside the
+          application and cannot vouch for it.
+        - Only from what the file actually says. If there is no comment explaining it, leave it
+          out; do not infer a reason from the code, which is the thing being checked.
+        - An empty array is the normal answer, and is expected for decompiled code, where the
+          comments no longer exist.
 
         Rules for what you report:
         - Only report what the code you were shown demonstrates. If reachability depends on a
@@ -165,6 +214,7 @@ public static class DeepPassPrompt
         ArgumentNullException.ThrowIfNull(triaged);
 
         var findings = new List<Finding>();
+        var explains = new Dictionary<Capability, string>();
         var discarded = 0;
 
         if (string.IsNullOrWhiteSpace(json))
@@ -176,25 +226,28 @@ public static class DeepPassPrompt
         {
             using var document = JsonDocument.Parse(json);
 
-            if (!document.RootElement.TryGetProperty("findings", out var array)
-                || array.ValueKind != JsonValueKind.Array)
+            // Read independently of each other. A model that answered one half and fumbled the
+            // other should lose only that half; returning early on a missing findings array
+            // would also throw away explanations that arrived beside it.
+            if (document.RootElement.TryGetProperty("findings", out var array)
+                && array.ValueKind == JsonValueKind.Array)
             {
-                return new DeepPassAnswer();
+                foreach (var element in array.EnumerateArray())
+                {
+                    if (IsLowConfidence(element))
+                    {
+                        discarded++;
+                        continue;
+                    }
+
+                    if (ReadFinding(element, triaged) is { } finding)
+                    {
+                        findings.Add(finding);
+                    }
+                }
             }
 
-            foreach (var element in array.EnumerateArray())
-            {
-                if (IsLowConfidence(element))
-                {
-                    discarded++;
-                    continue;
-                }
-
-                if (ReadFinding(element, triaged) is { } finding)
-                {
-                    findings.Add(finding);
-                }
-            }
+            ReadExplanations(document.RootElement, explains);
         }
         catch (JsonException)
         {
@@ -203,7 +256,12 @@ public static class DeepPassPrompt
             // answer must not take the scan down.
         }
 
-        return new DeepPassAnswer { Findings = findings, LowConfidenceDiscarded = discarded };
+        return new DeepPassAnswer
+        {
+            Findings = findings,
+            LowConfidenceDiscarded = discarded,
+            Explains = explains,
+        };
     }
 
     /// <summary>
@@ -214,6 +272,45 @@ public static class DeepPassPrompt
     /// absence of a confidence claim is not a confession of doubt, and silently discarding on
     /// a field the model failed to fill would quietly shrink coverage for a formatting reason.
     /// </remarks>
+    /// <summary>
+    /// Reads the author's own stated reasons, if the file carried any.
+    /// </summary>
+    /// <remarks>
+    /// Bounded and scrubbed like every other string that comes back from a model which has just
+    /// read a file this scanner assumes is hostile. Only the seven named capabilities are
+    /// accepted; anything else the model invents is dropped rather than shown, because this text
+    /// is put in front of a reader as something their application said about itself.
+    /// </remarks>
+    private static void ReadExplanations(
+        JsonElement root, Dictionary<Capability, string> into)
+    {
+        if (!root.TryGetProperty("explains", out var array)
+            || array.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var element in array.EnumerateArray())
+        {
+            if (!element.TryGetProperty("capability", out var name)
+                || !Enum.TryParse<Capability>(name.GetString(), ignoreCase: true, out var capability))
+            {
+                continue;
+            }
+
+            var reason = Redaction.Flatten(
+                element.TryGetProperty("reason", out var text) ? text.GetString() : null,
+                Redaction.MaxProse);
+
+            // First answer wins. A model repeating itself across files should not have the
+            // second mention quietly replace the first.
+            if (!string.IsNullOrWhiteSpace(reason))
+            {
+                into.TryAdd(capability, reason);
+            }
+        }
+    }
+
     private static bool IsLowConfidence(JsonElement element) =>
         element.TryGetProperty("confidence", out var confidence)
         && confidence.ValueKind == JsonValueKind.String

@@ -206,6 +206,7 @@ public sealed class Scanner
                 ? null
                 : deepPass.Usage.TotalInput + deepPass.Usage.Output,
             DeepPassBackend = deepPass.Backend,
+            SourceExplanations = deepPass.Explains,
             ScannerVersion = Version,
             Duration = stopwatch.Elapsed,
         };
