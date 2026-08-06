@@ -174,6 +174,35 @@ public sealed record Finding
         audience == Audience.EndUser ? UserRemediation : Remediation;
 
     /// <summary>
+    /// What to tell the reader to do about this, given whether anybody accounted for it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>An accounted-for capability needs different advice, not the same advice quieter.</b>
+    /// A remediation is written for the case where nobody has a reason: VC-MAL-002's says "Do not
+    /// run this application. If it has already been run, sign out of your accounts everywhere."
+    /// Correct for a credential stealer, and printed directly beneath "You told VibeCheck this
+    /// application has a reason to read your browser cookies" it contradicted the sentence above
+    /// it, in the same card, for the exact application the purpose feature exists to serve.
+    /// </para>
+    /// <para>
+    /// So once somebody has said yes, the question stops being whether to have the power and
+    /// becomes how to hold it. That is <see cref="Capabilities.Safeguard"/>, and it is the more
+    /// useful half for the audience this tool is actually for: a developer who has just confirmed
+    /// they need something is at the one moment they will read advice about it.
+    /// </para>
+    /// <para>
+    /// Both renderers call this rather than choosing for themselves, on the same reasoning as
+    /// <c>ScanReport.SummaryLine</c>: the window and the exported copy must not be able to
+    /// disagree about what the reader was told.
+    /// </para>
+    /// </remarks>
+    public string? GuidanceFor(Audience audience) =>
+        ExplainedBy is not null && Capability is { } power
+            ? power.Safeguard()
+            : RemediationFor(audience);
+
+    /// <summary>
     /// Whether this finding bears on the given reader's decision.
     /// </summary>
     /// <remarks>

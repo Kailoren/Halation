@@ -85,6 +85,89 @@ public static class Capabilities
         _ => capability.ToString(),
     };
 
+    /// <summary>What was observed, as a sentence about the application.</summary>
+    public static string Statement(this Capability capability)
+    {
+        var phrase = capability.Humanise();
+
+        return $"This application can {char.ToLowerInvariant(phrase[0])}{phrase[1..]}.";
+    }
+
+    /// <summary>
+    /// How to hold this power safely, for a reader who has said they need it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The answer to "yes, it has a reason to" is not silence. This tool exists to help people
+    /// build better applications, and somebody who has just confirmed they need a capability is
+    /// at the one moment they will actually read advice about it. Saying nothing there wastes
+    /// the only opening the report gets.
+    /// </para>
+    /// <para>
+    /// <b>Bounded on purpose.</b> Seven capabilities, seven pieces of advice. The temptation is
+    /// to enumerate correct usage per verb per kind of application, which does not converge:
+    /// there is no end to the ways software can be built, and each entry would be a table to
+    /// maintain forever and still incomplete. What generalises is the boundary of the
+    /// affirmation - reading a thing is not sending it anywhere - and that is one sentence per
+    /// capability rather than a matrix. Anything finer is a judgement about specific code, which
+    /// is the deep pass's job and is already what it is asked for.
+    /// </para>
+    /// </remarks>
+    public static string Safeguard(this Capability capability) => capability switch
+    {
+        Capability.BrowserCredentials =>
+            "Having a reason to read the store accounts for reading it, not for what happens "
+            + "next. Read through the platform's credential API rather than the file where you "
+            + "can, take only the entry you were asked for, keep nothing in memory after the "
+            + "operation, and never send any of it anywhere, including to your own servers.",
+
+        Capability.BrowserCookies =>
+            "Having a reason to read them accounts for reading them, not for sending them "
+            + "anywhere. Open the database read-only unless deleting is the actual job, work on "
+            + "a copy you delete afterwards rather than the browser's own file, and never "
+            + "transmit cookie values off the machine. A session cookie is a signed-in session, "
+            + "so anything that moves one is doing what a stealer does regardless of intent.",
+
+        Capability.CryptocurrencyWallets =>
+            "Having a reason to read wallet storage accounts for reading it, not for handling "
+            + "key material. Read metadata rather than keys or seed phrases wherever the feature "
+            + "allows, never write either to a log or a crash report, and never transmit them. "
+            + "If the feature genuinely needs a key, ask the user each time instead of storing "
+            + "what you were given.",
+
+        Capability.ChatTokens =>
+            "Having a reason to read a token store accounts for reading it, not for reusing the "
+            + "token elsewhere. Use the client's own documented integration point if one exists, "
+            + "since a token lifted from disk keeps working after the user signs out and is "
+            + "invisible to them. Never log it and never send it anywhere but the service it "
+            + "belongs to.",
+
+        Capability.ClipboardMonitoring =>
+            "Having a reason to watch the clipboard accounts for inspecting what is pasted, not "
+            + "for reading it continuously. Look only while your own paste target has focus, "
+            + "match the shape you need and discard everything else immediately, and never log "
+            + "or transmit clipboard contents. A clipboard carries passwords and messages that "
+            + "have nothing to do with your application.",
+
+        Capability.StartsWithWindows =>
+            "Having a reason to start with Windows accounts for starting, not for being hard to "
+            + "stop. Register per user rather than machine-wide so no administrator rights are "
+            + "needed, offer the switch inside your own settings rather than only in the "
+            + "installer, and make sure removing the application removes the entry.",
+
+        Capability.DownloadsAndRunsCode =>
+            "Having a reason to update yourself accounts for fetching and running your own "
+            + "builds, nothing else. Verify what you downloaded against a signature you can "
+            + "check, not a hash served from the same place as the file, because whoever can "
+            + "replace one can replace the other. Refuse to run anything that fails, follow "
+            + "redirects by hand so every hop is checked, and never execute a path taken from "
+            + "the server's reply.",
+
+        _ => "Having a reason to do this accounts for doing it, not for what is done with the "
+             + "result. Take the least you need, keep it no longer than the operation, and do "
+             + "not send it anywhere the user did not ask you to.",
+    };
+
     /// <summary>
     /// The kind of application a reasonable person would expect to have this, for the report to
     /// say when the declared purpose accounts for it.

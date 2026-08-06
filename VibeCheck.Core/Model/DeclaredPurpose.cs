@@ -16,6 +16,43 @@ public enum PurposeSource
     /// the untrusted thing being examined, so it can populate the question but not answer it.
     /// </summary>
     Manifest,
+
+    /// <summary>
+    /// A comment in the source explained it, found by the deep pass.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Same trust level as <see cref="Manifest"/>, and for the same reason: a comment ships
+    /// inside the thing under examination, so an application that wanted to look harmless would
+    /// carry exactly such a comment. It populates the question and never answers it.
+    /// </para>
+    /// <para>
+    /// Worth having anyway, because the developer case is the one where it is almost always
+    /// true. Asking somebody "does this have a reason to read cookies?" when their own code says
+    /// two lines above that it is clearing stale sessions is asking them to retype what they
+    /// already wrote. It only exists when scanning source: decompilation destroys comments, which
+    /// is exactly the asymmetry measured on FleetFinder.
+    /// </para>
+    /// </remarks>
+    SourceComment,
+}
+
+/// <summary>Which sources are allowed to settle a question rather than merely raise it.</summary>
+public static class PurposeSources
+{
+    /// <summary>
+    /// Whether a claim from this source may account for a capability on its own.
+    /// </summary>
+    /// <remarks>
+    /// <b>Only the reader.</b> Everything else arrived inside the artifact being examined and
+    /// therefore carries no weight it did not give itself. This was documented on
+    /// <see cref="PurposeSource.Manifest"/> from the start and enforced nowhere:
+    /// <see cref="PurposeSplit"/> asked only whether a capability was in the set, so any
+    /// non-reader purpose carrying one would have accounted for it silently. Latent rather than
+    /// live, because nothing constructed one - but adding a second untrusted source is exactly
+    /// how a latent hole becomes a real one.
+    /// </remarks>
+    public static bool CanAccount(this PurposeSource source) => source == PurposeSource.Reader;
 }
 
 /// <summary>
@@ -44,6 +81,16 @@ public sealed record DeclaredPurpose
     /// <summary>Who said so.</summary>
     public required PurposeSource Source { get; init; }
 
+    /// <summary>
+    /// What kind of application this was said to be.
+    /// </summary>
+    /// <remarks>
+    /// Carried here so it reaches the report without a second channel, and so a screenshot of a
+    /// quiet result shows the declaration that framed the questions as well as the answers. It
+    /// accounts for nothing on its own: see <see cref="ApplicationKind"/>.
+    /// </remarks>
+    public ApplicationKind Kind { get; init; } = ApplicationKind.Unstated;
+
     /// <summary>Nothing has been said, which is the default and the strict reading.</summary>
     public static DeclaredPurpose None { get; } = new() { Source = PurposeSource.Reader };
 
@@ -54,7 +101,45 @@ public sealed record DeclaredPurpose
         Source = PurposeSource.Reader,
     };
 
-    public bool Accounts(Capability capability) => Accounted.Contains(capability);
+    /// <summary>What they affirmed, and what they said the application is.</summary>
+    public static DeclaredPurpose FromReader(
+        ApplicationKind kind, IEnumerable<Capability> accounted) => new()
+    {
+        Accounted = new HashSet<Capability>(accounted),
+        Source = PurposeSource.Reader,
+        Kind = kind,
+    };
+
+    /// <summary>
+    /// The declaration itself, for the report to print back.
+    /// </summary>
+    /// <remarks>
+    /// Null when nobody said, rather than "Not stated", so a report that was never answered says
+    /// nothing rather than saying something empty.
+    /// </remarks>
+    public string? KindAttribution => Kind is ApplicationKind.Unstated
+        ? null
+        : $"You told VibeCheck this is {Kind.InSentence()}.";
+
+    /// <summary>
+    /// Whether this declaration settles the question for a capability.
+    /// </summary>
+    /// <remarks>
+    /// Membership is not enough. A claim that came out of the artifact can raise the question
+    /// and populate the answer for somebody to confirm, but only the reader's own affirmation
+    /// takes a finding out of the arithmetic. See <see cref="PurposeSources.CanAccount"/>.
+    /// </remarks>
+    public bool Accounts(Capability capability) =>
+        Source.CanAccount() && Accounted.Contains(capability);
+
+    /// <summary>
+    /// What this declaration claims, whether or not it is allowed to settle anything.
+    /// </summary>
+    /// <remarks>
+    /// This is the half a prefill uses: the deep pass reporting that the source explains a
+    /// capability should put that in front of the reader, not past them.
+    /// </remarks>
+    public bool Claims(Capability capability) => Accounted.Contains(capability);
 
     public bool SaysAnything => Accounted.Count > 0;
 
@@ -72,7 +157,11 @@ public sealed record DeclaredPurpose
         PurposeSource.Reader =>
             $"You told VibeCheck this application has a reason to {Lowered(capability)}.",
         PurposeSource.Manifest =>
-            $"The application's own manifest claims a reason to {Lowered(capability)}.",
+            $"The application's own manifest claims a reason to {Lowered(capability)}. That "
+            + "came from inside the application, so it is worth knowing and is not confirmation.",
+        PurposeSource.SourceComment =>
+            $"The source says this is to {Lowered(capability)}. That is the author's own note "
+            + "rather than an independent check, so it explains the code without vouching for it.",
         _ => $"Something accounted for the ability to {Lowered(capability)}.",
     };
 
