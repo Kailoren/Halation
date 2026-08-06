@@ -164,6 +164,55 @@ public sealed record Verdict
     public IReadOnlyList<string> AccountedFor { get; init; } = [];
 
     /// <summary>
+    /// Deep pass findings that were reported but took no part in the score.
+    /// </summary>
+    /// <remarks>
+    /// Counted on the verdict rather than left to be discovered further down the report. The
+    /// number above is deterministic so that two readers with two different models can compare
+    /// it; the cost of that is a headline which knows nothing about what the deep pass found,
+    /// and this is what stops the headline claiming more than it checked.
+    /// </remarks>
+    public int InferredCount { get; init; }
+
+    /// <summary>The worst of those, across both readings.</summary>
+    public Severity WorstInferred { get; init; } = Severity.Info;
+
+    /// <summary>
+    /// What the deep pass added, in a sentence, for display beside the score.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Beside the number, not below it.</b> The dependency caveat established this: the
+    /// caveat moved into the verdict card and the number stayed where it was, because anything
+    /// four cards down is invisible to a screenshot. Null when the deep pass added nothing that
+    /// carries weight, on the same principle - a line that appears on every report stops being
+    /// read.
+    /// </para>
+    /// <para>
+    /// <b>It does not tell the reader their model might be the weak one.</b> An earlier wording
+    /// explained the rule by saying that what an AI reports varies with which one you use. True,
+    /// and the wrong thing to print: it ranks the reader's setup inside their own report, tells
+    /// somebody running a free local model that theirs is the lesser answer, and puts the doubt
+    /// on the whole document rather than on the finding it belongs to. Which model answered is
+    /// already on the receipt for anyone comparing two reports, and that is where it belongs.
+    /// </para>
+    /// <para>
+    /// What is said instead is what the reader can act on: these are suggestions rather than
+    /// counted problems, every one quotes the code behind it so it can be judged rather than
+    /// trusted, and the score is the part that means the same thing in every report. That is
+    /// honest about the difference without inviting anybody to discount the tool over it.
+    /// </para>
+    /// </remarks>
+    public string? InferredSummary => InferredCount == 0
+        ? null
+        : $"The AI also raised {InferredCount} "
+          + $"{(InferredCount == 1 ? "point" : "points")} worth a look, the most serious rated "
+          + $"{WorstInferred}. {(InferredCount == 1 ? "It is" : "They are")} listed below as "
+          + "suggestions rather than counted problems, and each one quotes the code behind it so "
+          + "you can judge it for yourself. The score comes from the checks alone, so it means "
+          + "the same thing in every report.";
+
+    /// <summary>
     /// Which report this verdict was rendered for.
     /// </summary>
     /// <remarks>
@@ -223,6 +272,7 @@ public sealed record Verdict
     /// Short label for the band, for display next to the score.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// The top band is qualified when something was accounted for, and that qualification is
     /// the point. Scanning a cleaner and stating it has a reason to read browser cookies
     /// correctly produces 100/100, because the arithmetic genuinely has nothing left to count.
@@ -230,15 +280,26 @@ public sealed record Verdict
     /// health for an application with six critical behaviours in it, all of them still listed
     /// further down where the screenshot does not reach. The number can stay honest and the
     /// label still overreach, so the label says what the number rests on.
+    /// </para>
+    /// <para>
+    /// <b>Inferred findings qualify it for the same reason and take precedence.</b> The score
+    /// counts deterministic findings only, so an application whose rules found nothing scores at
+    /// the top however much the deep pass reported. Left as "no known issues found", the one
+    /// case where the deep pass earns its keep - a real problem no pattern could express - would
+    /// be published under a clean headline. Only the top band needs this: every band below it
+    /// already says there is something to look at.
+    /// </para>
     /// </remarks>
     public string BandLabel => Band switch
     {
         ScoreBand.CriticalIssues => "Critical issues",
         ScoreBand.SeriousIssues => "Serious issues",
         ScoreBand.NeedsWork => "Needs work",
-        ScoreBand.NoKnownIssues => Advice == InstallAdvice.ConsistentWithStatedPurpose
-            ? "Nothing beyond what you accounted for"
-            : "No known issues found",
+        ScoreBand.NoKnownIssues => InferredCount > 0
+            ? $"Nothing from the checks · {InferredCount} AI suggestions to review"
+            : Advice == InstallAdvice.ConsistentWithStatedPurpose
+                ? "Nothing beyond what you accounted for"
+                : "No known issues found",
         ScoreBand.InsufficientCoverage => "Could not analyse",
         _ => "Unknown",
     };

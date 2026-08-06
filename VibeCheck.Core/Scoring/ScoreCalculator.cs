@@ -13,6 +13,23 @@ namespace VibeCheck.Core.Scoring;
 /// the single worst finding, so any critical caps at 39 whatever else passed.
 /// </para>
 /// <para>
+/// <b>Only deterministic findings move the number. The deep pass reports and does not score.</b>
+/// Measured on FleetFinder 2.2.7, one unchanged application: the rules said 99 every time, a
+/// local 7B model made it 41, and Opus 5 made it 75. A number that depends on which model the
+/// reader configured is not a measurement, it is a sample - two people cannot compare reports,
+/// and one person cannot tell whether their own fix helped or their model changed. Worse, it is
+/// a gaming route of exactly the kind per-audience scores were removed to close: scan with the
+/// weakest model and screenshot the best number.
+/// </para>
+/// <para>
+/// <b>What the deep pass keeps is the power to withhold the all-clear.</b> Scoring it nowhere and
+/// saying nothing would let a real vulnerability that only it found sit beneath a headline of
+/// 100/100 - the coverage-metric failure this design has hit repeatedly, where the arithmetic is
+/// right and the words beside it overreach. So inferred findings are counted on the verdict, and
+/// <see cref="Verdict.BandLabel"/> may not claim a clean result while any of them carry weight.
+/// The number stays comparable; the sentence stays true.
+/// </para>
+/// <para>
 /// <b>Both readings are computed and the lower one is the score, for both readers.</b> Findings
 /// carry a severity per audience, so the same artifact genuinely reads differently for whoever
 /// ships it and whoever runs it, and the report still says both. What it will not do is let the
@@ -100,10 +117,22 @@ public static class ScoreCalculator
     {
         ArgumentNullException.ThrowIfNull(findings);
 
-        var developer = ScoreFor(findings, Audience.Developer);
-        var endUser = ScoreFor(findings, Audience.EndUser);
+        // Only deterministic findings move the number. See the remarks on this class for why.
+        var scored = findings.Where(f => f.Source == FindingSource.Rule).ToList();
+        var inferred = findings.Where(f => f.Source == FindingSource.Assisted).ToList();
+
+        var developer = ScoreFor(scored, Audience.Developer);
+        var endUser = ScoreFor(scored, Audience.EndUser);
 
         var score = Math.Min(developer, endUser);
+
+        // Counted on whichever reading rates them worse, because this decides whether the
+        // headline may claim a clean result and that decision should not soften when the reader
+        // changes. Weightless ones are excluded: an inferred finding that deducts nothing on
+        // either reading has nothing to caveat.
+        var inferredCounted = inferred.Count(f =>
+            WeightFor(f.SeverityFor(Audience.Developer)) > 0
+            || WeightFor(f.SeverityFor(Audience.EndUser)) > 0);
 
         // Which reading produced the number, so the account below it describes arithmetic that
         // really ran rather than the reader's own. Where the two agree it is attributed to
@@ -133,6 +162,8 @@ public static class ScoreCalculator
                 Audience = audience,
                 BlockingReasons = Titles(blockingAtLowCoverage),
                 AccountedFor = Titles(Vouched(accountedFor)),
+                InferredCount = inferredCounted,
+                WorstInferred = WorstOf(inferred),
             };
         }
 
@@ -150,11 +181,29 @@ public static class ScoreCalculator
             Band = BandFor(score),
             Advice = AdviceFor(blocking, accountedFor),
             Audience = audience,
-            Explanation = Explain(findings, governing, developer, endUser),
+            Explanation = Explain(scored, governing, developer, endUser),
             BlockingReasons = Titles(blocking),
             AccountedFor = Titles(Vouched(accountedFor)),
+            InferredCount = inferredCounted,
+            WorstInferred = WorstOf(inferred),
         };
     }
+
+    /// <summary>
+    /// The worst severity in a set, taken across both readings.
+    /// </summary>
+    /// <remarks>
+    /// Across both rather than on the governing reading, because this describes findings that
+    /// took no part in choosing a governing reading. Taking the harsher of the two is the same
+    /// rule the headline follows and stops the caveat weakening when the reader switches.
+    /// </remarks>
+    private static Severity WorstOf(IReadOnlyList<Finding> findings) =>
+        findings.Count == 0
+            ? Severity.Info
+            : findings.Max(f =>
+                f.SeverityFor(Audience.Developer) > f.SeverityFor(Audience.EndUser)
+                    ? f.SeverityFor(Audience.Developer)
+                    : f.SeverityFor(Audience.EndUser));
 
     /// <summary>
     /// Behaviour that would have blocked, had nobody vouched for it.
@@ -235,7 +284,12 @@ public static class ScoreCalculator
                 category => category,
                 category =>
                 {
-                    var inCategory = findings.Where(f => f.Category == category).ToList();
+                    // Deterministic only, exactly as the headline is. A category card built from
+                    // inferred findings could show a worse number than the score above it, which
+                    // is the same screenshot taken one card further down.
+                    var inCategory = findings
+                        .Where(f => f.Category == category && f.Source == FindingSource.Rule)
+                        .ToList();
 
                     return Math.Min(
                         ScoreFor(inCategory, Audience.Developer),

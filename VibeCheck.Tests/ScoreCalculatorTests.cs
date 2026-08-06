@@ -240,4 +240,99 @@ public class ScoreCalculatorTests
 
         Assert.Equal(Enum.GetValues<FindingCategory>().Length, scores.Count);
     }
+
+    // ---- The deep pass reports; it does not score --------------------------
+
+    /// <summary>
+    /// The whole reason for the rule. Measured on one unchanged application: the rules said 99
+    /// every time, a local 7B model made it 41 and Opus 5 made it 75. A number that moves with
+    /// the reader's choice of model cannot be compared with anybody else's.
+    /// </summary>
+    [Fact]
+    public void Inferred_findings_do_not_move_the_number()
+    {
+        var rulesOnly = ScoreCalculator.Calculate([Make(Severity.Low)]);
+
+        var withDeepPass = ScoreCalculator.Calculate(
+        [
+            Make(Severity.Low),
+            Make(Severity.Critical, source: FindingSource.Assisted),
+            Make(Severity.High, source: FindingSource.Assisted),
+            Make(Severity.High, source: FindingSource.Assisted),
+        ]);
+
+        Assert.Equal(rulesOnly.Score, withDeepPass.Score);
+        Assert.Equal(rulesOnly.Band, withDeepPass.Band);
+    }
+
+    /// <summary>
+    /// And the other half, without which the first half is a licence to publish a clean headline
+    /// over a real problem: the label may not claim the all-clear while they exist.
+    /// </summary>
+    [Fact]
+    public void The_top_band_may_not_claim_a_clean_result_while_inferred_findings_exist()
+    {
+        var verdict = ScoreCalculator.Calculate(
+            [Make(Severity.Medium, source: FindingSource.Assisted)]);
+
+        // Nothing deterministic was found, so the arithmetic genuinely has nothing to count.
+        Assert.Equal(100, verdict.Score);
+        Assert.Equal(ScoreBand.NoKnownIssues, verdict.Band);
+
+        // But the words beside it must not say so.
+        Assert.NotEqual("No known issues found", verdict.BandLabel);
+        Assert.Contains("AI suggestions", verdict.BandLabel, StringComparison.Ordinal);
+
+        // The reader's own setup is never ranked inside their own report. Which model answered
+        // is on the receipt; a sentence beside the score saying results vary by model reads as
+        // "yours may be the worse one", and turns a fact about the tool into doubt about the
+        // document.
+        Assert.DoesNotContain("varies", verdict.InferredSummary!, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Equal(1, verdict.InferredCount);
+        Assert.Equal(Severity.Medium, verdict.WorstInferred);
+        Assert.NotNull(verdict.InferredSummary);
+    }
+
+    [Fact]
+    public void Weightless_inferred_findings_raise_no_caveat()
+    {
+        // An inferred finding that deducts nothing on either reading has nothing to qualify, and
+        // a caveat printed on every report stops being read. Same rule as the dependency caveat.
+        var verdict = ScoreCalculator.Calculate(
+            [Make(Severity.Info, source: FindingSource.Assisted)]);
+
+        Assert.Equal(0, verdict.InferredCount);
+        Assert.Equal("No known issues found", verdict.BandLabel);
+        Assert.Null(verdict.InferredSummary);
+    }
+
+    [Fact]
+    public void Category_scores_ignore_inferred_findings_too()
+    {
+        // Otherwise the same screenshot is available one card further down: a category reading
+        // worse than the headline that governs it.
+        var scores = ScoreCalculator.CategoryScores(
+        [
+            Make(Severity.Critical, FindingCategory.CodeSafety, source: FindingSource.Assisted),
+        ]);
+
+        Assert.Equal(100, scores[FindingCategory.CodeSafety]);
+    }
+
+    [Fact]
+    public void The_account_of_the_number_counts_only_what_produced_it()
+    {
+        // The explanation is read against the number directly above it. Counting inferred
+        // findings there would describe arithmetic that never ran.
+        var verdict = ScoreCalculator.Calculate(
+        [
+            Make(Severity.Medium),
+            Make(Severity.Critical, source: FindingSource.Assisted),
+        ]);
+
+        Assert.NotNull(verdict.Explanation);
+        Assert.Equal(Severity.Medium, verdict.Explanation!.Worst);
+        Assert.Equal(1, verdict.Explanation.Counted);
+    }
 }
