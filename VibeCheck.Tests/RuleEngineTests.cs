@@ -596,6 +596,60 @@ public class RuleEngineTests
         Assert.Equal(400, result.Findings.Count(f => f.RuleId == "VC-SEC-002"));
     }
 
+    // ---- Saying which checks did not apply ---------------------------------
+
+    [Fact]
+    public void Checks_that_applied_to_nothing_are_explained_rather_than_left_bare()
+    {
+        // A Go application gets every check that carries no language filter and none of the
+        // handful written against C# or JavaScript syntax. Those show in the checks list as
+        // "could not run", which without a reason beside it reads as the scan having failed.
+        var file = new RecoveredFile
+        {
+            RelativePath = "cmd/server/main.go",
+            Content = "package main\n\nfunc main() { println(\"hello\") }\n",
+            Language = SourceLanguage.Other,
+        };
+
+        var result = Engine.Analyse([file]);
+
+        var note = Assert.Single(
+            result.Limitations,
+            l => l.Contains("did not apply to any file", StringComparison.Ordinal));
+
+        // The count is real, and the reader is told what the code actually is so the number
+        // means something.
+        Assert.Contains("checks did not apply", note, StringComparison.Ordinal);
+        Assert.Contains("languages these checks do not name", note, StringComparison.Ordinal);
+
+        // The distinction the whole line exists to protect.
+        Assert.Contains("has not cleared anything", note, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Nothing_is_said_when_every_check_applied()
+    {
+        // Same rule as the dependency caveat: an application with no gap has nothing to be
+        // warned about, and a line that fires on every scan stops being read.
+        var files = Enumerable.Range(0, 1)
+            .Select(_ => new RecoveredFile
+            {
+                RelativePath = "src/app.js",
+                Content = "const x = 1;",
+                Language = SourceLanguage.JavaScript,
+            })
+            .ToList();
+
+        var result = Engine.Analyse(files);
+
+        // Only meaningful if some check really did sit out; when one does, it must be explained.
+        var idle = result.Checks.Count(c => c.FilesExamined == 0);
+        var explained = result.Limitations.Any(
+            l => l.Contains("did not apply to any file", StringComparison.Ordinal));
+
+        Assert.Equal(idle > 0, explained);
+    }
+
     /// <summary>Builds a Supabase-shaped JWT asserting the given role.</summary>
     private static string Jwt(string role)
     {

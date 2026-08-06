@@ -140,16 +140,21 @@ public static class DeepPassRunner
         // second read of the subset that handles untrusted input.
         limitations.Add(
             triage.HitCeiling
-                ? $"The deep pass read {examined} files, but {triage.Qualified:N0} of the "
-                  + $"{files.Count:N0} recovered files qualified for it. The ceiling on how many "
-                  + "are sent stopped it early, so "
-                  + $"{triage.Qualified - triaged.Count:N0} files that handle untrusted input "
-                  + "were not read by it. Raise the limit to cover them."
-                : $"The deep pass read {examined} of {files.Count:N0} recovered files: every "
-                  + "file that handles input the application does not control, or that calls "
-                  + "into code a rule flagged. The rest were not skipped, they were read by the "
-                  + "rule pass like everything else and had no untrusted input for the deep "
-                  + "pass to reason about.");
+                ? $"Every one of the {files.Count:N0} files in this application was checked. "
+                  + $"{examined} of them were also read a second time by the AI, but "
+                  + $"{triage.Qualified:N0} were worth reading that way. There is a limit on how "
+                  + $"many can be sent, and it stopped the pass early, so "
+                  + $"{triage.Qualified - triaged.Count:N0} files that take in information from "
+                  + "outside the application did not get that second look. Raising the limit "
+                  + "would cover them."
+                : $"Every one of the {files.Count:N0} files in this application was checked. "
+                  + $"{examined} of them were also read a second time by the AI. That second "
+                  + "reading is slower, so it is saved for the files that take in information "
+                  + "from outside the application — anything downloaded, opened, or typed in — "
+                  + "and for the code those files hand their results to, because that is where "
+                  + $"problems usually start. The remaining {files.Count - examined:N0} were "
+                  + "checked in full like the rest; there was simply nothing arriving from "
+                  + "outside them for the AI to follow.");
 
         // Stated once, here, rather than repeated on every finding. A hedge attached to each
         // item stops being read and starts reading as a tool that does not trust its own

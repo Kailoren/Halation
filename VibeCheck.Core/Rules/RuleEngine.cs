@@ -129,6 +129,16 @@ public sealed class RuleEngine
             progress?.Report(Interlocked.Increment(ref completed));
         });
 
+        // Checks written for a language this application does not contain looked at nothing, and
+        // a reader is owed the reason. Without it the checks list shows them as "could not run"
+        // beside no explanation, which reads as a fault in the scan rather than as a fact about
+        // the code. Silent when every check applied, on the same principle as the dependency
+        // caveat: an application with no gap has nothing to be warned about.
+        if (InapplicableChecks(examined, files) is { } notApplicable)
+        {
+            limitations.TryAdd(notApplicable, 0);
+        }
+
         return new RuleEngineResult
         {
             Findings = Deduplicate(findings),
@@ -159,6 +169,72 @@ public sealed class RuleEngine
             ],
         };
     }
+
+    /// <summary>
+    /// The checks that examined nothing, and the languages present, in the reader's terms.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Most of the catalogue carries no language filter, but a handful are written against the
+    /// syntax of one language and cannot fire anywhere else. Somebody scanning a Go or PHP
+    /// application therefore gets a smaller set of checks than the total implies, and until now
+    /// the only trace of that was a row in the checks list reading "could not run" with no reason
+    /// beside it — which reads as the scan having failed rather than as a fact about the code.
+    /// </para>
+    /// <para>
+    /// <b>Counted from what actually ran, not from the catalogue's declarations.</b> A rule that
+    /// examined no files is inapplicable whatever the reason, so this stays correct if a rule is
+    /// ever scoped by something other than language. It claims only what it can prove: that these
+    /// checks looked at nothing here. It does not assert why, because the engine does not know.
+    /// </para>
+    /// </remarks>
+    private string? InapplicableChecks(
+        ConcurrentDictionary<string, int> examined,
+        IReadOnlyList<RecoveredFile> files)
+    {
+        var idle = _rules.Count(rule => examined.GetValueOrDefault(rule.Id) == 0);
+
+        if (idle == 0 || files.Count == 0)
+        {
+            return null;
+        }
+
+        var languages = files
+            .Select(file => file.Language)
+            .Distinct()
+            .Select(PlainName)
+            .OfType<string>()
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+
+        var written = languages.Count switch
+        {
+            0 => string.Empty,
+            1 => $" The code here is {languages[0]}.",
+            _ => $" The code here is {string.Join(", ", languages[..^1])} and {languages[^1]}.",
+        };
+
+        return $"{idle} of the {_rules.Count} checks did not apply to any file in this "
+               + $"application, so they did not run.{written} They are listed as not run rather "
+               + "than as passed, because a check that examined nothing has not cleared anything.";
+    }
+
+    /// <summary>
+    /// A language as somebody who does not write code would name it, or null when it is not
+    /// program text and naming it would pad the sentence rather than inform it.
+    /// </summary>
+    private static string? PlainName(SourceLanguage language) => language switch
+    {
+        SourceLanguage.CSharp => "C#",
+        SourceLanguage.JavaScript => "JavaScript",
+        SourceLanguage.TypeScript => "TypeScript",
+        SourceLanguage.Python => "Python",
+        SourceLanguage.Java => "Java",
+        SourceLanguage.Shell => "shell scripts",
+        SourceLanguage.Other => "languages these checks do not name individually",
+        _ => null,
+    };
 
     /// <summary>
     /// Softens findings that sit in test and example files.
