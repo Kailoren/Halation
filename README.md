@@ -3,7 +3,7 @@
 
 # VibeCheck
 [![License](https://img.shields.io/github/license/kailoren/vibecheck?style=plastic)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/kailoren/vibecheck?style=plastic)](https://github.com/kailoren/fleetfinder/releases/latest)
+[![Release](https://img.shields.io/github/v/release/kailoren/vibecheck?style=plastic)](https://github.com/kailoren/vibecheck/releases/latest)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?style=plastic)
 
 A drag-and-drop security scanner for AI-generated applications.
