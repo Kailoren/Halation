@@ -220,19 +220,63 @@
                      be an inline Style with a DataTrigger swapping two brushes, which meant the
                      one moment in the application with any drama in it snapped between two
                      flat colours and no theme could say otherwise. -->
-                <ContentControl x:Name="DropTarget" Style="{StaticResource DropZone}" Height="230">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <TextBlock Text="&#xE7C3;" FontFamily="{DynamicResource IconFont}" FontSize="40"
-                                   Foreground="{StaticResource Muted}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="Drop an application here"
-                                   FontFamily="{DynamicResource DisplayFont}"
-                                   FontSize="19" Margin="0,18,0,0" HorizontalAlignment="Center"/>
-                        <TextBlock Style="{StaticResource Caption}" HorizontalAlignment="Center"
-                                   Margin="0,8,0,0" TextAlignment="Center"
-                                   Text="An executable, an installed folder, a zip, or a source project"/>
-                        <Button Content="Choose a file or folder" Style="{StaticResource Btn}"
-                                Margin="0,20,0,0" HorizontalAlignment="Center" Click="OnBrowse"/>
-                    </StackPanel>
+                <!-- MinHeight, not Height. Fixed at 230 the zone kept its size when the selected
+                     state added the kind selector, so the icon was clipped off the top and the
+                     buttons rendered through the notched bottom border. The empty state still
+                     wants the height, hence a floor rather than nothing. -->
+                <ContentControl x:Name="DropTarget" Style="{StaticResource DropZone}" MinHeight="230">
+                    <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+
+                        <!-- Nothing chosen yet. -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    Visibility="{Binding HasSelection,
+                                                         Converter={StaticResource InverseBoolToVisibility}}">
+                            <TextBlock Text="&#xE7C3;" FontFamily="{DynamicResource IconFont}" FontSize="40"
+                                       Foreground="{StaticResource Muted}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Drop an application here"
+                                       FontFamily="{DynamicResource DisplayFont}"
+                                       FontSize="19" Margin="0,18,0,0" HorizontalAlignment="Center"/>
+                            <TextBlock Style="{StaticResource Caption}" HorizontalAlignment="Center"
+                                       Margin="0,8,0,0" TextAlignment="Center"
+                                       Text="An executable, an installed folder, a zip, or a source project"/>
+                            <!-- Two buttons, not one that shows the folder picker and reaches
+                                 the file picker only when cancelled. Windows has no dialog that
+                                 takes either, so the honest arrangement is to ask which rather
+                                 than make somebody dismiss the wrong one first. -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                        Margin="0,20,0,0">
+                                <Button Content="Choose a file" Style="{StaticResource Btn}"
+                                        Click="OnBrowseFile"/>
+                                <Button Content="Choose a folder" Style="{StaticResource Btn}"
+                                        Margin="10,0,0,0" Click="OnBrowseFolder"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Chosen, and waiting to be told to go. The settings below apply to
+                             this scan, and this is the gap in which they can still be changed;
+                             dropping a file used to start the scan before they could be read. -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    Visibility="{Binding HasSelection,
+                                                         Converter={StaticResource BoolToVisibility}}">
+                            <!-- The same glyph as the empty state, in the accent rather than the
+                                 muted brush. E8A5 was tried first and rendered as an empty box:
+                                 not every code point in the icon font is present, and the only
+                                 way to know is to look at it. -->
+                            <TextBlock Text="&#xE7C3;" FontFamily="{DynamicResource IconFont}" FontSize="34"
+                                       Foreground="{StaticResource Accent}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding SelectedName}" TextTrimming="CharacterEllipsis"
+                                       FontFamily="{DynamicResource DisplayFont}" MaxWidth="520"
+                                       FontSize="18" Margin="0,14,0,0" HorizontalAlignment="Center"/>
+                            <TextBlock Style="{StaticResource Caption}" HorizontalAlignment="Center"
+                                       Margin="0,8,0,0" TextAlignment="Center"
+                                       Text="Ready to scan."/>
+                            <!-- The buttons and the kind selector moved into ScanSetupWindow,
+                                 which opens the moment something is chosen. This panel is
+                                 what sits behind that dialog, so it names the artifact and
+                                 stops there. -->
+                        </StackPanel>
+
+                    </Grid>
                 </ContentControl>
 
 
@@ -663,6 +707,35 @@
                                  readable, while nothing whatever is known about the packages
                                  inside it. That was already in the report, four cards down,
                                  which is three further than anybody scrolls before deciding. -->
+            <!-- Level with the number, because the number cannot carry this. The score counts
+                 deterministic findings only, so that two readers using two different models can
+                 compare it at all; the cost is a headline that knows nothing about what the deep
+                 pass found. One unchanged application scored 99 by rules, 41 through a local 7B
+                 and 75 through Opus 5, which is why the number stopped moving with the model and
+                 why this sentence has to sit where the number is. -->
+            <!-- What the reader declared, printed back where the number is. It excused nothing
+                 by itself, but it decided how every capability question was worded, so a quiet
+                 report has to show it. -->
+                            <Border Margin="0,12,0,0" Padding="12"
+                                    CornerRadius="{DynamicResource ButtonRadius}"
+                                    Background="{StaticResource PanelRaised}"
+                                    BorderBrush="{StaticResource Edge}" BorderThickness="1"
+                                    Visibility="{Binding DeclaredKindAttribution,
+                                                         Converter={StaticResource NullToVisibility}}">
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource Caption}"
+                                           Text="{Binding DeclaredKindAttribution}"/>
+                            </Border>
+
+                            <Border Margin="0,12,0,0" Padding="12"
+                                    CornerRadius="{DynamicResource ButtonRadius}"
+                                    Background="{StaticResource PanelRaised}"
+                                    BorderBrush="{StaticResource Medium}" BorderThickness="1"
+                                    Visibility="{Binding InferredSummary,
+                                                         Converter={StaticResource NullToVisibility}}">
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource Caption}"
+                                           Text="{Binding InferredSummary}"/>
+                            </Border>
+
                             <Border Margin="0,12,0,0" Padding="12"
                                     CornerRadius="{DynamicResource ButtonRadius}"
                                     Background="{StaticResource PanelRaised}"

@@ -66,7 +66,11 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private async void OnDrop(object sender, DragEventArgs e)
+    /// <summary>
+    /// Takes the drop and stops there. Starting the scan is a separate click, so the deep pass
+    /// settings underneath can still be changed for the scan they are about to apply to.
+    /// </summary>
+    private void OnDrop(object sender, DragEventArgs e)
     {
         _model.IsDragging = false;
 
@@ -77,8 +81,32 @@ public partial class MainWindow : Window
 
         if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths)
         {
-            await _model.ScanAsync(paths[0]);
+            Choose(paths[0]);
         }
+    }
+
+    /// <summary>
+    /// Takes an artifact and asks about it before scanning.
+    /// </summary>
+    /// <remarks>
+    /// One path for all three ways in - drop, file picker, folder picker - so the question cannot
+    /// be reached by one and skipped by another.
+    /// </remarks>
+    private async void Choose(string path)
+    {
+        _model.Select(path);
+
+        var setup = new ScanSetupWindow(_model, path) { Owner = this };
+
+        setup.ShowDialog();
+
+        if (setup.StartRequested)
+        {
+            await _model.StartScanAsync();
+            return;
+        }
+
+        _model.ClearSelection();
     }
 
     // ---- Browse ------------------------------------------------------------
@@ -91,19 +119,17 @@ public partial class MainWindow : Window
     /// and the user should not have to decide which kind of picker to ask for. The folder
     /// dialog is offered first because it is the case a file dialog cannot cover at all.
     /// </remarks>
-    private async void OnBrowse(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Picks a file.
+    /// </summary>
+    /// <remarks>
+    /// One dialog, opened directly. It used to show the folder picker first and reach the file
+    /// picker only when that was cancelled, so choosing a downloaded .exe - the common case -
+    /// meant dismissing a dialog that was never wanted. Windows has no picker that takes either,
+    /// so the honest arrangement is two buttons and no guessing about which one somebody meant.
+    /// </remarks>
+    private void OnBrowseFile(object sender, RoutedEventArgs e)
     {
-        var folder = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Choose an application folder (cancel to pick a single file instead)",
-        };
-
-        if (folder.ShowDialog() == true)
-        {
-            await _model.ScanAsync(folder.FolderName);
-            return;
-        }
-
         var file = new Microsoft.Win32.OpenFileDialog
         {
             Title = "Choose an application",
@@ -112,7 +138,21 @@ public partial class MainWindow : Window
 
         if (file.ShowDialog() == true)
         {
-            await _model.ScanAsync(file.FileName);
+            Choose(file.FileName);
+        }
+    }
+
+    /// <summary>Picks an installed folder or a source tree, which a file dialog cannot reach.</summary>
+    private void OnBrowseFolder(object sender, RoutedEventArgs e)
+    {
+        var folder = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Choose an application folder",
+        };
+
+        if (folder.ShowDialog() == true)
+        {
+            Choose(folder.FolderName);
         }
     }
 

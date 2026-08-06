@@ -907,6 +907,135 @@ public sealed class MainViewModel : INotifyPropertyChanged
         set => Set(ref _isDragging, value);
     }
 
+    private string? _selectedPath;
+
+    /// <summary>
+    /// The artifact chosen and not yet scanned.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Dropping a file used to start the scan on the spot, which put the one decision that
+    /// changes what a scan costs - whether the deep pass runs, and what answers it - permanently
+    /// out of reach. The settings sit below the drop zone, so by the time a reader had read them
+    /// the scan they applied to had already finished, and the only way to apply them was to scan
+    /// the same application twice.
+    /// </para>
+    /// <para>
+    /// Choosing and starting are therefore separate. The second benefit is smaller but real: a
+    /// mis-drop costs nothing now, where before it spent a deep pass on the wrong application.
+    /// </para>
+    /// </remarks>
+    public string? SelectedPath
+    {
+        get => _selectedPath;
+        private set
+        {
+            if (Set(ref _selectedPath, value))
+            {
+                Notify(nameof(SelectedName));
+                Notify(nameof(HasSelection));
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
+    }
+
+    public bool HasSelection => !string.IsNullOrEmpty(SelectedPath);
+
+    /// <summary>
+    /// The chosen artifact's own name, which is what somebody recognises. The full path is not
+    /// shown: it is long, it is often somebody's user folder, and a report gets exported.
+    /// </summary>
+    public string? SelectedName => string.IsNullOrEmpty(SelectedPath)
+        ? null
+        : System.IO.Path.GetFileName(SelectedPath.TrimEnd(
+            System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar));
+
+    private ApplicationKind _declaredKind = ApplicationKind.Unstated;
+
+    /// <summary>
+    /// What the reader says this application is, which frames the capability questions.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Per scan, not per reader.</b> The audience is a fact about whoever is holding the tool
+    /// and is asked once and stored; this is a fact about the artifact in front of them, and the
+    /// next one will be something else. Storing it would carry a declaration from one application
+    /// onto another, which is the one way this could quietly account for something nobody said.
+    /// </para>
+    /// <para>
+    /// It accounts for nothing on its own. See <see cref="ApplicationKind"/>.
+    /// </para>
+    /// </remarks>
+    public ApplicationKind DeclaredKind
+    {
+        get => _declaredKind;
+        set
+        {
+            if (Set(ref _declaredKind, value))
+            {
+                Notify(nameof(DeclaredKindLabel));
+
+                // Questions already on screen were phrased against the old answer.
+                RebuildQuestions();
+            }
+        }
+    }
+
+    public string DeclaredKindLabel => DeclaredKind.Humanise();
+
+    private List<ApplicationKindChoice>? _kindChoices;
+
+    /// <summary>
+    /// The kinds a reader can pick, excluding <see cref="ApplicationKind.Unstated"/>.
+    /// </summary>
+    /// <remarks>
+    /// Unstated is not offered because it is not a claim: it is what is true before anybody
+    /// answers, and putting it on the list would invite somebody to pick "not stated" as though
+    /// it meant something different from leaving the question alone.
+    /// </remarks>
+    public IReadOnlyList<ApplicationKindChoice> ApplicationKindChoices =>
+        _kindChoices ??=
+        [
+            .. Enum.GetValues<ApplicationKind>()
+                .Where(k => k != ApplicationKind.Unstated)
+                .Select(k => new ApplicationKindChoice(k, this)),
+        ];
+
+    /// <summary>Reflects a pick onto every row, so the group shows one answer.</summary>
+    internal void ChooseKind(ApplicationKind kind)
+    {
+        DeclaredKind = kind;
+
+        foreach (var choice in ApplicationKindChoices)
+        {
+            choice.Refresh();
+        }
+    }
+
+    /// <summary>Chooses an artifact. Deliberately does not scan it.</summary>
+    /// <remarks>
+    /// Clears the declared kind: it described the previous application, and carrying it across
+    /// would answer a question about this one that nobody was asked.
+    /// </remarks>
+    public void Select(string path)
+    {
+        if (State != AppState.Waiting)
+        {
+            return;
+        }
+
+        Error = null;
+        DeclaredKind = ApplicationKind.Unstated;
+        SelectedPath = path;
+    }
+
+    /// <summary>Puts the drop zone back, for a reader who picked the wrong thing.</summary>
+    public void ClearSelection() => SelectedPath = null;
+
+    /// <summary>Runs the scan the reader has now had a chance to configure.</summary>
+    public Task StartScanAsync() =>
+        SelectedPath is { Length: > 0 } path ? ScanAsync(path) : Task.CompletedTask;
+
     /// <summary>True while the window is minimised, for themes that animate.</summary>
     /// <remarks>
     /// Nothing in the report depends on this. It exists so a theme with a looping background
@@ -965,6 +1094,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                              nameof(CoveragePercent), nameof(CoverageBasis), nameof(CoverageIsLow),
                              nameof(SummaryLine), nameof(VulnerabilitySummary), nameof(Sha256),
                              nameof(DependencyCaveat), nameof(MinificationCaveat),
+                             nameof(InferredSummary), nameof(DeclaredKindAttribution),
                              nameof(DurationLabel), nameof(ScoreCaption),
                              nameof(AwaitingAnswer), nameof(ShowInstallBanner),
                              nameof(AccountedForReasons), nameof(HasAccountedFor),
@@ -1100,6 +1230,28 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// is why it is bound rather than being made an empty string.
     /// </summary>
     public string? DependencyCaveat => Report?.DependencyCaveat;
+
+    /// <summary>
+    /// Shown beside the score when the deep pass found things the score does not count. Null
+    /// hides the panel, for the same reason as the caveat above.
+    /// </summary>
+    /// <remarks>
+    /// The score counts deterministic findings only, so it can read at the top of its range
+    /// while the deep pass has flagged real problems. This is the sentence that stops the
+    /// headline overstating what was checked, and it belongs level with the number rather than
+    /// down among the findings.
+    /// </remarks>
+    public string? InferredSummary => Report?.Verdict.InferredSummary;
+
+    /// <summary>
+    /// What the reader said this application is, shown beside the score. Null hides the panel.
+    /// </summary>
+    /// <remarks>
+    /// Printed back for the same reason the capability affirmations are: it framed every question
+    /// that followed, so a quiet report should show it rather than leaving a reader to wonder
+    /// what the scan was told.
+    /// </remarks>
+    public string? DeclaredKindAttribution => Report?.Purpose?.KindAttribution;
 
     /// <summary>
     /// Shown beside the score when most of the application ships as a bundle. Bound the same
@@ -1340,7 +1492,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             foreach (var capability in Scanner.QuestionsFor(_strict).Except(_answered))
             {
-                Questions.Add(new PurposeQuestion(capability, Answer));
+                Questions.Add(new PurposeQuestion(capability, DeclaredKind, Answer));
             }
         }
 
@@ -1371,9 +1523,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         if (_strict is not null)
         {
+            // The kind travels even when nothing was affirmed, so a report where every answer
+            // was "no" still records what the application was said to be. Without it a strict
+            // result looks the same whether the reader declared a kind or never answered.
             Report = Scanner.Reconsider(
                 _strict,
-                _accounted.Count == 0 ? null : DeclaredPurpose.FromReader([.. _accounted]));
+                _accounted.Count == 0 && DeclaredKind is ApplicationKind.Unstated
+                    ? null
+                    : DeclaredPurpose.FromReader(DeclaredKind, _accounted));
         }
 
         RebuildQuestions();
@@ -1551,44 +1708,77 @@ public sealed class MainViewModel : INotifyPropertyChanged
 /// </remarks>
 public sealed class PurposeQuestion
 {
-    public PurposeQuestion(Capability capability, Action<Capability, bool> answer)
+    public PurposeQuestion(
+        Capability capability, ApplicationKind kind, Action<Capability, bool> answer)
     {
         ArgumentNullException.ThrowIfNull(answer);
 
         Capability = capability;
+        Kind = kind;
         HasReasonCommand = new RelayCommand(_ => answer(capability, true));
         NoReasonCommand = new RelayCommand(_ => answer(capability, false));
     }
 
     public Capability Capability { get; }
 
-    /// <summary>What was observed, in the reader's terms rather than the rule's.</summary>
-    public string Statement
-    {
-        get
-        {
-            var phrase = Capability.Humanise();
+    /// <summary>What the reader said the application is, which frames the question.</summary>
+    public ApplicationKind Kind { get; }
 
-            return $"This application can {char.ToLowerInvariant(phrase[0])}{phrase[1..]}.";
-        }
-    }
+    /// <summary>What was observed, in the reader's terms rather than the rule's.</summary>
+    public string Statement => Capability.Statement();
 
     /// <summary>
-    /// Who legitimately does this, so the answer is an informed one rather than a guess.
+    /// Whether this is surprising for what they said the application is, so the answer is an
+    /// informed one rather than a guess.
     /// </summary>
     /// <remarks>
     /// The second sentence matters as much as the first. Without it a reader has no basis to
-    /// answer and will tend to say yes, which would make the question a formality.
+    /// answer and will tend to say yes, which would make the question a formality. Phrased in
+    /// Core so the window and the exported report cannot ask the same question differently.
     /// </remarks>
-    public string Context =>
-        $"Expected of {Capability.ExpectedOf()}. Unusual in anything else, and this alone "
-        + "would otherwise advise against installing it.";
+    public string Context => Kind.Context(Capability);
 
-    public string Prompt => "Does it have a reason to?";
+    public string Prompt => ApplicationKinds.Asked;
 
     public ICommand HasReasonCommand { get; }
 
     public ICommand NoReasonCommand { get; }
+}
+
+/// <summary>
+/// One kind of application, as a row the reader can pick.
+/// </summary>
+/// <remarks>
+/// A wrapper rather than binding the enum directly, because a <c>RadioButton</c> needs a
+/// two-way boolean per row and the alternative is a converter taking the enum value as a
+/// parameter, which cannot itself be bound.
+/// </remarks>
+public sealed class ApplicationKindChoice(ApplicationKind kind, MainViewModel owner)
+    : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public ApplicationKind Kind { get; } = kind;
+
+    public string Label { get; } = kind.Humanise();
+
+    public bool IsSelected
+    {
+        get => owner.DeclaredKind == Kind;
+        set
+        {
+            // Only ever acts on being turned on. WPF clears the previous row in the group by
+            // setting it false, and treating that as "the reader deselected a kind" would put
+            // the declaration back to Unstated on every change.
+            if (value && owner.DeclaredKind != Kind)
+            {
+                owner.ChooseKind(Kind);
+            }
+        }
+    }
+
+    internal void Refresh() =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected)));
 }
 
 public sealed class FindingCard(Finding finding, Audience audience) : INotifyPropertyChanged
@@ -1645,7 +1835,11 @@ public sealed class FindingCard(Finding finding, Audience audience) : INotifyPro
 
     public string? Evidence => Finding.Evidence;
 
-    public string? Remediation => Finding.RemediationFor(audience);
+    /// <summary>
+    /// What to do about this finding. Guidance rather than remediation, so a capability somebody
+    /// has accounted for is told how to be held safely instead of being told not to be run.
+    /// </summary>
+    public string? Remediation => Finding.GuidanceFor(audience);
 
     /// <summary>"How to fix" is wrong for somebody who cannot fix it.</summary>
     public string RemediationLabel =>

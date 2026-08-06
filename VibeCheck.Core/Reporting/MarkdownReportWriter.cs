@@ -88,7 +88,7 @@ public static class MarkdownReportWriter
                 output.AppendLine();
             }
 
-            if (capability.RemediationFor(report.Audience) is { Length: > 0 } advice)
+            if (capability.GuidanceFor(report.Audience) is { Length: > 0 } advice)
             {
                 output.AppendLine($"**Worth checking:** {advice}");
                 output.AppendLine();
@@ -240,6 +240,27 @@ public static class MarkdownReportWriter
 
         output.AppendLine(report.SummaryLine);
         output.AppendLine();
+
+        // What the reader said this application is, printed back beside the number rather than
+        // left implicit. The kind accounts for nothing on its own, but it decided how every
+        // capability question was phrased, and a screenshot of a quiet report should show the
+        // declaration that framed the answers as well as the answers themselves.
+        if (report.Purpose?.KindAttribution is { Length: > 0 } declared)
+        {
+            output.AppendLine($"> **What this was said to be.** {declared} That changes how "
+                              + "anything unusual is explained, and excuses nothing on its own.");
+            output.AppendLine();
+        }
+
+        // First of the three, because this one names findings that exist while the other two
+        // name checks that did not run. The score is deterministic so that two readers can
+        // compare it, and the price of that is a number which knows nothing about what the deep
+        // pass found. This is where that is said.
+        if (report.Verdict.InferredSummary is { Length: > 0 } inferred)
+        {
+            output.AppendLine($"> **The AI had suggestions the checks did not.** {inferred}");
+            output.AppendLine();
+        }
 
         // Beside the number, for the same reason the window puts it there: a class of check
         // that could not run is not visible in a score, and stating it four sections later is
