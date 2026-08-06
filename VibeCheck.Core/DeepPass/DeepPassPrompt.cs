@@ -147,15 +147,21 @@ public static class DeepPassPrompt
         Separately from findings, fill "explains". Some code does something that looks alarming
         out of context and the author has already written down why, in a comment or a docstring
         beside it. When this file both does one of the named things and says why, record the
-        capability and quote or closely paraphrase the author's own reason.
+        capability and the author's own words.
 
+        - The reason must be copied from the file, word for word. Do not paraphrase it, do not
+          summarise it and do not write your own sentence. It is checked against the file, and
+          anything that is not in there is discarded.
+        - It must be the author explaining their own code, not you describing it. "Clears stale
+          sessions left behind by the browser" is a reason. "This reads browser cookies" is a
+          description, and "this could be used to steal credentials" is a finding. Neither of the
+          last two belongs here.
         - This is not a finding and not an endorsement. It is repeated back to the person running
           the scan so they can confirm or reject it, because a comment ships inside the
           application and cannot vouch for it.
-        - Only from what the file actually says. If there is no comment explaining it, leave it
-          out; do not infer a reason from the code, which is the thing being checked.
         - An empty array is the normal answer, and is expected for decompiled code, where the
-          comments no longer exist.
+          comments no longer exist. Leave it empty rather than filling it with something you
+          worked out yourself.
 
         Rules for what you report:
         - Only report what the code you were shown demonstrates. If reachability depends on a
@@ -247,7 +253,7 @@ public static class DeepPassPrompt
                 }
             }
 
-            ReadExplanations(document.RootElement, explains);
+            ReadExplanations(document.RootElement, triaged.File.Content, explains);
         }
         catch (JsonException)
         {
@@ -265,22 +271,42 @@ public static class DeepPassPrompt
     }
 
     /// <summary>
-    /// Reads the author's own stated reasons, if the file carried any.
+    /// Reads the author's own stated reasons, keeping only the ones the file actually contains.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Bounded and scrubbed like every other string that comes back from a model which has just
     /// read a file this scanner assumes is hostile. Only the seven named capabilities are
-    /// accepted; anything else the model invents is dropped rather than shown, because this text
-    /// is put in front of a reader as something their application said about itself.
+    /// accepted, because this text is put in front of a reader as something their own
+    /// application said about itself.
+    /// </para>
+    /// <para>
+    /// <b>And the quote must be in the file, checked here rather than asked for and trusted.</b>
+    /// The first real run of this feature, qwen2.5-coder:7b over FleetFinder's source, returned
+    /// three explanations and <i>none of them appeared anywhere in the source</i>. They were the
+    /// model's own accusations wearing the author's voice: one claimed a reason for reading
+    /// browser cookies in an application whose source does not contain the word "cookie". Shown
+    /// as "The code says why", that is the scanner inventing a note and attributing it to the
+    /// person being scanned, which is worse than not having the feature.
+    /// </para>
+    /// <para>
+    /// So a paraphrase is no longer good enough and the prompt no longer asks for one. Anything
+    /// that cannot be found in the file it was supposedly read from is dropped. Whitespace is
+    /// normalised before comparing, because a quote spanning a wrapped comment arrives with the
+    /// line breaks and leading slashes flattened out of it, and that is a formatting difference
+    /// rather than a different sentence.
+    /// </para>
     /// </remarks>
     private static void ReadExplanations(
-        JsonElement root, Dictionary<Capability, string> into)
+        JsonElement root, string content, Dictionary<Capability, string> into)
     {
         if (!root.TryGetProperty("explains", out var array)
             || array.ValueKind != JsonValueKind.Array)
         {
             return;
         }
+
+        var haystack = Normalise(content);
 
         foreach (var element in array.EnumerateArray())
         {
@@ -294,13 +320,56 @@ public static class DeepPassPrompt
                 element.TryGetProperty("reason", out var text) ? text.GetString() : null,
                 Redaction.MaxProse);
 
+            if (string.IsNullOrWhiteSpace(reason) || !Quoted(haystack, reason))
+            {
+                continue;
+            }
+
             // First answer wins. A model repeating itself across files should not have the
             // second mention quietly replace the first.
-            if (!string.IsNullOrWhiteSpace(reason))
-            {
-                into.TryAdd(capability, reason);
-            }
+            into.TryAdd(capability, reason);
         }
+    }
+
+    /// <summary>
+    /// Whether the model's quote really is in the file it read.
+    /// </summary>
+    /// <remarks>
+    /// A floor on length as well, because a three-word fragment appears in almost any file by
+    /// accident and would let a fabricated reason through on a coincidence.
+    /// </remarks>
+    private static bool Quoted(string normalisedContent, string reason)
+    {
+        var needle = Normalise(reason).Trim(' ', '.', ',', '"', '\'');
+
+        return needle.Length >= 20
+               && normalisedContent.Contains(needle, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Collapses whitespace and comment punctuation so a wrapped quote still matches.</summary>
+    private static string Normalise(string text)
+    {
+        var builder = new StringBuilder(text.Length);
+        var space = false;
+
+        foreach (var c in text)
+        {
+            if (char.IsWhiteSpace(c) || c is '/' or '*' or '#')
+            {
+                space = true;
+                continue;
+            }
+
+            if (space && builder.Length > 0)
+            {
+                builder.Append(' ');
+            }
+
+            space = false;
+            builder.Append(c);
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
