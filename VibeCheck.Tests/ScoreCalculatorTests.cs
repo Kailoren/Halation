@@ -279,9 +279,10 @@ public class ScoreCalculatorTests
         Assert.Equal(100, verdict.Score);
         Assert.Equal(ScoreBand.NoKnownIssues, verdict.Band);
 
-        // But the words beside it must not say so.
+        // But the words beside it must not say so. Counted, so the label agrees with itself:
+        // one finding used to be announced as "1 AI suggestions to review".
         Assert.NotEqual("No known issues found", verdict.BandLabel);
-        Assert.Contains("AI suggestions", verdict.BandLabel, StringComparison.Ordinal);
+        Assert.Contains("1 AI suggestion to review", verdict.BandLabel, StringComparison.Ordinal);
 
         // The reader's own setup is never ranked inside their own report. Which model answered
         // is on the receipt; a sentence beside the score saying results vary by model reads as

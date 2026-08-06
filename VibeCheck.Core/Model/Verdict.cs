@@ -207,10 +207,11 @@ public sealed record Verdict
         ? null
         : $"The AI also raised {InferredCount} "
           + $"{(InferredCount == 1 ? "point" : "points")} worth a look, the most serious rated "
-          + $"{WorstInferred}. {(InferredCount == 1 ? "It is" : "They are")} listed below as "
-          + "suggestions rather than counted problems, and each one quotes the code behind it so "
-          + "you can judge it for yourself. The score comes from the checks alone, so it means "
-          + "the same thing in every report.";
+          + $"{WorstInferred.ToString().ToLowerInvariant()}. "
+          + $"{(InferredCount == 1 ? "It is" : "They are")} listed below as suggestions rather "
+          + "than counted problems, and each one quotes the code it is based on so you can judge "
+          + "it yourself. The score comes from the checks alone, so it means the same thing in "
+          + "every report.";
 
     /// <summary>
     /// Which report this verdict was rendered for.
@@ -296,7 +297,8 @@ public sealed record Verdict
         ScoreBand.SeriousIssues => "Serious issues",
         ScoreBand.NeedsWork => "Needs work",
         ScoreBand.NoKnownIssues => InferredCount > 0
-            ? $"Nothing from the checks · {InferredCount} AI suggestions to review"
+            ? $"Nothing from the checks · {InferredCount} AI "
+              + $"{(InferredCount == 1 ? "suggestion" : "suggestions")} to review"
             : Advice == InstallAdvice.ConsistentWithStatedPurpose
                 ? "Nothing beyond what you accounted for"
                 : "No known issues found",
