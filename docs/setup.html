@@ -236,7 +236,7 @@
       <h2>Route 3 · Any OpenAI-compatible endpoint</h2>
       <p>
         Anything that speaks the OpenAI chat-completions shape can answer the deep pass, which
-        covers every hosted provider worth naming plus Ollama and LM Studio on your own machine.
+        covers every hosted provider worth naming plus <a href="https://ollama.com">Ollama</a> and <a href="https://lmstudio.ai">LM Studio</a> on your own machine.
         Press <strong>Configure</strong> on the drop screen.
       </p>
       <figure>
@@ -404,7 +404,15 @@
     <section id="lm-studio">
       <h2>Setting up LM Studio</h2>
       <ol>
-        <li>Install <a href="https://lmstudio.ai">LM Studio</a> and download a model through its own interface.</li>
+        <li>Install <a href="https://lmstudio.ai">LM Studio</a>.</li>
+        <li>
+          <strong>Open it once.</strong> This step is not optional and is easy to skip on a
+          headless setup: LM Studio creates its working folder on first launch, and until it has,
+          its own command line tool refuses to do anything at all, reporting
+          <em>"no valid installation could be found"</em> even though the application is plainly
+          installed.
+        </li>
+        <li>Download a model through its interface. For an 8 GB card, a 7B coder model.</li>
         <li>Open the <strong>Developer</strong> tab and start the local server. It listens on <code>localhost:1234</code>.</li>
         <li>Copy the model id exactly as LM Studio lists it. It is usually longer than an Ollama tag and is not interchangeable with one.</li>
         <li>In the endpoint window, press the <strong>LM Studio</strong> preset, paste the model id, leave the key empty, and save.</li>
@@ -427,8 +435,8 @@
             <tr><th scope="col">Preset</th><th scope="col">Key</th><th scope="col">Notes</th></tr>
           </thead>
           <tbody>
-            <tr><td>Ollama</td><td>Not needed</td><td>On this machine. Nothing uploaded, nothing charged.</td></tr>
-            <tr><td>LM Studio</td><td>Not needed</td><td>On this machine. Start its local server first.</td></tr>
+            <tr><td><a href="https://ollama.com">Ollama</a></td><td>Not needed</td><td>On this machine. Nothing uploaded, nothing charged.</td></tr>
+            <tr><td><a href="https://lmstudio.ai">LM Studio</a></td><td>Not needed</td><td>On this machine. Start its local server first.</td></tr>
             <tr><td>OpenAI</td><td>Required</td><td>Keys and current model ids at platform.openai.com.</td></tr>
             <tr><td>OpenRouter</td><td>Required</td><td>Many models behind one key. Ids look like <code>vendor/model</code>.</td></tr>
             <tr><td>Google Gemini</td><td>Required</td><td>Google's own OpenAI-compatible endpoint, not the Gemini API shape.</td></tr>
