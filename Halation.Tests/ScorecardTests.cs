@@ -29,10 +29,12 @@ public sealed class ScorecardTests
         IReadOnlyList<Finding> findings,
         int coverage = 100,
         string sha = "abc123",
-        string version = "0.1.4-beta")
+        string version = "0.1.4-beta",
+        bool hashCoversContent = true)
     {
         return new ScanReport
         {
+            HashCoversContent = hashCoversContent,
             ArtifactName = "fixture.exe",
             Kind = ArtifactKind.SourceTree,
             ArtifactBytes = 10,
@@ -118,16 +120,53 @@ public sealed class ScorecardTests
 
     /// <summary>
     /// A card cannot say how to check it against a hash it does not have, and must not imply it
-    /// can. A source tree has no single file to point at.
+    /// can. A folder has no single file to point at.
     /// </summary>
     [Fact]
     public void SaysHowToCheckItDifferentlyWithoutAHash()
     {
         var withHash = Scorecard.From(Report([], sha: "abc"));
-        var without = Scorecard.From(Report([], sha: ""));
+        var without = Scorecard.From(Report([], sha: "", hashCoversContent: false));
 
         Assert.Contains("hash", withHash.VerificationLine, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("hash", without.VerificationLine, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// The directory hash is a digest of relative paths and file sizes, not of the code. Two
+    /// folders with the same shape and completely different contents share it, so putting it on
+    /// a card beside "check this by rescanning" offers a verification it cannot perform.
+    /// </summary>
+    [Fact]
+    public void WithholdsAHashThatCannotSpeakForTheContents()
+    {
+        var card = Scorecard.From(Report([], sha: "manifestdigest", hashCoversContent: false));
+
+        Assert.Equal(string.Empty, card.Sha256);
+        Assert.DoesNotContain("manifestdigest", card.VerificationLine, StringComparison.Ordinal);
+        Assert.NotNull(card.HashCaveat);
+    }
+
+    [Fact]
+    public void KeepsAHashThatDoesSpeakForTheContents()
+    {
+        var card = Scorecard.From(Report([], sha: "realfilehash", hashCoversContent: true));
+
+        Assert.Equal("realfilehash", card.Sha256);
+        Assert.Null(card.HashCaveat);
+    }
+
+    /// <summary>
+    /// A badge claiming to be checkable without saying how is asking to be believed, which is
+    /// the opposite of the point of having one.
+    /// </summary>
+    [Fact]
+    public void SaysWhatCheckingItActuallyInvolves()
+    {
+        var card = Scorecard.From(Report([], sha: "abc", version: "1.2.3"));
+
+        Assert.Contains("scan", card.VerificationLine, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("1.2.3", card.VerificationLine, StringComparison.Ordinal);
     }
 
     /// <summary>

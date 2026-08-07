@@ -161,6 +161,11 @@ public sealed class Scanner
             Kind = artifact.Kind,
             ArtifactBytes = artifact.Bytes,
             Sha256 = sha256,
+
+            // A directory has no single stream to hash, so its value is a digest of names and
+            // sizes and cannot speak for the contents. Only a file's hash can.
+            HashCoversContent = !artifact.IsDirectory,
+
             ScannedAt = DateTimeOffset.Now,
 
             // Coverage gates the verdict: without it, an artifact that yielded no readable

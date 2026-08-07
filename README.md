@@ -261,10 +261,24 @@ save a file, and what happens to it next is yours.
 
 **The scorecard** is a 1200x630 image carrying the score, the band it falls in, how much of the
 application could be read, what was found by severity, and the SHA-256 of the file that was
-scanned. That last one is the point: an image proves nothing by itself, and the hash is what lets
-anybody rescan the same file and check they get the same answer. It also names the version that
-produced it, because the rules change between releases and a score is only reproducible against
-the build that made it.
+scanned. It also names the version that produced it, because rules are added between releases and
+a score is only reproducible against the build that made it.
+
+**Checking somebody else's card** is three steps, because an image is not evidence and nothing
+about a PNG is signed:
+
+1. Get the file the card names.
+2. Hash it and confirm it matches: `Get-FileHash TheirApp.exe -Algorithm SHA256`. Anything other
+   than an exact match means you are not holding the file that was scanned.
+3. Scan that file with the version named on the card, and compare.
+
+Scanning a **folder** produces no usable hash: there is no single stream of bytes to digest, and
+two different folders can share a digest of names and sizes. Rather than print a number that looks
+like verification and is not, a card from a folder scan carries no hash and says so on its face.
+Scan the built file if you want a card somebody else can check.
+
+The hash is safe to publish. It is one-way, and a file has far too much entropy to work backwards
+from. It is the same thing projects publish beside a download.
 
 **Why the sharing export exists.** Every finding in an ordinary report quotes the line of code it was found
 in and names the file and line. That is the most valuable thing in it, because it is what lets you

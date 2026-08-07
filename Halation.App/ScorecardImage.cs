@@ -126,15 +126,19 @@ public static class ScorecardImage
         // ---- how to check it -----------------------------------------------
         d.DrawRectangle(edge, null, new Rect(64, 470, Width - 128, 1));
 
-        Write(d, card.VerificationLine, ui, 16, FontWeights.Normal, muted, 64, 492);
+        Write(d, card.VerificationLine, ui, 16, FontWeights.Normal, text, 64, 490);
 
         if (!string.IsNullOrEmpty(card.Sha256))
         {
-            Write(d, $"SHA-256  {card.Sha256}", mono, 14, FontWeights.Normal, muted, 64, 522);
+            Write(d, $"SHA-256  {card.Sha256}", mono, 14, FontWeights.Normal, muted, 64, 520);
+        }
+        else if (card.HashCaveat is { } caveat)
+        {
+            Write(d, caveat, ui, 15, FontWeights.Normal, muted, 64, 520);
         }
 
         Write(d, card.ScannedAt.ToString("d MMMM yyyy", CultureInfo.InvariantCulture),
-            ui, 16, FontWeights.Normal, muted, 64, 556);
+            ui, 16, FontWeights.Normal, muted, 64, 552);
 
         // Said out loud, because a badge that does not say this invites being read as one.
         Write(d, "Halation cannot say an application is safe, and does not claim to.",

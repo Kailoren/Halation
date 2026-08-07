@@ -48,7 +48,16 @@ public sealed record Scorecard
     /// <summary>Findings that count for nothing, listed so the totals add up.</summary>
     public required int Info { get; init; }
 
-    /// <summary>The hash of the file that was scanned. Empty for a source tree.</summary>
+    /// <summary>
+    /// The hash of the file that was scanned, and empty whenever it would not mean that.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately blank for a directory. The scanner still produces a value there, but it is a
+    /// digest of relative paths and file sizes rather than of the code, so two folders with the
+    /// same shape and entirely different contents share it. Printing that beside "check this by
+    /// rescanning" would offer a verification the number cannot perform, which is worse than
+    /// offering none.
+    /// </remarks>
     public required string Sha256 { get; init; }
 
     public required DateTimeOffset ScannedAt { get; init; }
@@ -69,11 +78,25 @@ public sealed record Scorecard
     public string CountsDisplay => $"{Critical}/{High}/{Medium}/{Low}";
 
     /// <summary>
-    /// How somebody else checks this rather than taking it on trust.
+    /// How somebody else checks this rather than taking it on trust, in the steps they take.
     /// </summary>
+    /// <remarks>
+    /// Named steps rather than "verifiable", because a badge asserting it can be checked without
+    /// saying how is asking to be believed, which is the opposite of the point. The version is
+    /// in it because the rules change between releases: the same file scanned by a later build
+    /// can legitimately score differently, and somebody comparing against the wrong one would
+    /// conclude the card was false.
+    /// </remarks>
     public string VerificationLine => string.IsNullOrEmpty(Sha256)
-        ? $"Scanned with Halation {ScannerVersion}. Rescan the same source to check this."
-        : $"Scanned with Halation {ScannerVersion}. Rescan the file with this hash to check this.";
+        ? $"To check this: scan the same source with Halation {ScannerVersion}."
+        : $"To check this: hash the file, confirm it matches below, then scan it with Halation {ScannerVersion}.";
+
+    /// <summary>
+    /// Said out loud when the hash cannot identify what was scanned, rather than left implied.
+    /// </summary>
+    public string? HashCaveat => string.IsNullOrEmpty(Sha256)
+        ? "A folder has no single hash, so this card cannot name the exact code it read."
+        : null;
 
     /// <summary>Takes the card's facts off a finished report.</summary>
     public static Scorecard From(ScanReport report)
@@ -102,7 +125,10 @@ public sealed record Scorecard
             Low = Count(Severity.Low),
             Info = Count(Severity.Info),
 
-            Sha256 = report.Sha256,
+            // Only when it is a hash of the bytes. A directory's value describes the shape of a
+            // folder rather than its code, and cannot support the claim the card makes with it.
+            Sha256 = report.HashCoversContent ? report.Sha256 : "",
+
             ScannedAt = report.ScannedAt,
             ScannerVersion = report.ScannerVersion,
         };

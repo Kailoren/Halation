@@ -19,6 +19,27 @@ public sealed record ScanReport
     /// <summary>SHA-256 of the artifact, so a result can be tied to an exact file.</summary>
     public required string Sha256 { get; init; }
 
+    /// <summary>
+    /// Whether <see cref="Sha256"/> is a digest of the bytes that were scanned, rather than of
+    /// a description of them.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// True for a single file, where the hash is of the file itself and two artifacts sharing it
+    /// are the same artifact. <b>False for a directory</b>, where there is no single stream to
+    /// hash and the value is instead a digest of a manifest of relative paths and file sizes.
+    /// That is enough to notice a folder has changed shape; it is not enough to say the contents
+    /// are the same, because two directories with matching names and sizes and completely
+    /// different code inside them produce the same value.
+    /// </para>
+    /// <para>
+    /// It exists because anything offering the hash as something a reader can <i>check a result
+    /// against</i> has to know which of those two it is holding. Defaults to false, so a report
+    /// that never says makes the weaker claim rather than the stronger one.
+    /// </para>
+    /// </remarks>
+    public bool HashCoversContent { get; init; }
+
     public required DateTimeOffset ScannedAt { get; init; }
 
     public required Verdict Verdict { get; init; }

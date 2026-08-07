@@ -484,6 +484,46 @@
         read as the second.
       </p>
 
+      <h3>Checking somebody else's scorecard</h3>
+      <p>
+        An image is not evidence. Anyone can draw one, and nothing about a PNG is signed. The
+        hash is what makes the claim checkable, and checking it is three steps:
+      </p>
+      <ol>
+        <li>Get the file the card names, from wherever its author publishes it.</li>
+        <li>
+          Hash it yourself and confirm it matches the SHA-256 on the card. In PowerShell:
+          <pre><code>Get-FileHash TheirApp.exe -Algorithm SHA256</code></pre>
+          Anything other than an exact match means you are not holding the file that was scanned,
+          and the rest of the card says nothing about what you have.
+        </li>
+        <li>
+          Scan that file with the version of Halation named on the card, and compare. The version
+          matters: rules are added between releases, so a later build can legitimately score the
+          same file differently.
+        </li>
+      </ol>
+      <div class="callout">
+        <span class="callout__title">A card without a hash is a weaker claim, and says so</span>
+        <p>
+          Scanning a folder produces no usable hash. There is no single stream of bytes to digest,
+          and the value the scanner keeps internally is a digest of file names and sizes, which
+          two completely different folders can share. Rather than print a number that looks like
+          verification and is not, a scorecard from a folder scan carries no hash at all and says
+          on its face that it cannot name the exact code it read.
+        </p>
+        <p>
+          If you want a card somebody else can check, <strong>scan the built file</strong> rather
+          than the source directory.
+        </p>
+      </div>
+      <p>
+        The hash itself is safe to publish. It is one-way, and a file has far too much entropy to
+        work backwards from; it is the same thing projects publish beside a download so people can
+        confirm what they fetched. The only thing it reveals is to somebody who already holds the
+        file, who can confirm it is the one that was scanned, which is the entire purpose.
+      </p>
+
       <h3>Why the sharing export exists</h3>
       <p>
         Every finding in an ordinary report <strong>quotes the line of code it was found in</strong>
