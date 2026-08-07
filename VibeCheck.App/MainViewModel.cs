@@ -1288,6 +1288,48 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public ICommand ExportJsonCommand { get; }
 
+    /// <summary>
+    /// What to record about this machine, for a reader who later wants to report the result.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Gathered only when a model on this machine is going to answer.</b> On the Claude routes
+    /// the reader's graphics card has nothing to do with the outcome, so collecting it would be
+    /// gathering facts for their own sake, in an application whose argument is that it does not
+    /// do that.
+    /// </para>
+    /// <para>
+    /// It is written into the exported report and nowhere else. Local models are the one part of
+    /// this application measured on a single configuration, so a report about a poor result is
+    /// close to useless without the card it ran on, and asking a reader to type all this out by
+    /// hand is asking them not to bother.
+    /// </para>
+    /// </remarks>
+    private ScanEnvironment? DescribeThisMachine(DeepPassEndpointSettings? endpoint)
+    {
+        if (endpoint is null || !endpoint.Endpoint.IsLoopback)
+        {
+            return null;
+        }
+
+        var adapter = GraphicsMemory.Detect();
+
+        return ScanEnvironment.Describe() with
+        {
+            SystemMemoryBytes = GraphicsMemory.SystemBytes(),
+            GraphicsAdapter = adapter?.Name,
+            GraphicsMemoryBytes = adapter?.VideoBytes ?? 0,
+            DeepPassRoute = "Endpoint",
+            DeepPassModel = endpoint.Model,
+
+            // Named from what was detected on this machine rather than from the address, because
+            // "Ollama" tells a reader of the report which default context length was in play and
+            // "127.0.0.1" tells them nothing.
+            DeepPassRuntime = LocalRuntimeProbe.NameFor(endpoint.Endpoint),
+            DeepPassRanLocally = true,
+        };
+    }
+
     /// <summary>Runs a scan. Called from the drop handler and the browse button.</summary>
     public async Task ScanAsync(string path)
     {
@@ -1323,6 +1365,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
             // The model belongs to the endpoint and only to the endpoint. Left set for another
             // source it would override the Claude model that route was built around.
             DeepPassModel = endpoint?.Model,
+
+            Environment = DescribeThisMachine(endpoint),
         };
 
         try

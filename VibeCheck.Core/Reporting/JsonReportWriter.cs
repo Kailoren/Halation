@@ -34,6 +34,25 @@ public static class JsonReportWriter
             scannedAt = report.ScannedAt,
             durationSeconds = Math.Round(report.Duration.TotalSeconds, 2),
 
+            // Present only when the application filled it in, and only ever written to this
+            // file. It is what makes a local model report worth reading: the same model answers
+            // very differently on a card it fits in than on one it does not.
+            environment = report.Environment is null
+                ? null
+                : new
+                {
+                    os = report.Environment.OperatingSystem,
+                    architecture = report.Environment.Architecture,
+                    processors = report.Environment.ProcessorCount,
+                    systemMemoryBytes = Positive(report.Environment.SystemMemoryBytes),
+                    graphicsAdapter = report.Environment.GraphicsAdapter,
+                    graphicsMemoryBytes = Positive(report.Environment.GraphicsMemoryBytes),
+                    deepPassRoute = report.Environment.DeepPassRoute,
+                    deepPassModel = report.Environment.DeepPassModel,
+                    deepPassRuntime = report.Environment.DeepPassRuntime,
+                    deepPassRanLocally = report.Environment.DeepPassRanLocally,
+                },
+
             artifact = new
             {
                 name = report.ArtifactName,
@@ -141,4 +160,14 @@ public static class JsonReportWriter
             }),
         }, Format);
     }
+
+    /// <summary>
+    /// A figure, or null where zero means "could not be read" rather than "none".
+    /// </summary>
+    /// <remarks>
+    /// Emitting 0 would say a machine has no memory, which is never true and would look like a
+    /// measurement rather than a gap. Null is dropped from the output by the serializer, so the
+    /// key is simply absent and nobody has to know which zeros were real.
+    /// </remarks>
+    private static long? Positive(long value) => value > 0 ? value : null;
 }

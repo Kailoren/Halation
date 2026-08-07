@@ -162,7 +162,67 @@ public static class MarkdownReportWriter
         output.AppendLine();
         output.AppendLine($"All of it in {report.Duration.TotalSeconds:F1}s.");
         output.AppendLine();
+
+        WriteEnvironment(output, report);
     }
+
+    /// <summary>
+    /// The machine, written out so a report about a disappointing deep pass is worth reading.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Only when a model that is not Anthropic's answered. The Claude routes run on hardware the
+    /// reader does not own and their graphics card has nothing to do with the result, so printing
+    /// it there would be collecting facts for the sake of it.
+    /// </para>
+    /// <para>
+    /// This is in the exported file and nowhere else. It is not sent, and the section says so,
+    /// because somebody about to paste this into a public discussion should be told what is in it
+    /// rather than find out afterwards.
+    /// </para>
+    /// </remarks>
+    private static void WriteEnvironment(StringBuilder output, ScanReport report)
+    {
+        if (report.Environment is not { } machine || machine.DeepPassRanLocally is not true)
+        {
+            return;
+        }
+
+        output.AppendLine("## This machine");
+        output.AppendLine();
+        output.AppendLine("Included because a model on your own hardware answered this scan, and "
+                          + "how well that goes depends on the hardware. Nothing here was sent "
+                          + "anywhere; it is in this file so you can share it if you choose to.");
+        output.AppendLine();
+
+        void Row(string label, string? value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                output.AppendLine($"- **{label}:** {value}");
+            }
+        }
+
+        Row("Graphics", machine.GraphicsAdapter ?? "none detected");
+        Row("Video memory", Memory(machine.GraphicsMemoryBytes));
+        Row("System memory", Memory(machine.SystemMemoryBytes));
+        Row("Processors", machine.ProcessorCount > 0 ? machine.ProcessorCount.ToString() : null);
+        Row("Operating system", machine.OperatingSystem);
+        Row("Architecture", machine.Architecture);
+        Row("Model", machine.DeepPassModel);
+        Row("Runtime", machine.DeepPassRuntime);
+
+        output.AppendLine();
+        output.AppendLine("Local models are the least-tested part of VibeCheck, measured so far on "
+                          + "one configuration only. If this result was poor, or surprisingly "
+                          + "good, posting this report is the most useful thing you can do with "
+                          + "it: <https://github.com/kailoren/vibecheck/discussions>");
+        output.AppendLine();
+    }
+
+    /// <summary>A memory figure in gigabytes, or null when it could not be read.</summary>
+    private static string? Memory(long bytes) =>
+        bytes > 0 ? $"{bytes / (double)(1024 * 1024 * 1024):0.#} GB" : null;
 
     private static void WriteHeader(StringBuilder output, ScanReport report)
     {

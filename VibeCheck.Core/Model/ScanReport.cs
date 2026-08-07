@@ -121,6 +121,15 @@ public sealed record ScanReport
     /// <summary>Version of the scanner that produced this report.</summary>
     public required string ScannerVersion { get; init; }
 
+    /// <summary>
+    /// The machine this ran on and what answered the deep pass, for a reader filing a report.
+    /// </summary>
+    /// <remarks>
+    /// Null when the caller did not supply it, which is every caller except the application
+    /// itself. Nothing here leaves the machine; see <see cref="ScanEnvironment"/>.
+    /// </remarks>
+    public ScanEnvironment? Environment { get; init; }
+
     /// <summary>How long the scan took, for the UI and for spotting pathological inputs.</summary>
     public TimeSpan Duration { get; init; }
 

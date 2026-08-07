@@ -208,6 +208,7 @@ public sealed class Scanner
             DeepPassBackend = deepPass.Backend,
             SourceExplanations = deepPass.Explains,
             ScannerVersion = Version,
+            Environment = options.Environment,
             Duration = stopwatch.Elapsed,
         };
 

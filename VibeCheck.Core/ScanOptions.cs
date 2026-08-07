@@ -80,6 +80,16 @@ public sealed record ScanOptions
     /// Who the report is being written for. Findings carry a severity per audience, so this
     /// selects which question the score answers rather than only how it is worded.
     /// </summary>
+    /// <summary>
+    /// The machine to record in the report, when the caller can describe more of it than Core can.
+    /// </summary>
+    /// <remarks>
+    /// The graphics adapter and the installed memory are read through Windows APIs that a
+    /// platform-neutral assembly cannot reach, so the application fills those in and passes the
+    /// result down. Left null, the report simply carries no environment.
+    /// </remarks>
+    public ScanEnvironment? Environment { get; init; }
+
     public Audience Audience { get; init; } = Audience.Developer;
 
     /// <summary>

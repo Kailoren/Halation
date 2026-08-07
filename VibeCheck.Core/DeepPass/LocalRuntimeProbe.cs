@@ -62,6 +62,21 @@ public static class LocalRuntimeProbe
     ];
 
     /// <summary>
+    /// Which runtime a local address belongs to, by port, or null if it is not one we know.
+    /// </summary>
+    /// <remarks>
+    /// By port rather than by asking the server, because this is called while writing a report
+    /// rather than while configuring one, and a runtime that has since been closed should still
+    /// be named in the record of a scan it answered. Naming it matters more than it sounds: the
+    /// two ship different default context lengths, which is the first thing to suspect when a
+    /// local result is disappointing.
+    /// </remarks>
+    public static string? NameFor(Uri? endpoint) =>
+        endpoint is null
+            ? null
+            : Candidates.FirstOrDefault(c => c.Port == endpoint.Port)?.Name;
+
+    /// <summary>
     /// Short on purpose. This runs while somebody is looking at a dialog, and a machine with
     /// nothing listening refuses the connection immediately, so the only thing this timeout
     /// governs is how long a wedged server can hold up the interface.
