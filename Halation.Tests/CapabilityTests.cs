@@ -17,7 +17,7 @@ namespace Halation.Tests;
 public class CapabilityTests : IDisposable
 {
     private readonly string _scratch = Path.Combine(
-        Path.GetTempPath(), $"vibecheck-capability-{Guid.NewGuid():N}");
+        Path.GetTempPath(), $"halation-capability-{Guid.NewGuid():N}");
 
     public CapabilityTests() => Directory.CreateDirectory(_scratch);
 

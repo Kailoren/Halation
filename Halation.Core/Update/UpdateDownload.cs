@@ -55,7 +55,7 @@ public static class UpdateDownload
             Timeout = TimeSpan.FromMinutes(15),
         };
 
-        client.DefaultRequestHeaders.UserAgent.ParseAdd($"VibeCheck/{Scanner.Version}");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"Halation/{Scanner.Version}");
 
         return client;
     }

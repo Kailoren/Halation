@@ -16,7 +16,7 @@ namespace Halation.Tests;
 public class DeclaredPurposeTests : IDisposable
 {
     private readonly string _scratch = Path.Combine(
-        Path.GetTempPath(), $"vibecheck-purpose-{Guid.NewGuid():N}");
+        Path.GetTempPath(), $"halation-purpose-{Guid.NewGuid():N}");
 
     public DeclaredPurposeTests() => Directory.CreateDirectory(_scratch);
 

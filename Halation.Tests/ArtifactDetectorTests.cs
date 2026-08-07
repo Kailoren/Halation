@@ -8,7 +8,7 @@ namespace Halation.Tests;
 
 public class ArtifactDetectorTests : IDisposable
 {
-    private readonly string _scratch = Directory.CreateTempSubdirectory("vibecheck-tests-").FullName;
+    private readonly string _scratch = Directory.CreateTempSubdirectory("halation-tests-").FullName;
 
     public void Dispose()
     {

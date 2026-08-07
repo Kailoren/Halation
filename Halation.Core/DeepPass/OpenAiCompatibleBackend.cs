@@ -502,7 +502,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
                 type = "json_schema",
                 json_schema = new
                 {
-                    name = "vibecheck_findings",
+                    name = "halation_findings",
                     strict = true,
                     schema = DeepPassPrompt.FindingSchema,
                 },

@@ -132,7 +132,7 @@ public class NsisArchiveTests
 
     private static string TempFile(byte[] content)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"vibecheck-nsis-{Guid.NewGuid():N}.exe");
+        var path = Path.Combine(Path.GetTempPath(), $"halation-nsis-{Guid.NewGuid():N}.exe");
         File.WriteAllBytes(path, content);
 
         return path;

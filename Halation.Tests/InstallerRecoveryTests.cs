@@ -140,7 +140,7 @@ public class InstallerRecoveryTests
 
     private static string TempFile(byte[] content)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"vibecheck-installer-{Guid.NewGuid():N}.exe");
+        var path = Path.Combine(Path.GetTempPath(), $"halation-installer-{Guid.NewGuid():N}.exe");
         File.WriteAllBytes(path, content);
 
         return path;

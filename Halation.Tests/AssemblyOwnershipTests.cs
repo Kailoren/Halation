@@ -12,7 +12,7 @@ namespace Halation.Tests;
 /// </remarks>
 public class AssemblyOwnershipTests : IDisposable
 {
-    private readonly string _scratch = Directory.CreateTempSubdirectory("vibecheck-owner-").FullName;
+    private readonly string _scratch = Directory.CreateTempSubdirectory("halation-owner-").FullName;
 
     public void Dispose()
     {

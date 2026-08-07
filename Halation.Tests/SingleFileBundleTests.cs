@@ -11,7 +11,7 @@ namespace Halation.Tests;
 /// </summary>
 public class SingleFileBundleTests : IDisposable
 {
-    private readonly string _scratch = Directory.CreateTempSubdirectory("vibecheck-bundle-").FullName;
+    private readonly string _scratch = Directory.CreateTempSubdirectory("halation-bundle-").FullName;
 
     public void Dispose()
     {

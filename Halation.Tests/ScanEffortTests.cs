@@ -12,7 +12,7 @@ namespace Halation.Tests;
 public class ScanEffortTests : IDisposable
 {
     private readonly string _scratch = Path.Combine(
-        Path.GetTempPath(), $"vibecheck-effort-{Guid.NewGuid():N}");
+        Path.GetTempPath(), $"halation-effort-{Guid.NewGuid():N}");
 
     public ScanEffortTests() => Directory.CreateDirectory(_scratch);
 

@@ -18,7 +18,7 @@ namespace Halation.Tests;
 /// </remarks>
 public class ValidationRegressionTests : IDisposable
 {
-    private readonly string _scratch = Directory.CreateTempSubdirectory("vibecheck-regress-").FullName;
+    private readonly string _scratch = Directory.CreateTempSubdirectory("halation-regress-").FullName;
 
     public void Dispose()
     {

@@ -25,7 +25,7 @@ public static class GitHubReleases
 {
     public const string Owner = "Kailoren";
 
-    public const string Repo = "VibeCheck";
+    public const string Repo = "Halation";
 
     /// <summary>The asset that is a whole application, as opposed to notes or checksums.</summary>
     public const string ExecutableAssetName = "Halation.exe";
@@ -55,7 +55,7 @@ public static class GitHubReleases
 
         // GitHub refuses requests with no user agent. Deliberately says nothing about the
         // machine beyond the product: an update check is not a telemetry channel.
-        client.DefaultRequestHeaders.UserAgent.ParseAdd($"VibeCheck/{Scanner.Version}");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"Halation/{Scanner.Version}");
         client.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 
         return client;

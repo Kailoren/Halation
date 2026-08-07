@@ -8,7 +8,7 @@ namespace Halation.Tests;
 
 public class RecoveryBackendTests : IDisposable
 {
-    private readonly string _scratch = Directory.CreateTempSubdirectory("vibecheck-recovery-").FullName;
+    private readonly string _scratch = Directory.CreateTempSubdirectory("halation-recovery-").FullName;
 
     public void Dispose()
     {

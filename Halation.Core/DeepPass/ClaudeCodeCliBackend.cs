@@ -63,7 +63,7 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
         // Created rather than reused: the agent is pointed at a directory with nothing in it,
         // so there is no configuration, no repository and no source for it to find locally.
         _workingDirectory = Path.Combine(
-            Path.GetTempPath(), "vibecheck-deep-pass-" + Guid.NewGuid().ToString("N"));
+            Path.GetTempPath(), "halation-deep-pass-" + Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(_workingDirectory);
     }

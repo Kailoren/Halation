@@ -27,7 +27,7 @@ public class UpdateCheckTests
             "tag_name": "{{tag}}",
             "prerelease": {{(prerelease ? "true" : "false")}},
             "draft": {{(draft ? "true" : "false")}},
-            "html_url": "https://github.com/Kailoren/VibeCheck/releases/tag/{{tag}}",
+            "html_url": "https://github.com/Kailoren/Halation/releases/tag/{{tag}}",
             "published_at": "2026-08-04T12:00:00Z",
             "assets": [
               {
@@ -35,7 +35,7 @@ public class UpdateCheckTests
                 "state": "uploaded",
                 "size": {{size}},
                 "browser_download_url": "{{assetUrl
-                    ?? $"https://github.com/Kailoren/VibeCheck/releases/download/{tag}/{assetName}"}}"
+                    ?? $"https://github.com/Kailoren/Halation/releases/download/{tag}/{assetName}"}}"
               }
             ]
           }
@@ -87,11 +87,11 @@ public class UpdateCheckTests
             """
             [{
               "tag_name": "v0.2.0", "prerelease": false, "draft": false,
-              "html_url": "https://github.com/Kailoren/VibeCheck/releases/tag/v0.2.0",
+              "html_url": "https://github.com/Kailoren/Halation/releases/tag/v0.2.0",
               "assets": [{
                 "name": "Halation.exe", "state": "starter", "size": 10,
                 "browser_download_url":
-                  "https://github.com/Kailoren/VibeCheck/releases/download/v0.2.0/Halation.exe"
+                  "https://github.com/Kailoren/Halation/releases/download/v0.2.0/Halation.exe"
               }]
             }]
             """));
@@ -112,19 +112,19 @@ public class UpdateCheckTests
     [Theory]
 
     // Not GitHub at all.
-    [InlineData("https://example.com/Kailoren/VibeCheck/releases/download/v1/Halation.exe")]
+    [InlineData("https://example.com/Kailoren/Halation/releases/download/v1/Halation.exe")]
 
     // A host that ends in the right letters but is not the right host.
-    [InlineData("https://notgithub.com/Kailoren/VibeCheck/releases/download/v1/Halation.exe")]
+    [InlineData("https://notgithub.com/Kailoren/Halation/releases/download/v1/Halation.exe")]
 
     // The right host, somewhere else on it.
-    [InlineData("https://github.com/Kailoren/VibeCheck/raw/main/evil.exe")]
+    [InlineData("https://github.com/Kailoren/Halation/raw/main/evil.exe")]
 
     // Somebody else's repository.
     [InlineData("https://github.com/someone/else/releases/download/v1/Halation.exe")]
 
     // Not encrypted.
-    [InlineData("http://github.com/Kailoren/VibeCheck/releases/download/v1/Halation.exe")]
+    [InlineData("http://github.com/Kailoren/Halation/releases/download/v1/Halation.exe")]
     [InlineData("file:///C:/Windows/System32/cmd.exe")]
     [InlineData("not a url")]
     [InlineData(null)]
@@ -134,7 +134,7 @@ public class UpdateCheckTests
     [Fact]
     public void AcceptsARealReleaseAssetAddress() =>
         Assert.NotNull(GitHubReleases.ValidateDownloadUrl(
-            "https://github.com/Kailoren/VibeCheck/releases/download/v0.1.0-beta/Halation.exe"));
+            "https://github.com/Kailoren/Halation/releases/download/v0.1.0-beta/Halation.exe"));
 
     /// <summary>An asset whose address is refused is dropped rather than carried along.</summary>
     [Fact]

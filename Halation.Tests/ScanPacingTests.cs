@@ -13,7 +13,7 @@ namespace Halation.Tests;
 public class ScanPacingTests : IDisposable
 {
     private readonly string _scratch = Path.Combine(
-        Path.GetTempPath(), $"vibecheck-pacing-{Guid.NewGuid():N}");
+        Path.GetTempPath(), $"halation-pacing-{Guid.NewGuid():N}");
 
     public ScanPacingTests() => Directory.CreateDirectory(_scratch);
 

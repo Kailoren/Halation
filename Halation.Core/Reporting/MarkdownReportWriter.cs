@@ -216,7 +216,7 @@ public static class MarkdownReportWriter
         output.AppendLine("Local models are the least-tested part of VibeCheck, measured so far on "
                           + "one configuration only. If this result was poor, or surprisingly "
                           + "good, posting this report is the most useful thing you can do with "
-                          + "it: <https://github.com/kailoren/vibecheck/discussions>");
+                          + "it: <https://github.com/kailoren/halation/discussions>");
         output.AppendLine();
     }
 

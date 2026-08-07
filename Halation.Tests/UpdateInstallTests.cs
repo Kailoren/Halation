@@ -49,7 +49,7 @@ public class UpdateInstallTests : IDisposable
     }
 
     private readonly string _scratch = Path.Combine(
-        Path.GetTempPath(), $"vibecheck-update-{Guid.NewGuid():N}");
+        Path.GetTempPath(), $"halation-update-{Guid.NewGuid():N}");
 
     public UpdateInstallTests() => Directory.CreateDirectory(_scratch);
 

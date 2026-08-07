@@ -55,7 +55,7 @@ public sealed class OsvClient(HttpClient http) : IDisposable
             MaxResponseContentBufferSize = MaxResponseBytes,
         };
 
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("VibeCheck/0.1 (+security scanner)");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd($"Halation/{Scanner.Version} (+security scanner)");
 
         return new OsvClient(client);
     }

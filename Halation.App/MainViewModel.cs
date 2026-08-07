@@ -1743,7 +1743,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         // The name says which one it is, because the two files are otherwise easy to confuse
         // and only one of them is safe to attach to anything.
-        var suffix = forSharing ? "-vibecheck-shared" : "-vibecheck";
+        var suffix = forSharing ? "-halation-shared" : "-halation";
 
         var dialog = new Microsoft.Win32.SaveFileDialog
         {

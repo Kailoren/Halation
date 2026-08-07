@@ -13,7 +13,7 @@ namespace Halation.Tests;
 /// </summary>
 public class ScannerIntegrationTests : IDisposable
 {
-    private readonly string _scratch = Directory.CreateTempSubdirectory("vibecheck-e2e-").FullName;
+    private readonly string _scratch = Directory.CreateTempSubdirectory("halation-e2e-").FullName;
 
     public void Dispose()
     {
@@ -250,7 +250,7 @@ public class ScannerIntegrationTests : IDisposable
         var markdown = MarkdownReportWriter.Write(report);
 
         File.WriteAllText(
-            Path.Combine(Path.GetTempPath(), "vibecheck-sample-report.md"),
+            Path.Combine(Path.GetTempPath(), "halation-sample-report.md"),
             markdown);
 
         Assert.Contains("# VibeCheck report", markdown, StringComparison.Ordinal);

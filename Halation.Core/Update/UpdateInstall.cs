@@ -331,7 +331,7 @@ public static class UpdateInstall
 
     private static bool IsWritable(string directory)
     {
-        var probe = Path.Combine(directory, $".vibecheck-write-{Guid.NewGuid():N}");
+        var probe = Path.Combine(directory, $".halation-write-{Guid.NewGuid():N}");
 
         try
         {

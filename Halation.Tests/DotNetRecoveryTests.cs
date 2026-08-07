@@ -216,7 +216,7 @@ internal static class ObfuscatedAssemblyBuilder
 
     public static string WriteTemp()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"vibecheck-obf-{Guid.NewGuid():N}.dll");
+        var path = Path.Combine(Path.GetTempPath(), $"halation-obf-{Guid.NewGuid():N}.dll");
         File.WriteAllBytes(path, Build());
 
         return path;

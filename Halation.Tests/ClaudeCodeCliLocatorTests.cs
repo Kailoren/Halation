@@ -10,7 +10,7 @@ namespace Halation.Tests;
 public sealed class ClaudeCodeCliLocatorTests : IDisposable
 {
     private readonly string _root = Path.Combine(
-        Path.GetTempPath(), "vibecheck-cli-" + Guid.NewGuid().ToString("N"));
+        Path.GetTempPath(), "halation-cli-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {
