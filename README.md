@@ -1,6 +1,8 @@
 
 <div align="center">
 
+<img width="250" height="249" alt="VibeCheck2" src="https://github.com/user-attachments/assets/aa308adb-666b-4136-8c52-a6c7b9152359" />
+
 # VibeCheck
 [![License](https://img.shields.io/github/license/kailoren/vibecheck?style=plastic)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/kailoren/vibecheck?style=plastic)](https://github.com/kailoren/vibecheck/releases/latest)
