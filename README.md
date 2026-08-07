@@ -6,6 +6,8 @@
 [![Release](https://img.shields.io/github/v/release/kailoren/vibecheck?style=plastic)](https://github.com/kailoren/vibecheck/releases/latest)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?style=plastic)
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/T3N624MRS4)
+
 A drag-and-drop security scanner for AI-generated applications.
 
 Drop in an app, and VibeCheck recovers what source it can, checks it against the
