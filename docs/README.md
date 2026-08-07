@@ -1,4 +1,4 @@
-# The VibeCheck website
+# The Halation website
 
 Static HTML, no build step. GitHub Pages serves this folder as it stands.
 
@@ -15,7 +15,7 @@ that the footer block still hashes the same as the others.
 ## Publishing it
 
 In the repository's **Settings → Pages**, set the source to **Deploy from a branch**, branch
-`main`, folder `/docs`. The site appears at `https://kailoren.github.io/VibeCheck/`.
+`main`, folder `/docs`. The site appears at `https://kailoren.github.io/Halation/`.
 
 Every path in here is relative, so the site works from that subfolder, from the root of a custom
 domain, or from a local server, without anything being edited. To attach a custom domain later,
@@ -23,7 +23,7 @@ add a `CNAME` file to this folder containing the bare hostname and point a DNS `
 `kailoren.github.io`.
 
 **The one absolute URL in the site is `og:image`.** A social scraper does not resolve a
-relative image path, so those tags name `https://kailoren.github.io/VibeCheck/` in full. If the
+relative image path, so those tags name `https://kailoren.github.io/Halation/` in full. If the
 site ever moves to a custom domain, that base has to be updated in all seven pages; everything
 else is relative and moves on its own.
 
@@ -36,7 +36,7 @@ skipping it makes deploys quicker.
 `rules.html` cannot drift away from the checks the scanner actually runs. **Regenerate it
 whenever a rule is added, removed, retitled or re-rated.**
 
-A throwaway console project that references `VibeCheck.Core` does it:
+A throwaway console project that references `Halation.Core` does it:
 
 ```csharp
 var rules = RuleEngine.DefaultRules
@@ -91,13 +91,13 @@ hardcoded credentials and injection flaws, plus five pinned packages with publis
 against those exact versions.
 
 **That project is deliberately not in this repository.** It contains live-shaped credentials, so
-committing it would trip GitHub's secret scanning, and VibeCheck would raise the same findings
+committing it would trip GitHub's secret scanning, and Halation would raise the same findings
 against its own source. Rebuild it if the screenshot needs retaking; the numbers in the image are
 whatever the scan says on the day.
 
 ## Conventions worth keeping
 
-- **The palette, the typefaces and the metrics mirror `VibeCheck.App/Themes/Theme.xaml`.** The
+- **The palette, the typefaces and the metrics mirror `Halation.App/Themes/Theme.xaml`.** The
   severity ramp especially: those colours carry meaning rather than decoration.
 - **Fonts are self-hosted**, not fetched from a font CDN. A site for a tool whose whole claim is
   that nothing leaves your machine should not hand a third party a record of everyone who reads

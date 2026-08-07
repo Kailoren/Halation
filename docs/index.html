@@ -5,19 +5,19 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VibeCheck: a security scanner for AI-generated applications</title>
-<meta name="description" content="Drag any application in. VibeCheck recovers what source it can, checks it against the vulnerability classes AI code generators actually produce, and reports what it found and what it could not reach. Free, MIT licensed, runs entirely on your machine.">
+<title>Halation: a security scanner for AI-generated applications</title>
+<meta name="description" content="Drag any application in. Halation recovers what source it can, checks it against the vulnerability classes AI code generators actually produce, and reports what it found and what it could not reach. Free, MIT licensed, runs entirely on your machine.">
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="assets/css/site.css">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="VibeCheck">
-<meta property="og:title" content="VibeCheck: a security scanner for AI-generated applications">
-<meta property="og:description" content="Drag any application in. VibeCheck recovers what source it can, checks it against the vulnerability classes AI code generators actually produce, and reports what it found and what it could not reach. Free, MIT licensed, runs entirely on your machine.">
-<meta property="og:url" content="https://kailoren.github.io/VibeCheck/">
-<meta property="og:image" content="https://kailoren.github.io/VibeCheck/assets/img/social.png">
+<meta property="og:site_name" content="Halation">
+<meta property="og:title" content="Halation: a security scanner for AI-generated applications">
+<meta property="og:description" content="Drag any application in. Halation recovers what source it can, checks it against the vulnerability classes AI code generators actually produce, and reports what it found and what it could not reach. Free, MIT licensed, runs entirely on your machine.">
+<meta property="og:url" content="https://kailoren.github.io/Halation/">
+<meta property="og:image" content="https://kailoren.github.io/Halation/assets/img/social.png">
 <meta property="og:image:width" content="2560">
 <meta property="og:image:height" content="1280">
-<meta property="og:image:alt" content="VibeCheck, a drag-and-drop security scanner for AI-generated applications.">
+<meta property="og:image:alt" content="Halation, a drag-and-drop security scanner for AI-generated applications.">
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
@@ -35,7 +35,7 @@
   <div class="shell nav__inner">
     <a class="brand" href="index.html">
       <img src="assets/img/logo.png" alt="" width="26" height="26">
-      <span>VibeCheck</span>
+      <span>Halation</span>
     </a>
     <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
     <ul class="nav__links" id="nav-links">
@@ -46,7 +46,7 @@
       <li><a href="faq.html">FAQ</a></li>
       <li><a href="changelog.html">Changelog</a></li>
       <li><a href="discuss.html">Discuss</a></li>
-      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+      <li><a href="https://github.com/kailoren/halation">GitHub</a></li>
     </ul>
   </div>
 </header>
@@ -58,13 +58,13 @@
   <div class="shell hero__inner">
     <div>
       <span class="hero__eyebrow">v0.1.3-beta · MIT · Windows</span>
-      <h1>Vibe coded?<br><span class="accent">Vibe checked.</span></h1>
+      <h1>Shipped as a binary.<br><span class="accent">Read like source.</span></h1>
       <p class="hero__sub">
-        Drag any application in. VibeCheck recovers what source it can, checks it against the
+        Drag any application in. Halation recovers what source it can, checks it against the
         failures AI code generators actually produce, and tells you what it could not reach.
       </p>
       <div class="btn-row">
-        <a class="btn btn--primary" href="https://github.com/kailoren/vibecheck/releases/download/v0.1.3-beta/VibeCheck.exe">Download for Windows</a>
+        <a class="btn btn--primary" href="https://github.com/kailoren/halation/releases/download/v0.1.3-beta/VibeCheck.exe">Download for Windows</a>
         <a class="btn btn--ghost" href="docs.html">Read the documentation</a>
       </div>
       <div class="hero__meta">
@@ -94,7 +94,7 @@
     <div class="section-label reveal">How a scan runs</div>
     <h2 class="reveal">It reads the application, not the download page</h2>
     <p class="lede reveal">
-      Most tools that check a program look at what it says about itself. VibeCheck takes the
+      Most tools that check a program look at what it says about itself. Halation takes the
       binary apart and reads the code inside it, then says how much of it it managed to reach.
     </p>
 
@@ -143,7 +143,7 @@
     <p class="lede reveal">
       Static analysis can demonstrate that bad patterns are present. It can never demonstrate
       that none are, and a deliberately malicious application will read cleaner than a sloppy
-      honest one. So VibeCheck never prints a verdict of "safe", and the rest of the design
+      honest one. So Halation never prints a verdict of "safe", and the rest of the design
       exists to stop a reassuring-looking report undoing that.
     </p>
 
@@ -260,7 +260,7 @@
 
     <figure class="reveal" style="margin-top:3rem">
       <div class="shot shot--crop" style="--natural:1120px;--crop:760px">
-        <img src="assets/img/screen-results.png" alt="The VibeCheck results screen showing a score of 11 out of 100 labelled Critical issues, a coverage card reading 100% readable, and a findings list naming a live Stripe secret key, a Supabase service_role key, SQL queries built by string concatenation, and four dependencies with known vulnerabilities." width="2240" height="2360" loading="lazy">
+        <img src="assets/img/screen-results.png" alt="The Halation results screen showing a score of 11 out of 100 labelled Critical issues, a coverage card reading 100% readable, and a findings list naming a live Stripe secret key, a Supabase service_role key, SQL queries built by string concatenation, and four dependencies with known vulnerabilities." width="2240" height="2360" loading="lazy">
       </div>
       <figcaption class="shot__caption">The developer's report. The end user's names the same evidence differently.</figcaption>
     </figure>
@@ -294,7 +294,7 @@
         <span class="feature__icon">BEFORE YOU INSTALL</span>
         <h3>The risk in running it</h3>
         <p>
-          Run something you downloaded through it. For Electron and .NET applications VibeCheck
+          Run something you downloaded through it. For Electron and .NET applications Halation
           recovers the real code from the shipped binary and reads that, rather than trusting
           the description on a download page. This report drops the identifiers and says what
           the application can do to the machine it lands on.
@@ -307,7 +307,7 @@
       <p>
         <strong>You downloaded something and want to know if it is safe to run.</strong> Pick
         the second one and drop in whatever you downloaded: the installer, the <code>.exe</code>,
-        the zip. VibeCheck opens it and reads what is inside. There is nothing to set up and
+        the zip. Halation opens it and reads what is inside. There is nothing to set up and
         nothing to pay for.
       </p>
       <p>
@@ -387,7 +387,7 @@
 
     <figure class="reveal" style="margin-top:2.5rem">
       <div class="shot" style="--natural:560px">
-        <img src="assets/img/screen-setup.png" alt="The VibeCheck pre-scan window, offering a deep pass tick box with three sources: an Anthropic API key, Claude Code on this machine, or any OpenAI-compatible endpoint." width="1120" height="955" loading="lazy">
+        <img src="assets/img/screen-setup.png" alt="The Halation pre-scan window, offering a deep pass tick box with three sources: an Anthropic API key, Claude Code on this machine, or any OpenAI-compatible endpoint." width="1120" height="955" loading="lazy">
       </div>
       <figcaption class="shot__caption">Asked before the scan, so the choice applies to this one.</figcaption>
     </figure>
@@ -445,19 +445,19 @@
         trust, being able to read it is part of the offer.
       </p>
       <div class="btn-row" style="justify-content:center;margin-top:2rem">
-        <a class="btn btn--primary" href="https://github.com/kailoren/vibecheck/releases/download/v0.1.3-beta/VibeCheck.exe">Download for Windows</a>
-        <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck">Read the source</a>
+        <a class="btn btn--primary" href="https://github.com/kailoren/halation/releases/download/v0.1.3-beta/VibeCheck.exe">Download for Windows</a>
+        <a class="btn btn--ghost" href="https://github.com/kailoren/halation">Read the source</a>
       </div>
       <p style="margin-top:1.6rem;font-family:var(--mono);font-size:0.8rem;color:var(--muted)">
         Windows 10 or 11 · one self-contained file · no runtime to install<br>
-        <a href="https://github.com/kailoren/vibecheck/releases">All releases, including betas</a>
+        <a href="https://github.com/kailoren/halation/releases">All releases, including betas</a>
       </p>
     </div>
 
     <div class="callout reveal" style="margin-top:2rem;text-align:left">
       <span class="callout__title">If you want to chip in</span>
       <p>
-        Nothing is behind this and nothing will be. VibeCheck is one person's work, and what it
+        Nothing is behind this and nothing will be. Halation is one person's work, and what it
         costs is time and the occasional certificate, so anything sent goes towards keeping it
         maintained rather than towards unlocking something you do not already have.
       </p>
@@ -474,11 +474,11 @@
         newer, and <a href="setup.html#choose">running a model on your own machine is the least
         tested corner of it</a>, measured on a single configuration so far. Reports from other
         hardware are the thing that moves it forward, and there is a
-        <a href="https://github.com/kailoren/vibecheck/discussions">place to post them</a>.
+        <a href="https://github.com/kailoren/halation/discussions">place to post them</a>.
       </p>
       <p>
         Releases are also not yet code-signed, so Windows SmartScreen will warn when you download
-        one. That is what stops VibeCheck installing its own updates too: it holds itself to the
+        one. That is what stops Halation installing its own updates too: it holds itself to the
         rule it applies to everyone else, which is that a download is installed only when a
         signature validates.
       </p>
@@ -494,7 +494,7 @@
       <div>
         <a class="brand" href="index.html" style="margin-bottom:0.8rem">
           <img src="assets/img/logo.png" alt="" width="26" height="26">
-          <span>VibeCheck</span>
+          <span>Halation</span>
         </a>
         <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
           A drag-and-drop security scanner for AI-generated applications.
@@ -513,18 +513,18 @@
       <div>
         <h4>Project</h4>
         <ul>
-          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/halation">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/halation/releases">Releases</a></li>
           <li><a href="discuss.html">Discussions</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+          <li><a href="https://github.com/kailoren/halation/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/halation/blob/main/LICENSE">MIT licence</a></li>
           <li><a href="https://ko-fi.com/kailodev">Support on Ko-fi</a></li>
         </ul>
       </div>
     </div>
     <div class="footer__note">
       <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
-      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+      <span>Halation cannot tell you an application is safe, and does not claim to.</span>
     </div>
   </div>
 </footer>

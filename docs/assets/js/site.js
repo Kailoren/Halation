@@ -1,5 +1,5 @@
 /* ============================================================================
-   VibeCheck site behaviour
+   Halation site behaviour
 
    Everything here is decoration over content that already reads correctly
    without it. Nothing is hidden until this file has run and confirmed it can

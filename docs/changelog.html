@@ -5,19 +5,19 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Changelog · VibeCheck</title>
-<meta name="description" content="What changed in each release of VibeCheck, and what is still to come.">
+<title>Changelog · Halation</title>
+<meta name="description" content="What changed in each release of Halation, and what is still to come.">
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="assets/css/site.css">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="VibeCheck">
-<meta property="og:title" content="Changelog · VibeCheck">
-<meta property="og:description" content="What changed in each release of VibeCheck, and what is still to come.">
-<meta property="og:url" content="https://kailoren.github.io/VibeCheck/changelog.html">
-<meta property="og:image" content="https://kailoren.github.io/VibeCheck/assets/img/social.png">
+<meta property="og:site_name" content="Halation">
+<meta property="og:title" content="Changelog · Halation">
+<meta property="og:description" content="What changed in each release of Halation, and what is still to come.">
+<meta property="og:url" content="https://kailoren.github.io/Halation/changelog.html">
+<meta property="og:image" content="https://kailoren.github.io/Halation/assets/img/social.png">
 <meta property="og:image:width" content="2560">
 <meta property="og:image:height" content="1280">
-<meta property="og:image:alt" content="VibeCheck, a drag-and-drop security scanner for AI-generated applications.">
+<meta property="og:image:alt" content="Halation, a drag-and-drop security scanner for AI-generated applications.">
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
@@ -35,7 +35,7 @@
   <div class="shell nav__inner">
     <a class="brand" href="index.html">
       <img src="assets/img/logo.png" alt="" width="26" height="26">
-      <span>VibeCheck</span>
+      <span>Halation</span>
     </a>
     <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
     <ul class="nav__links" id="nav-links">
@@ -46,7 +46,7 @@
       <li><a href="faq.html">FAQ</a></li>
       <li><a href="changelog.html" aria-current="page">Changelog</a></li>
       <li><a href="discuss.html">Discuss</a></li>
-      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+      <li><a href="https://github.com/kailoren/halation">GitHub</a></li>
     </ul>
   </div>
 </header>
@@ -56,9 +56,9 @@
     <div class="section-label">Changelog</div>
     <h1>What changed, and when</h1>
     <p class="lede">
-      VibeCheck is in early development. Every release so far is a beta, and the version numbers
+      Halation is in early development. Every release so far is a beta, and the version numbers
       say so. The full commit history is on
-      <a href="https://github.com/kailoren/vibecheck/commits/main">GitHub</a>.
+      <a href="https://github.com/kailoren/halation/commits/main">GitHub</a>.
     </p>
   </div>
 </div>
@@ -77,6 +77,41 @@
   </div>
 
   <div style="margin-top:3rem">
+
+    <div class="release reveal">
+      <div class="release__head">
+        <h2 class="release__version">0.1.4-beta</h2>
+        <span class="release__date">7 August 2026</span>
+      </div>
+      <p>
+        This tool was called VibeCheck until this release. The name collided with several
+        products doing a different job, and it filed this one alongside scanners that read a
+        deployed website rather than a compiled application.
+      </p>
+      <ul>
+        <li>
+          <strong>It is called Halation now.</strong> Halation is light bleeding past the edge
+          of where it should be, which is what the highest-severity checks look for: keys and
+          tokens outside the boundary they were meant to stay inside. Nothing about what the
+          tool does has changed.
+        </li>
+        <li>
+          <strong>Your settings come with you.</strong> The audience choice, window position,
+          update preference and, if you set one, your encrypted API key and endpoint are carried
+          over the first time this release runs. They are copied rather than moved, so the old
+          folder is left untouched and the previous build still works.
+        </li>
+        <li>
+          <strong>The executable is <code>Halation.exe</code>.</strong> Existing shortcuts
+          pointing at the old filename will not find it.
+        </li>
+        <li>
+          <strong>Fixed:</strong> the version reported to OSV when checking dependencies was
+          hardcoded and had said <code>0.1</code> since the first release regardless of the
+          build.
+        </li>
+      </ul>
+    </div>
 
     <div class="release reveal">
       <div class="release__head">
@@ -176,7 +211,7 @@
       <div>
         <a class="brand" href="index.html" style="margin-bottom:0.8rem">
           <img src="assets/img/logo.png" alt="" width="26" height="26">
-          <span>VibeCheck</span>
+          <span>Halation</span>
         </a>
         <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
           A drag-and-drop security scanner for AI-generated applications.
@@ -195,18 +230,18 @@
       <div>
         <h4>Project</h4>
         <ul>
-          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/halation">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/halation/releases">Releases</a></li>
           <li><a href="discuss.html">Discussions</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+          <li><a href="https://github.com/kailoren/halation/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/halation/blob/main/LICENSE">MIT licence</a></li>
           <li><a href="https://ko-fi.com/kailodev">Support on Ko-fi</a></li>
         </ul>
       </div>
     </div>
     <div class="footer__note">
       <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
-      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+      <span>Halation cannot tell you an application is safe, and does not claim to.</span>
     </div>
   </div>
 </footer>

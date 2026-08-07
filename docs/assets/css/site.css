@@ -1,8 +1,8 @@
 /* ============================================================================
-   VibeCheck site styles
+   Halation site styles
 
    The palette, the typefaces and the metrics are lifted from the application's
-   own theme (VibeCheck.App/Themes/Theme.xaml) so the site and the tool read as
+   own theme (Halation.App/Themes/Theme.xaml) so the site and the tool read as
    one thing. Where a value appears here it should agree with the key of the
    same name there; the severity ramp especially, because those colours carry
    meaning rather than decoration.

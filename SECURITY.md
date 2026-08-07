@@ -2,9 +2,9 @@
 
 ## Reporting a vulnerability
 
-Use **[private vulnerability reporting](https://github.com/kailoren/vibecheck/security/advisories/new)**
+Use **[private vulnerability reporting](https://github.com/kailoren/halation/security/advisories/new)**
 on this repository. It goes to the maintainer and stays private until there is something to
-publish. Please do not open a public issue or discussion for a flaw in VibeCheck itself.
+publish. Please do not open a public issue or discussion for a flaw in Halation itself.
 
 This is a one-person project, so there is no response-time commitment I could make and keep. What
 I will do is acknowledge the report, tell you honestly whether I think it is a real problem, and
@@ -12,14 +12,14 @@ say what I intend to do about it.
 
 ## What counts
 
-VibeCheck exists to be pointed at files nobody trusts. It opens installers, unpacks archives,
+Halation exists to be pointed at files nobody trusts. It opens installers, unpacks archives,
 reads bundles out of executables and decompiles assemblies, on purpose, and usually because
 somebody already suspects the thing they downloaded. **That recovery path is the real attack
 surface, and it is the part worth attacking.**
 
 Reports about it are exactly what this page is for:
 
-- A crafted archive, installer or bundle that makes VibeCheck write outside the directory it was
+- A crafted archive, installer or bundle that makes Halation write outside the directory it was
   given, execute anything, or read a file it was not pointed at
 - Anything that turns scanning a hostile artifact into running it
 - A path that leaks the stored API key, the endpoint key, or the recovered source of a scanned
@@ -34,10 +34,10 @@ report actionable.
 
 ## What does not count
 
-**A wrong scan result is not a vulnerability in VibeCheck.** A missed flaw, a false positive, a
+**A wrong scan result is not a vulnerability in Halation.** A missed flaw, a false positive, a
 score you disagree with, or an artifact it declined to read are all ordinary defects, and they are
 the most useful thing you can send. They belong in
-[Discussions](https://github.com/kailoren/vibecheck/discussions), under "It got this wrong", where
+[Discussions](https://github.com/kailoren/halation/discussions), under "It got this wrong", where
 they can be argued about in the open.
 
 That distinction matters more here than in most projects, because for a scanner almost anything
@@ -51,7 +51,7 @@ Two related things that are also not vulnerabilities, because they are documente
 - **The deep pass uploads recovered source** to whichever endpoint is configured, when it is
   switched on. That is what it is for, it is off by default, and what leaves the machine is stated
   on screen before a scan and in the report afterwards.
-- **VibeCheck reports its own findings against itself.** The rule table contains the patterns it
+- **Halation reports its own findings against itself.** The rule table contains the patterns it
   looks for, so a scanner scanning a scanner sees them. Matches discounted for that reason are
   counted and printed on the receipt rather than removed quietly.
 
@@ -67,6 +67,6 @@ behaviour rather than a bug.
 
 ## Scope
 
-This policy covers the VibeCheck application and this repository, including the website under
+This policy covers the Halation application and this repository, including the website under
 `docs/`. It does not cover the applications you scan with it, or the third-party model endpoints
 you may configure the deep pass to use.

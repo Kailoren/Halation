@@ -5,19 +5,19 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deep pass setup · VibeCheck</title>
-<meta name="description" content="Setting up the optional deep pass: connect Claude Code, paste an Anthropic API key, or point VibeCheck at any OpenAI-compatible endpoint including Ollama or LM Studio on your own machine. With model recommendations by graphics card.">
+<title>Deep pass setup · Halation</title>
+<meta name="description" content="Setting up the optional deep pass: connect Claude Code, paste an Anthropic API key, or point Halation at any OpenAI-compatible endpoint including Ollama or LM Studio on your own machine. With model recommendations by graphics card.">
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="assets/css/site.css">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="VibeCheck">
-<meta property="og:title" content="Deep pass setup · VibeCheck">
-<meta property="og:description" content="Setting up the optional deep pass: connect Claude Code, paste an Anthropic API key, or point VibeCheck at any OpenAI-compatible endpoint including Ollama or LM Studio on your own machine. With model recommendations by graphics card.">
-<meta property="og:url" content="https://kailoren.github.io/VibeCheck/setup.html">
-<meta property="og:image" content="https://kailoren.github.io/VibeCheck/assets/img/social.png">
+<meta property="og:site_name" content="Halation">
+<meta property="og:title" content="Deep pass setup · Halation">
+<meta property="og:description" content="Setting up the optional deep pass: connect Claude Code, paste an Anthropic API key, or point Halation at any OpenAI-compatible endpoint including Ollama or LM Studio on your own machine. With model recommendations by graphics card.">
+<meta property="og:url" content="https://kailoren.github.io/Halation/setup.html">
+<meta property="og:image" content="https://kailoren.github.io/Halation/assets/img/social.png">
 <meta property="og:image:width" content="2560">
 <meta property="og:image:height" content="1280">
-<meta property="og:image:alt" content="VibeCheck, a drag-and-drop security scanner for AI-generated applications.">
+<meta property="og:image:alt" content="Halation, a drag-and-drop security scanner for AI-generated applications.">
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
@@ -35,7 +35,7 @@
   <div class="shell nav__inner">
     <a class="brand" href="index.html">
       <img src="assets/img/logo.png" alt="" width="26" height="26">
-      <span>VibeCheck</span>
+      <span>Halation</span>
     </a>
     <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
     <ul class="nav__links" id="nav-links">
@@ -46,7 +46,7 @@
       <li><a href="faq.html">FAQ</a></li>
       <li><a href="changelog.html">Changelog</a></li>
       <li><a href="discuss.html">Discuss</a></li>
-      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+      <li><a href="https://github.com/kailoren/halation">GitHub</a></li>
     </ul>
   </div>
 </header>
@@ -157,7 +157,7 @@
         </p>
         <p>
           <strong>That test has already paid for itself once.</strong> It exposed a defect in
-          VibeCheck rather than in the model: findings were printing the model's own prose inside
+          Halation rather than in the model: findings were printing the model's own prose inside
           a code fence, as though it were a line from your file. Evidence is now taken from the
           file itself using a line number the model cites, so a quotation you cannot find in your
           own code is no longer something that can be produced. That fix came out of one afternoon
@@ -179,7 +179,7 @@
           Good result or bad, it is worth more than an opinion about local models in the
           abstract. Scan something, press <strong>Export for sharing</strong> on the results
           screen, and post the file in
-          <a href="https://github.com/kailoren/vibecheck/discussions">Discussions</a>.
+          <a href="https://github.com/kailoren/halation/discussions">Discussions</a>.
         </p>
         <p>
           <strong>That button exists because the ordinary export is not safe to post.</strong>
@@ -193,7 +193,7 @@
         <p>
           What it keeps is the part that makes it worth reading: your graphics card and its
           memory, your system memory, the model, and which runtime served it. Those are the things
-          that decide the answer. <strong>Nothing is sent anywhere by VibeCheck</strong>, and none
+          that decide the answer. <strong>Nothing is sent anywhere by Halation</strong>, and none
           of this is either: it is written into a file you can read first and then choose to
           share.
         </p>
@@ -240,24 +240,24 @@
     <section id="claude-code">
       <h2>Route 1 · The Claude Code you already have</h2>
       <p>
-        <strong>Nothing to configure.</strong> VibeCheck looks for Claude Code when it starts,
+        <strong>Nothing to configure.</strong> Halation looks for Claude Code when it starts,
         including the copy bundled inside the Claude desktop app, and asks it whether it is signed
         in. Claude Code does not need to be running.
       </p>
       <ol>
         <li>Install <a href="https://claude.com/claude-code">Claude Code</a>, or the Claude desktop app, which carries a copy.</li>
         <li>Sign in to it once, in its own interface.</li>
-        <li>Start VibeCheck. The route reports itself ready, and names the installation it found.</li>
+        <li>Start Halation. The route reports itself ready, and names the installation it found.</li>
       </ol>
       <p>
         If it is installed but signed out, a <strong>Sign in</strong> button appears and opens
-        Claude Code's own sign-in flow. VibeCheck never sees your credentials; the CLI holds them,
+        Claude Code's own sign-in flow. Halation never sees your credentials; the CLI holds them,
         exactly as it does when you use it directly.
       </p>
       <div class="callout">
         <span class="callout__title">The check runs once, at startup</span>
         <p>
-          Sign in to Claude Code while VibeCheck is already open and it will not notice until you
+          Sign in to Claude Code while Halation is already open and it will not notice until you
           press <strong>Sign in</strong> or restart it.
         </p>
       </div>
@@ -283,11 +283,11 @@
       <ol>
         <li>Create a key at the <a href="https://console.anthropic.com">Anthropic Console</a>.</li>
         <li>Buy some credit. The API is prepaid and separate from a Claude subscription.</li>
-        <li>In VibeCheck, press <strong>Set key</strong> on the drop screen and paste it.</li>
+        <li>In Halation, press <strong>Set key</strong> on the drop screen and paste it.</li>
       </ol>
       <figure>
         <div class="shot" style="--natural:560px">
-          <img src="assets/img/screen-apikey.png" alt="The VibeCheck API key window, with a masked entry field and a note explaining that the key is encrypted to your Windows account and stored outside the application folder." width="1120" height="605" loading="lazy">
+          <img src="assets/img/screen-apikey.png" alt="The Halation API key window, with a masked entry field and a note explaining that the key is encrypted to your Windows account and stored outside the application folder." width="1120" height="605" loading="lazy">
         </div>
         <figcaption class="shot__caption">The key is masked on screen and never written into a report.</figcaption>
       </figure>
@@ -329,7 +329,7 @@
       </p>
       <figure>
         <div class="shot" style="--natural:600px">
-          <img src="assets/img/screen-endpoint.png" alt="The VibeCheck endpoint configuration window. It names the detected graphics card and system memory, offers an editable video memory figure, and recommends the largest model that fits, giving the fetch command for both Ollama and LM Studio with the download size. Below that are ten provider presets and the endpoint, model and key fields." width="1200" height="1715" loading="lazy">
+          <img src="assets/img/screen-endpoint.png" alt="The Halation endpoint configuration window. It names the detected graphics card and system memory, offers an editable video memory figure, and recommends the largest model that fits, giving the fetch command for both Ollama and LM Studio with the download size. Below that are ten provider presets and the endpoint, model and key fields." width="1200" height="1715" loading="lazy">
         </div>
         <figcaption class="shot__caption">The endpoint window, sizing a model against the card it found.</figcaption>
       </figure>
@@ -428,7 +428,7 @@
         <span class="callout__title">The two runtimes spell the same model differently</span>
         <p>
           Ollama writes <code>qwen2.5-coder:7b</code> and LM Studio writes
-          <code>qwen/qwen2.5-coder-7b</code>, and neither accepts the other's spelling. VibeCheck
+          <code>qwen/qwen2.5-coder-7b</code>, and neither accepts the other's spelling. Halation
           gives you the command for whichever runtime is answering, and both when neither is, so
           you should not have to translate between them.
         </p>
@@ -441,7 +441,7 @@
       </div>
 
       <div class="callout callout--warn">
-        <span class="callout__title">Below 6.5 GB, VibeCheck recommends nothing</span>
+        <span class="callout__title">Below 6.5 GB, Halation recommends nothing</span>
         <p>
           It says so rather than suggesting something smaller, and that is deliberate. Pointed at
           one real application's source, <code>qwen2.5-coder:1.5b</code> read all eighteen
@@ -471,7 +471,7 @@
           Ollama serves them through the same <code>localhost:11434</code> as local ones: the
           daemon sees the <code>-cloud</code> suffix, attaches your ollama.com credentials, and
           forwards the request. A loopback address is not proof that anything stayed on your
-          machine, so VibeCheck reads the suffix and says so rather than claiming nothing was
+          machine, so Halation reads the suffix and says so rather than claiming nothing was
           uploaded while your source code was.
         </p>
       </div>
@@ -491,11 +491,11 @@
           <strong>Run a local model at your own risk.</strong> The load is ordinary, no different
           in kind from a demanding game or a long render, but sustained load is also what finds
           hardware that was already marginal: failing cooling, an unstable overclock, a dying fan,
-          a power supply with nothing left in reserve. <strong>Kailoren and VibeCheck accept no
+          a power supply with nothing left in reserve. <strong>Kailoren and Halation accept no
           responsibility or liability of any kind</strong> for damage to your graphics card or to
           any other part of your machine, however it arises from running a local model. The
           software is provided under the
-          <a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a>,
+          <a href="https://github.com/kailoren/halation/blob/main/LICENSE">MIT licence</a>,
           without warranty of any kind, express or implied.
         </p>
         <p>
@@ -510,7 +510,7 @@
       <h2>Setting up Ollama</h2>
       <ol>
         <li>Install <a href="https://ollama.com">Ollama</a>. It runs as a background service on <code>localhost:11434</code>.</li>
-        <li>Pull a model. VibeCheck shows the exact command for the size that fits your card, with a copy button:
+        <li>Pull a model. Halation shows the exact command for the size that fits your card, with a copy button:
           <pre><code>ollama pull qwen2.5-coder:7b</code></pre>
         </li>
         <li>In the endpoint window, press the <strong>Ollama</strong> preset. It fills in
@@ -527,7 +527,7 @@
         </p>
         <pre><code>OLLAMA_CONTEXT_LENGTH=32768</code></pre>
         <p>
-          as a system environment variable and restart Ollama. VibeCheck compares the reported
+          as a system environment variable and restart Ollama. Halation compares the reported
           prompt tokens against the characters it sent and reports a mismatch, so a truncated read
           is caught rather than trusted. Better not to have one at all, though.
         </p>
@@ -547,7 +547,7 @@
         </li>
         <li>
           Download a model. For an 8 GB card, a 7B coder model. Either through its interface, or
-          with the command VibeCheck gives you:
+          with the command Halation gives you:
           <pre><code>lms get qwen/qwen2.5-coder-7b</code></pre>
         </li>
         <li>Open the <strong>Developer</strong> tab and start the local server. It listens on <code>localhost:1234</code>.</li>
@@ -631,7 +631,7 @@
         Claude Code route it is <strong>a refusal enforced in the core</strong>, and the reason is
         worth stating: feeding source recovered from software you do not trust into an agent that
         can act on your machine is the attack this tool exists to warn people about. The scanned
-        program never has to run, because getting VibeCheck to read it becomes the attack instead.
+        program never has to run, because getting Halation to read it becomes the attack instead.
       </p>
     </section>
 
@@ -663,7 +663,7 @@
       <h3>404 on the first file</h3>
       <p>
         The endpoint is a base URL rather than the chat-completions path. Leave the field and let
-        VibeCheck complete it, then check the box shows the full address. OpenRouter is the common
+        Halation complete it, then check the box shows the full address. OpenRouter is the common
         trap: its path really is <code>/api/v1</code> and not <code>/v1</code>.
       </p>
       <h3>401 or 403</h3>
@@ -674,13 +674,13 @@
       <h3>The model answers about only part of a file</h3>
       <p>
         The context length is too short and the input is being truncated. Raise it, as under
-        <a href="#ollama">Ollama</a> above. VibeCheck reports the mismatch when it can detect one.
+        <a href="#ollama">Ollama</a> above. Halation reports the mismatch when it can detect one.
       </p>
       <h3>Claude Code is installed but not detected</h3>
       <p>
-        The check runs at startup only. Press <strong>Sign in</strong>, or restart VibeCheck. If it
+        The check runs at startup only. Press <strong>Sign in</strong>, or restart Halation. If it
         is installed and signed in and still not found, that is worth
-        <a href="https://github.com/kailoren/vibecheck/issues">an issue</a> with the way you
+        <a href="https://github.com/kailoren/halation/issues">an issue</a> with the way you
         installed it.
       </p>
       <h3>A scan disagrees with the last one</h3>
@@ -701,7 +701,7 @@
       <div>
         <a class="brand" href="index.html" style="margin-bottom:0.8rem">
           <img src="assets/img/logo.png" alt="" width="26" height="26">
-          <span>VibeCheck</span>
+          <span>Halation</span>
         </a>
         <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
           A drag-and-drop security scanner for AI-generated applications.
@@ -720,18 +720,18 @@
       <div>
         <h4>Project</h4>
         <ul>
-          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/halation">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/halation/releases">Releases</a></li>
           <li><a href="discuss.html">Discussions</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+          <li><a href="https://github.com/kailoren/halation/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/halation/blob/main/LICENSE">MIT licence</a></li>
           <li><a href="https://ko-fi.com/kailodev">Support on Ko-fi</a></li>
         </ul>
       </div>
     </div>
     <div class="footer__note">
       <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
-      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+      <span>Halation cannot tell you an application is safe, and does not claim to.</span>
     </div>
   </div>
 </footer>

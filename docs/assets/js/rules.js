@@ -180,8 +180,8 @@
     .catch(function (error) {
       listEl.innerHTML = '<p class="empty">The rule catalogue could not be loaded ('
         + esc(error.message) + '). It is in '
-        + '<a href="https://github.com/kailoren/vibecheck/tree/main/VibeCheck.Core/Rules">'
-        + 'VibeCheck.Core/Rules</a> in the source.</p>';
+        + '<a href="https://github.com/kailoren/halation/tree/main/Halation.Core/Rules">'
+        + 'Halation.Core/Rules</a> in the source.</p>';
 
       if (familiesEl) {
         familiesEl.innerHTML = '';

@@ -5,7 +5,7 @@ thing you can send is an application this tool got wrong.**
 
 ## Why there are no pull requests
 
-VibeCheck is maintained by one person, and it is a security tool. Those two facts together decide
+Halation is maintained by one person, and it is a security tool. Those two facts together decide
 this.
 
 A merged pull request ships in the release that carries my name and, in time, my signing
@@ -15,7 +15,7 @@ and a narrowed regex that looks like a tidy-up is exactly the shape a bad-faith 
 Reviewing every contribution to that standard is not something I can promise to keep up, and a
 pull request that sits unreviewed for months is worse for you than one I never accepted.
 
-So the guarantee is deliberately simple: every line in a VibeCheck release was written by its
+So the guarantee is deliberately simple: every line in a Halation release was written by its
 maintainer.
 
 **This costs you nothing.** The licence is MIT. Fork it, change whatever you like, ship your own
@@ -58,7 +58,7 @@ honestly and whether it will fire on ordinary code.
 Coverage is bounded by what can be recovered, not by the rule table. If it declined to read
 something, that is worth knowing, and so is the artifact.
 
-## Reporting a security flaw in VibeCheck itself
+## Reporting a security flaw in Halation itself
 
 Not in a public issue, please. Use GitHub's private vulnerability reporting on this repository, so
 there is time to fix it before it is described in public.

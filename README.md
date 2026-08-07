@@ -1,24 +1,24 @@
 
 <div align="center">
 
-<img width="250" height="249" alt="VibeCheck2" src="https://github.com/user-attachments/assets/aa308adb-666b-4136-8c52-a6c7b9152359" />
+<img width="250" height="249" alt="Halation" src="https://github.com/user-attachments/assets/aa308adb-666b-4136-8c52-a6c7b9152359" />
 
-# VibeCheck
-[![License](https://img.shields.io/github/license/kailoren/vibecheck?style=plastic)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/kailoren/vibecheck?style=plastic)](https://github.com/kailoren/vibecheck/releases/latest)
+# Halation
+[![License](https://img.shields.io/github/license/kailoren/halation?style=plastic)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/kailoren/halation?style=plastic)](https://github.com/kailoren/halation/releases/latest)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?style=plastic)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/T3N624MRS4)
 
 A drag-and-drop security scanner for AI-generated applications.
 
-Drop in an app, and VibeCheck recovers what source it can, checks it against the
+Drop in an app, and Halation recovers what source it can, checks it against the
 vulnerability classes AI code generators actually produce, and reports what it found and
 what it could not reach.
 
 All analysis happens on your machine. The only thing that ever leaves it is the list of
 package names and versions the application declares, sent to check them against published
-advisories, and that can be turned off entirely. Your code is never uploaded. VibeCheck also
+advisories, and that can be turned off entirely. Your code is never uploaded. Halation also
 asks GitHub what the newest release is when it starts, which sends nothing at all and is
 likewise switchable.
 
@@ -32,7 +32,7 @@ predictable: keys committed to the bundle, database row-level security left off,
 with no authentication, dependencies years out of date.
 
 **Before you install.** Run something you downloaded through it. For Electron and .NET
-applications, VibeCheck recovers the real application code from the shipped binary and reads
+applications, Halation recovers the real application code from the shipped binary and reads
 it, rather than trusting the description on a download page.
 
 ## What it does not do
@@ -41,7 +41,7 @@ it, rather than trusting the description on a download page.
 patterns are present; it can never demonstrate that none are. A deliberately malicious app
 will read cleaner than a sloppy honest one.
 
-So VibeCheck does not print a verdict of "safe". It reports:
+So Halation does not print a verdict of "safe". It reports:
 
 - **A score out of 100**, capped by the single worst issue found. Fifty passing checks cannot
   lift an app that ships a live API key out of the red band. There is **one score**, and it is
@@ -93,7 +93,7 @@ rules, never by the score alone.
 
 Installers matter more than that table makes them look, because almost nothing is downloaded
 as a bare executable. An installer is a native stub with the application attached, so reading
-only the stub writes off everything worth checking. VibeCheck unpacks NSIS installers, which
+only the stub writes off everything worth checking. Halation unpacks NSIS installers, which
 is what `electron-builder` produces, and hands each payload to the recovery it deserves: an
 asar to the Electron reader, a .NET assembly or single-file bundle to the decompiler.
 Nothing is executed and nothing is written to disk: the installer is read, never run.
@@ -133,7 +133,7 @@ asked for, which is the difference between a dependency that can be checked and 
 ## Dependency checks
 
 Out-of-date dependencies are one of the most common real problems in shipped applications,
-so VibeCheck checks them against [OSV.dev](https://osv.dev) **at the moment you scan**. A
+so Halation checks them against [OSV.dev](https://osv.dev) **at the moment you scan**. A
 vulnerability database bundled into a release is out of date the day it ships, and findings
 cite CVE identifiers and link through to the NVD entry.
 
@@ -163,11 +163,11 @@ Opus. **They differ in whose account pays and in what that costs you.**
 
 ### Route 1: connect the Claude Code you already have
 
-VibeCheck looks for Claude Code when it starts, including the copy bundled inside the Claude
+Halation looks for Claude Code when it starts, including the copy bundled inside the Claude
 desktop app, and asks it whether it is signed in. That happens on its own, with nothing to click
 and nothing to configure, and **Claude Code does not need to be running**. If it is installed and
 signed in, the app says so and the route is ready; if it is installed but signed out, a **Sign
-in** button appears and opens Claude Code's own sign-in for you. VibeCheck never sees your
+in** button appears and opens Claude Code's own sign-in for you. Halation never sees your
 credentials. The CLI holds them, exactly as it does when you use it directly.
 
 **Detection still does not mean a scan will use it.** The deep pass is a tick box, off by
@@ -175,7 +175,7 @@ default, and no scan sends anything anywhere until you tick it. What being signe
 that ticking the box is the only thing you have to do: the route is chosen for you, so there is
 no second setting to find.
 
-One thing worth knowing: the check runs once, at startup. Sign in to Claude Code while VibeCheck
+One thing worth knowing: the check runs once, at startup. Sign in to Claude Code while Halation
 is already open and it will not notice until you press **Sign in** or restart it.
 
 **This spends the usage allowance of the Claude subscription you already pay for.** Nothing is
@@ -187,7 +187,7 @@ The report says which installation answered, and states plainly that no money wa
 
 ### Route 2: bring your own Anthropic API key
 
-Paste an API key from the [Anthropic Console](https://console.anthropic.com) and VibeCheck calls
+Paste an API key from the [Anthropic Console](https://console.anthropic.com) and Halation calls
 the API directly.
 
 **This costs real money, every scan.** The API is billed per token against credit you buy up
@@ -221,7 +221,7 @@ it is a refusal enforced in the core**, and the reason is worth stating: Claude 
 with shell and filesystem access, and the API is an endpoint that cannot execute anything.
 Feeding source recovered from software you do not trust into something that can act on your
 machine is the attack this tool exists to warn people about. The scanned program never has to
-run, because getting VibeCheck to read it becomes the attack instead.
+run, because getting Halation to read it becomes the attack instead.
 
 Where it is used, that agent is fenced in: no tools, safe mode, an empty working directory, no
 session persistence, and the file content arrives on standard input rather than on a command
@@ -289,7 +289,7 @@ any export.
 ## Scanning a scanner
 
 A detection tool is a program whose source contains, in quotation marks, every string it looks
-for. Pointed at its own published build VibeCheck used to score 16/100 and advise against
+for. Pointed at its own published build Halation used to score 16/100 and advise against
 installing itself, on nine findings that were all its own rule table read as the behaviour the
 rules describe. Antivirus signatures, WAF rules and linter configurations all have this shape.
 
@@ -323,12 +323,12 @@ is not a contradiction. The receipt records the work; the bar reports it at read
 
 ## Updates
 
-On startup VibeCheck asks GitHub for the public release list and compares it with the build
+On startup Halation asks GitHub for the public release list and compares it with the build
 you are running. A newer one gets a strip across the top of the window. Nothing about you or
 the machine is sent, the comparison happens locally, and the whole check can be switched off
 on the drop screen.
 
-**It will not install a build it cannot verify.** VibeCheck's own `VC-MAL-007` tells other
+**It will not install a build it cannot verify.** Halation's own `VC-MAL-007` tells other
 applications that an updater must check what it downloaded against a signature, and not
 against a hash served from the same place as the file, so this one is held to that: a download
 is installed only when Windows validates its Authenticode signature and the signer matches the
@@ -338,7 +338,7 @@ offering to install it. The refusal is stated on screen instead of the button qu
 absent.
 
 When an update is installed, the old build is renamed aside, the new one takes its place, and
-VibeCheck restarts into it. The next launch deletes what was moved. A build running from its
+Halation restarts into it. The next launch deletes what was moved. A build running from its
 own build output, or from a folder it cannot write to, declines to replace itself and says so.
 
 Prereleases are offered only to somebody already running one. A release build is never moved
@@ -356,13 +356,13 @@ Requires the .NET 10 SDK.
 
 ```
 dotnet test
-dotnet run --project VibeCheck.App
+dotnet run --project Halation.App
 ```
 
-A release build is a single self-contained `VibeCheck.exe` with no runtime to install:
+A release build is a single self-contained `Halation.exe` with no runtime to install:
 
 ```
-dotnet publish VibeCheck.App -p:PublishProfile=win-x64 -o <output folder>
+dotnet publish Halation.App -p:PublishProfile=win-x64 -o <output folder>
 ```
 
 ## Supporting it

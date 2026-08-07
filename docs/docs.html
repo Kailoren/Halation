@@ -5,19 +5,19 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Documentation · VibeCheck</title>
-<meta name="description" content="How VibeCheck reads an application, how the score is calculated, what the optional deep pass sends, and what never leaves your machine.">
+<title>Documentation · Halation</title>
+<meta name="description" content="How Halation reads an application, how the score is calculated, what the optional deep pass sends, and what never leaves your machine.">
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="assets/css/site.css">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="VibeCheck">
-<meta property="og:title" content="Documentation · VibeCheck">
-<meta property="og:description" content="How VibeCheck reads an application, how the score is calculated, what the optional deep pass sends, and what never leaves your machine.">
-<meta property="og:url" content="https://kailoren.github.io/VibeCheck/docs.html">
-<meta property="og:image" content="https://kailoren.github.io/VibeCheck/assets/img/social.png">
+<meta property="og:site_name" content="Halation">
+<meta property="og:title" content="Documentation · Halation">
+<meta property="og:description" content="How Halation reads an application, how the score is calculated, what the optional deep pass sends, and what never leaves your machine.">
+<meta property="og:url" content="https://kailoren.github.io/Halation/docs.html">
+<meta property="og:image" content="https://kailoren.github.io/Halation/assets/img/social.png">
 <meta property="og:image:width" content="2560">
 <meta property="og:image:height" content="1280">
-<meta property="og:image:alt" content="VibeCheck, a drag-and-drop security scanner for AI-generated applications.">
+<meta property="og:image:alt" content="Halation, a drag-and-drop security scanner for AI-generated applications.">
 <meta name="twitter:card" content="summary_large_image">
 </head>
 <body>
@@ -35,7 +35,7 @@
   <div class="shell nav__inner">
     <a class="brand" href="index.html">
       <img src="assets/img/logo.png" alt="" width="26" height="26">
-      <span>VibeCheck</span>
+      <span>Halation</span>
     </a>
     <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
     <ul class="nav__links" id="nav-links">
@@ -46,7 +46,7 @@
       <li><a href="faq.html">FAQ</a></li>
       <li><a href="changelog.html">Changelog</a></li>
       <li><a href="discuss.html">Discuss</a></li>
-      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+      <li><a href="https://github.com/kailoren/halation">GitHub</a></li>
     </ul>
   </div>
 </header>
@@ -54,7 +54,7 @@
 <div class="page-head">
   <div class="shell">
     <div class="section-label">Documentation</div>
-    <h1>How VibeCheck works</h1>
+    <h1>How Halation works</h1>
     <p class="lede">
       What it reads, what it can and cannot conclude from what it read, and what leaves your
       machine while it does. Written for both readers the tool serves.
@@ -91,7 +91,7 @@
     <section id="install">
       <h2>Installing</h2>
       <p>
-        VibeCheck is a single self-contained <code>VibeCheck.exe</code> for Windows 10 and 11.
+        Halation is a single self-contained <code>Halation.exe</code> for Windows 10 and 11.
         There is no runtime to install, no installer, and nothing written outside your own user
         folder. Download it, put it wherever you keep things, and run it.
       </p>
@@ -105,9 +105,14 @@
         </p>
       </div>
       <p>
-        Settings live in <code>%LOCALAPPDATA%\VibeCheck</code>. That is where the audience
+        Settings live in <code>%LOCALAPPDATA%\Halation</code>. That is where the audience
         choice, the window position and, if you set one, your encrypted API key are kept.
         Deleting that folder resets the application to a first run.
+      </p>
+      <p>
+        If you used this tool when it was called VibeCheck, those settings are carried across
+        the first time 0.1.4-beta runs. They are copied rather than moved, so the old folder is
+        left exactly as it was and the older build still works if you go back to it.
       </p>
     </section>
 
@@ -191,7 +196,7 @@
       <p>
         Almost nothing is downloaded as a bare executable. An installer is a native stub with
         the application attached, so reading only the stub writes off everything worth checking.
-        VibeCheck unpacks NSIS installers, which is what <code>electron-builder</code> produces,
+        Halation unpacks NSIS installers, which is what <code>electron-builder</code> produces,
         and hands each payload to the recovery it deserves.
       </p>
       <p>
@@ -249,7 +254,7 @@
       <h2>Dependency checks</h2>
       <p>
         Out-of-date dependencies are one of the most common real problems in shipped
-        applications, so VibeCheck checks them against <a href="https://osv.dev">OSV.dev</a>
+        applications, so Halation checks them against <a href="https://osv.dev">OSV.dev</a>
         <strong>at the moment you scan</strong>. Findings cite CVE identifiers and link through
         to the advisory.
       </p>
@@ -361,7 +366,7 @@
       <p>
         Reading a browser cookie database is what a password stealer does and what a cleaner
         does. Rather than asking you to pick from a list of application kinds, which invites
-        picking a flattering one, VibeCheck asks about what it actually observed:
+        picking a flattering one, Halation asks about what it actually observed:
         <em>"This application reads your browser cookies. Does it have a reason to?"</em>
       </p>
       <p>
@@ -465,7 +470,7 @@
         anybody is publishing that source.
       </p>
       <p>
-        That is a real obstacle to something VibeCheck actually needs. Nearly every improvement to
+        That is a real obstacle to something Halation actually needs. Nearly every improvement to
         this tool has come from somebody pointing it at a real application and finding it wrong,
         and a report is how you show that. Nobody should have to choose between helping and
         keeping their code to themselves.
@@ -535,7 +540,7 @@
       <h2>Scanning a scanner</h2>
       <p>
         A detection tool is a program whose source contains, in quotation marks, every string it
-        looks for. Pointed at its own published build VibeCheck used to score 16/100 and advise
+        looks for. Pointed at its own published build Halation used to score 16/100 and advise
         against installing itself, on nine findings that were all its own rule table read as the
         behaviour the rules describe. Antivirus signatures, WAF rules and linter configurations
         all have this shape.
@@ -560,12 +565,12 @@
     <section id="updates">
       <h2>Updates</h2>
       <p>
-        On startup VibeCheck asks GitHub for the public release list and compares it with the
+        On startup Halation asks GitHub for the public release list and compares it with the
         build you are running. A newer one gets a strip across the top of the window. Nothing
         about you or the machine is sent, and the whole check can be switched off.
       </p>
       <p>
-        <strong>It will not install a build it cannot verify.</strong> VibeCheck's own
+        <strong>It will not install a build it cannot verify.</strong> Halation's own
         <code>VC-MAL-007</code> tells other applications that an updater must check what it
         downloaded against a signature, and not against a hash served from the same place as the
         file, so this one is held to that. Until releases are code-signed there is no publisher
@@ -582,16 +587,16 @@
     <section id="building">
       <h2>Building from source</h2>
       <p>Requires the .NET 10 SDK.</p>
-      <pre><code>git clone https://github.com/kailoren/vibecheck
-cd vibecheck
+      <pre><code>git clone https://github.com/kailoren/halation
+cd halation
 dotnet test
-dotnet run --project VibeCheck.App</code></pre>
+dotnet run --project Halation.App</code></pre>
       <p>A release build is a single self-contained executable with no runtime to install:</p>
-      <pre><code>dotnet publish VibeCheck.App -p:PublishProfile=win-x64 -o &lt;output folder&gt;</code></pre>
+      <pre><code>dotnet publish Halation.App -p:PublishProfile=win-x64 -o &lt;output folder&gt;</code></pre>
       <p>
-        The solution is three projects: <code>VibeCheck.Core</code> holds the whole analysis
-        engine and is platform-neutral, <code>VibeCheck.App</code> is the WPF interface, and
-        <code>VibeCheck.Tests</code> covers both. The only third-party analysis dependency is
+        The solution is three projects: <code>Halation.Core</code> holds the whole analysis
+        engine and is platform-neutral, <code>Halation.App</code> is the WPF interface, and
+        <code>Halation.Tests</code> covers both. The only third-party analysis dependency is
         <a href="https://github.com/icsharpcode/ILSpy">ICSharpCode.Decompiler</a>, the ILSpy
         engine.
       </p>
@@ -607,7 +612,7 @@ dotnet run --project VibeCheck.App</code></pre>
       <div>
         <a class="brand" href="index.html" style="margin-bottom:0.8rem">
           <img src="assets/img/logo.png" alt="" width="26" height="26">
-          <span>VibeCheck</span>
+          <span>Halation</span>
         </a>
         <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
           A drag-and-drop security scanner for AI-generated applications.
@@ -626,18 +631,18 @@ dotnet run --project VibeCheck.App</code></pre>
       <div>
         <h4>Project</h4>
         <ul>
-          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="https://github.com/kailoren/halation">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/halation/releases">Releases</a></li>
           <li><a href="discuss.html">Discussions</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
-          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+          <li><a href="https://github.com/kailoren/halation/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/halation/blob/main/LICENSE">MIT licence</a></li>
           <li><a href="https://ko-fi.com/kailodev">Support on Ko-fi</a></li>
         </ul>
       </div>
     </div>
     <div class="footer__note">
       <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
-      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+      <span>Halation cannot tell you an application is safe, and does not claim to.</span>
     </div>
   </div>
 </footer>
