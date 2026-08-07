@@ -70,4 +70,27 @@ public sealed class ExportFormatTests
         Assert.Equal("json", ExportFormat.Json.Extension());
         Assert.Equal("png", ExportFormat.Scorecard.Extension());
     }
+
+    /// <summary>
+    /// The chooser must not promise a hash the card will not carry.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Scorecard.Sha256"/> is deliberately empty for a directory scan, because the
+    /// scanner's value there describes file names and sizes rather than code. Copy that offers
+    /// the hash unconditionally sells a verification the image then declines to support, which
+    /// is the overclaim the card was changed to avoid. It shipped once; this pins it.
+    /// </remarks>
+    [Fact]
+    public void TheScorecardDescriptionDoesNotPromiseAHashForEveryScan()
+    {
+        var description = ExportFormat.Scorecard.Description();
+
+        Assert.Contains("hash", description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("folder", description, StringComparison.OrdinalIgnoreCase);
+
+        // The claim has to be attached to scanning a file, not to the format in general.
+        var hash = description.IndexOf("hash", StringComparison.OrdinalIgnoreCase);
+        var file = description.IndexOf("file", StringComparison.OrdinalIgnoreCase);
+        Assert.InRange(file, 0, hash);
+    }
 }

@@ -58,11 +58,14 @@ public static class ExportFormats
             + "posted in public or sent to somebody who should not see the source. The findings "
             + "and the score are unchanged.",
 
+        // The hash sentence is conditional on purpose. A folder scan produces no hash the card
+        // can stand behind, so the card withholds it; promising one here would sell a check the
+        // image then refuses to offer. See Scorecard.Sha256.
         ExportFormat.Scorecard =>
             "An image of the result to attach to a readme or a post. Carries the score, how much "
-            + "of the application could be read, what was found, and the hash of the file that "
-            + "was scanned, so anyone can rescan the same file and check they get the same "
-            + "answer.",
+            + "of the application could be read, and what was found. Scanning a file also puts "
+            + "its hash on the card, so anyone can rescan that exact file and check the answer. "
+            + "A folder has no such hash, and the card says so rather than implying one.",
 
         _ => throw new ArgumentOutOfRangeException(nameof(format)),
     };
