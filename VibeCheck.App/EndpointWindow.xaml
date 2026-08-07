@@ -127,6 +127,16 @@
                        Margin="0,8,0,0" Visibility="Collapsed"
                        Text="One thing to check: the deep pass sends whole files, several times larger than Ollama's traditional default context of 4096 tokens. If yours is still on that default, most of each file is dropped before the model reads it and the scan will look quiet rather than broken. Setting OLLAMA_CONTEXT_LENGTH to 32768 removes the doubt."/>
 
+            <!-- Shown whatever the reader has installed, and worded as what happens rather than
+                 as a scare. A local model is the one route with a cost that is not money, and
+                 somebody choosing it for privacy should know they are choosing it for their
+                 graphics card too. The liability sentence is not boilerplate: sustained load is
+                 exactly what finds hardware that was already marginal, and this application is
+                 what asked for the load. -->
+            <TextBlock x:Name="LoadCaution" Style="{StaticResource Caption}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource High}" Margin="0,10,0,0"
+                       Text="A local model works your graphics card hard for as long as the scan runs, holding most of its memory and full utilisation throughout. Expect games, calls and anything else wanting the card to stutter until it finishes, with the heat and fan noise of any sustained load. Run one at your own risk: the load is ordinary, but sustained load is also what finds hardware that was already marginal, and no responsibility or liability is accepted for damage to your card or machine. VibeCheck is provided under the MIT licence, without warranty of any kind."/>
+
             <Border Height="1" Background="{StaticResource Edge}" Margin="0,16,0,14"/>
 
             <!-- Buttons rather than a drop-down. Every option is visible without a click, which
