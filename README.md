@@ -1,7 +1,7 @@
 
 <div align="center">
 
-<img width="250" height="249" alt="Halation" src="https://github.com/user-attachments/assets/aa308adb-666b-4136-8c52-a6c7b9152359" />
+<img width="256" height="256" alt="image-1786122777354" src="https://github.com/user-attachments/assets/86be28d5-22bf-4cbf-8ef8-6d88af11f87f" />
 
 # Halation
 [![License](https://img.shields.io/github/license/kailoren/halation?style=plastic)](LICENSE)
