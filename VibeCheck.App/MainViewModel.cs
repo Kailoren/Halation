@@ -576,7 +576,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
             "Billed by whoever runs that endpoint, at rates VibeCheck has no way to know. The "
             + "report states the tokens spent rather than inventing what they cost.",
 
-        _ => "Billed to your Anthropic API key, per file read.",
+        // The ceiling rather than the typical figure. "Cents per scan" was true of the small
+        // projects it was measured on and badly wrong at the other end, and somebody who learns
+        // the real number from their invoice has been misled by this application rather than by
+        // Anthropic. The file count is interpolated so the sentence cannot drift from the limit
+        // it describes.
+        _ => "Billed to your Anthropic API key, per file read. A small project costs cents. The "
+             + $"ceiling is {DeepPassTriage.DefaultMaxFiles} files, and an application large "
+             + "enough to reach it can cost around five dollars in a single scan, so treat cents "
+             + "as the floor rather than the usual figure. The report states what was spent.",
     };
 
     /// <summary>
