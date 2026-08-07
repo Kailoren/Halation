@@ -79,6 +79,7 @@
       <li><a href="#capabilities">Capabilities and purpose</a></li>
       <li><a href="#deep-pass">The deep pass</a></li>
       <li><a href="#privacy">What leaves your machine</a></li>
+      <li><a href="#exports">Taking a report away</a></li>
       <li><a href="#self">Scanning a scanner</a></li>
       <li><a href="#updates">Updates</a></li>
       <li><a href="#building">Building from source</a></li>
@@ -411,6 +412,122 @@
         Your code is never uploaded by the main scan. Neither is the artifact, its file names,
         its hash, or your report. The status bar states what leaves the machine on every screen,
         not only the one where there is nothing to send yet.
+      </p>
+      <p>
+        Sending a report somewhere is a separate decision, and one you make by saving a file
+        rather than by ticking anything. <a href="#exports">Taking a report away</a> covers the
+        three exports, and which of them is safe to post in public.
+      </p>
+    </section>
+
+    <section id="exports">
+      <h2>Taking a report away</h2>
+      <p>
+        The results screen offers three. Nothing is written anywhere until you press one of them,
+        and nothing is sent anywhere by any of them: they save a file, and what happens to it
+        afterwards is yours to decide.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Export</th>
+              <th scope="col">What it is for</th>
+              <th scope="col">Contains your code</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Export Markdown</strong></td>
+              <td>Reading it, keeping it, pasting it into your own notes or a private ticket</td>
+              <td><span style="color:var(--high)">Yes</span></td>
+            </tr>
+            <tr>
+              <td><strong>Export JSON</strong></td>
+              <td>Feeding it to something else. Every field, structured, with a version number</td>
+              <td><span style="color:var(--high)">Yes</span></td>
+            </tr>
+            <tr>
+              <td><strong>Export for sharing</strong></td>
+              <td>Posting in public, or sending to somebody who should not see the source</td>
+              <td><span style="color:var(--good)">No</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Why the third one exists</h3>
+      <p>
+        Every finding in an ordinary report <strong>quotes the line of code it was found in</strong>
+        and names the file and line it came from. That is deliberate, and it is the most important
+        thing in the report: it is what lets you check a claim instead of believing it. It also
+        means the ordinary export is a document full of your own source, and sending one to
+        anybody is publishing that source.
+      </p>
+      <p>
+        That is a real obstacle to something VibeCheck actually needs. Nearly every improvement to
+        this tool has come from somebody pointing it at a real application and finding it wrong,
+        and a report is how you show that. Nobody should have to choose between helping and
+        keeping their code to themselves.
+      </p>
+
+      <h3>What the sharing copy removes</h3>
+      <div class="grid grid--2" style="margin-top:1.2rem">
+        <div class="card">
+          <h3 style="margin-top:0">Taken out</h3>
+          <ul>
+            <li>The quoted lines of code, entirely</li>
+            <li>File names and paths</li>
+            <li>Line numbers</li>
+            <li>The name of what you scanned</li>
+            <li>Its SHA-256 hash</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3 style="margin-top:0">Kept</h3>
+          <ul>
+            <li>Every finding, its severity and its rule</li>
+            <li>The score, the bands, the coverage figure</li>
+            <li>Which checks ran, passed, or could not run</li>
+            <li>Timings and file counts</li>
+            <li>Your hardware and model, if one ran locally</li>
+          </ul>
+        </div>
+      </div>
+      <p style="margin-top:1.4rem">
+        Findings are not summarised or dropped. A sharing copy lists the same findings, in the same
+        order, at the same severities, with the same explanations. What goes is the evidence block
+        and the location; a finding that read <em>"Hardcoded credential ·
+        <code>src/Auth/Vault.cs:19</code>"</em> above a quoted line becomes <em>"Hardcoded
+        credential · <code>file 1 (.cs)</code>"</em> with no quotation.
+      </p>
+      <p>
+        <strong>Paths become labels rather than vanishing.</strong> The same file keeps the same
+        label throughout, so nine findings in one file still read as nine findings in one file,
+        and the extension stays because the language changes which checks could apply. The label
+        says nothing about what the file is called or where it sits.
+      </p>
+
+      <div class="callout">
+        <span class="callout__title">Two things it does not pretend</span>
+        <p>
+          <strong>It says at the top that it is the redacted one.</strong> A shortened report that
+          did not announce itself would be worse than none: anybody comparing two of them would
+          read the missing parts as findings that were not there, which is the exact mistake the
+          rest of this tool is built to prevent.
+        </p>
+        <p>
+          <strong>Wording written by an AI model is kept, and that wording can name things.</strong>
+          A model explaining a finding may refer to a method or a class it read. That is a far
+          smaller disclosure than a quoted line, and without it there is nothing left to discuss,
+          so it stays and the file tells you so. Read it before you post it, the same as you would
+          anything else.
+        </p>
+      </div>
+
+      <p>
+        Secrets are masked in both copies. A credential the scanner found is never printed back in
+        full, in any export, whatever you do with the file.
       </p>
     </section>
 

@@ -246,6 +246,46 @@ carry a confidence level, and low-confidence ones are dropped rather than hedged
 can **trigger a "do not install" verdict**, because the strongest claim in a report must not
 depend on whether the reader happened to have a key or a subscription.
 
+## Exporting a report, including one you can post in public
+
+Three buttons on the results screen. Nothing is written until you press one and nothing is sent
+by any of them; they save a file, and what happens to it next is yours.
+
+| Export | For | Contains your code |
+|---|---|---|
+| **Markdown** | Reading, keeping, pasting into your own notes or a private ticket | Yes |
+| **JSON** | Feeding to something else. Every field, structured, versioned | Yes |
+| **For sharing** | Posting in public, or sending to someone who should not see the source | **No** |
+
+**Why the third exists.** Every finding in an ordinary report quotes the line of code it was found
+in and names the file and line. That is the most valuable thing in it, because it is what lets you
+check a claim rather than believe it, and it also makes the ordinary export a document full of your
+own source. Sending one to anybody is publishing that source.
+
+That gets in the way of something this project actually needs. Nearly every real improvement here
+came from somebody pointing the tool at a real application and finding it wrong, and a report is
+how you show that. Nobody should have to choose between helping and keeping their code private.
+
+**The sharing copy removes** the quoted lines entirely, the file names and paths, the line numbers,
+and the name and SHA-256 of what you scanned. **It keeps** every finding, its severity and its rule,
+the score and coverage, which checks ran or could not, the timings, and your hardware and model if
+one ran locally.
+
+Nothing is summarised or dropped. The same findings appear in the same order at the same
+severities. A finding that read `Hardcoded credential · src/Auth/Vault.cs:19` above a quoted line
+becomes `Hardcoded credential · file 1 (.cs)` with no quotation. Paths become labels rather than
+disappearing, and the same file keeps the same label, so nine findings in one file still read as
+nine findings in one file.
+
+Two things it does not pretend. **It states at the top that it is the redacted copy**, because a
+shortened report that stayed quiet about it would let somebody read the missing parts as findings
+that were not there, which is the mistake the rest of this tool exists to prevent. And **wording an
+AI model wrote is kept**, which can name a method or a class it read: a far smaller disclosure than
+a quoted line, and without it there is nothing to discuss, so it stays and the file says so.
+
+Secrets are masked in both copies. A credential the scanner found is never printed back in full in
+any export.
+
 ## Scanning a scanner
 
 A detection tool is a program whose source contains, in quotation marks, every string it looks
