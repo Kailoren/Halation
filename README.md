@@ -82,9 +82,11 @@ rules, never by the score alone.
 |---|---|---|
 | Source folder, zip, or repository | read directly | full |
 | .NET executable or library | decompiled (ILSpy) | full, near-original C# |
+| .NET single-file bundle | unpacked from memory, then decompiled | full |
 | Electron application or `.asar` | unpacked | full, often unminified |
 | NSIS installer | unpacked, then as above | full for Electron and .NET payloads |
 | Java archive | decompiled | good |
+| Python bundle | readable modules only | partial, and said so |
 | Native Windows binary | not possible | signing and hardening flags only |
 
 Installers matter more than that table makes them look, because almost nothing is downloaded

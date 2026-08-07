@@ -116,9 +116,11 @@
         <tbody>
           <tr><td>Source folder, zip, or repository</td><td>read directly</td><td>full</td></tr>
           <tr><td>.NET executable or library</td><td>decompiled (ILSpy)</td><td>full, near-original C#</td></tr>
+          <tr><td>.NET single-file bundle</td><td>unpacked from memory, then decompiled</td><td>full</td></tr>
           <tr><td>Electron application or <code>.asar</code></td><td>unpacked</td><td>full, often unminified</td></tr>
           <tr><td>NSIS installer</td><td>unpacked, then as above</td><td>full for Electron and .NET payloads</td></tr>
           <tr><td>Java archive</td><td>decompiled</td><td>good</td></tr>
+          <tr><td>Python bundle</td><td>readable modules only</td><td>partial, and said so</td></tr>
           <tr><td>Native Windows binary</td><td>not possible</td><td>signing and hardening flags only</td></tr>
         </tbody>
       </table>
