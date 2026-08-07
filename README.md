@@ -1,7 +1,7 @@
 
 <div align="center">
 
-<img width="250" height="249" alt="Halation" src="https://github.com/user-attachments/assets/aa308adb-666b-4136-8c52-a6c7b9152359" />
+<img width="200" height="200" alt="Halation" src="docs/assets/img/logo.png" />
 
 # Halation
 [![License](https://img.shields.io/github/license/kailoren/halation?style=plastic)](LICENSE)
@@ -22,7 +22,7 @@ advisories, and that can be turned off entirely. Your code is never uploaded. Ha
 asks GitHub what the newest release is when it starts, which sends nothing at all and is
 likewise switchable.
 
-<img width="1116" height="815" alt="mainscreen" src="https://github.com/user-attachments/assets/c418a6d9-0c95-49c2-92fd-b0e18dbf6ecb" />
+<img width="1120" height="820" alt="The Halation drop screen, waiting for an application to be dragged onto it." src="docs/assets/img/screen-drop.png" />
 
 ## Who it is for
 
@@ -76,7 +76,7 @@ So Halation does not print a verdict of "safe". It reports:
 An explicit "do not install" is triggered only by specific, high-confidence deterministic
 rules, never by the score alone.
 
-<img width="1114" height="1038" alt="scanresults" src="https://github.com/user-attachments/assets/194d0b7d-7bd6-423d-b2d1-c5d0ffc90ad5" />
+<img width="1120" height="1180" alt="The results screen scoring an example project 11 out of 100, labelled Critical issues, with fourteen findings listed beneath." src="docs/assets/img/screen-results.png" />
 
 ## Recovery depth by artifact type
 
@@ -151,7 +151,7 @@ not run is never mistaken for one that came back clean.
 
 ## Optional deep pass
 
-<img width="1120" height="997" alt="Screenshot 2026-08-06 224153" src="https://github.com/user-attachments/assets/5b003aec-85b2-47b4-94f2-c4d41b038b23" />
+<img width="1200" height="1908" alt="The deep pass endpoint window, naming the detected graphics card and recommending the largest local model that fits it." src="docs/assets/img/screen-endpoint.png" />
 
 The main scan is free, needs no account, and sends nothing but package names. Optionally, a
 second deep pass reads the code and reasons about it, which is what catches the things a pattern
