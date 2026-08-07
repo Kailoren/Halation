@@ -182,7 +182,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         if (State == AppState.ChoosingAudience)
         {
-            State = AppState.Waiting;
+            ToWaiting();
         }
     }
 
@@ -1355,14 +1355,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             State = AppState.Results;
         }
+        // A scan that was cancelled or that failed leaves nothing chosen, the same as one that
+        // was read. The artifact it was pointed at is not offerable again from this screen.
         catch (OperationCanceledException)
         {
-            State = AppState.Waiting;
+            ToWaiting();
         }
         catch (Exception ex)
         {
             Error = $"{ex.GetType().Name}: {ex.Message}";
-            State = AppState.Waiting;
+            ToWaiting();
         }
         finally
         {
@@ -1416,6 +1418,31 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// Back to the opening screen with nothing chosen.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The selection has to be dropped with the state, and this exists because it was not.</b>
+    /// The waiting screen draws the chosen artifact <i>instead of</i> the browse buttons, on the
+    /// understanding that <c>ScanSetupWindow</c> is open in front of it. Left set with no dialog
+    /// there, that screen offers no way to choose anything and no way to start: the browse
+    /// buttons belong to the empty panel and the scan button lives in the dialog. The only way
+    /// out was a drop nothing on screen invites, so it read as locked to the previous artifact
+    /// and stayed that way through the audience screen too.
+    /// </para>
+    /// <para>
+    /// Every route back here other than choosing an artifact goes through this. Choosing one is
+    /// the exception on purpose: <c>Choose</c> sets the selection and opens the dialog over it,
+    /// and clears it again itself if the dialog is dismissed.
+    /// </para>
+    /// </remarks>
+    private void ToWaiting()
+    {
+        SelectedPath = null;
+        State = AppState.Waiting;
+    }
+
     private void Reset()
     {
         Report = null;
@@ -1429,7 +1456,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         _answered.Clear();
         RebuildQuestions();
 
-        State = AppState.Waiting;
+        ToWaiting();
     }
 
     /// <summary>
