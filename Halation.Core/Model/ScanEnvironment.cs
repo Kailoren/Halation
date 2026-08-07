@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace VibeCheck.Core.Model;
+namespace Halation.Core.Model;
 
 /// <summary>
 /// The machine a scan ran on, and what answered the deep pass, recorded in the exported report.

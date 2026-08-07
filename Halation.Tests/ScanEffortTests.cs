@@ -1,8 +1,8 @@
-using VibeCheck.Core;
-using VibeCheck.Core.Dependencies;
-using VibeCheck.Core.Model;
+using Halation.Core;
+using Halation.Core.Dependencies;
+using Halation.Core.Model;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The receipt exists so a scan that finishes in under two seconds is not read as one that

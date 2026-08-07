@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>
 /// Turns a model's claim about where something is into a quotation taken from the file itself.

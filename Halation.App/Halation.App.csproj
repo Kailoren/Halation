@@ -41,7 +41,7 @@
 
     <!-- The shipped executable is Halation.exe; only the project is called Halation.App. -->
     <AssemblyName>Halation</AssemblyName>
-    <RootNamespace>VibeCheck.App</RootNamespace>
+    <RootNamespace>Halation.App</RootNamespace>
 
     <ApplicationIcon>Halation.ico</ApplicationIcon>
 

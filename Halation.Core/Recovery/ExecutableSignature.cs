@@ -2,9 +2,9 @@ using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Recovery;
+namespace Halation.Core.Recovery;
 
 /// <summary>
 /// Whether a shipped executable is signed, and the VC-BIN-010 finding when it is not.

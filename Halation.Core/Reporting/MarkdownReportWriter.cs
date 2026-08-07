@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Text;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Rules;
-using VibeCheck.Core.Scoring;
+using Halation.Core.Model;
+using Halation.Core.Rules;
+using Halation.Core.Scoring;
 
-namespace VibeCheck.Core.Reporting;
+namespace Halation.Core.Reporting;
 
 /// <summary>
 /// Renders a scan report as Markdown.

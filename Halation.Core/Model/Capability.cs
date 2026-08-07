@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.Model;
+namespace Halation.Core.Model;
 
 /// <summary>
 /// A power the application was observed to have, named so that a declared purpose can be

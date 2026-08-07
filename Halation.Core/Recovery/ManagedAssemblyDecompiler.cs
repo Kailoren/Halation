@@ -6,9 +6,9 @@ using ICSharpCode.Decompiler.CSharp;
 using ICSharpCode.Decompiler.Metadata;
 using ICSharpCode.Decompiler.TypeSystem;
 
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Recovery;
+namespace Halation.Core.Recovery;
 
 /// <summary>
 /// Running totals shared across every assembly in one scan, so the limits apply to the

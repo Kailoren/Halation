@@ -2,9 +2,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-using VibeCheck.Core.Rules;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>
 /// Answers the deep pass through any endpoint that speaks the OpenAI chat-completions shape.

@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>
 /// Collects the deep pass API key.

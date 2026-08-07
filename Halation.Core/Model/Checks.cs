@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.Model;
+namespace Halation.Core.Model;
 
 /// <summary>How one check ended up. Three states, never two.</summary>
 /// <remarks>

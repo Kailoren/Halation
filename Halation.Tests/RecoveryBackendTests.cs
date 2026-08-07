@@ -1,10 +1,10 @@
 using System.IO.Compression;
 
-using VibeCheck.Core.Artifacts;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Artifacts;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 public class RecoveryBackendTests : IDisposable
 {

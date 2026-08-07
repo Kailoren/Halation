@@ -1,6 +1,6 @@
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Scoring;
+namespace Halation.Core.Scoring;
 
 /// <summary>
 /// Turns a set of findings into the headline score, band, and install verdict.

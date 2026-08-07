@@ -2,11 +2,11 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
-using VibeCheck.Core.Rules;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>One file selected for the deep pass, and why.</summary>
 public sealed record TriagedFile

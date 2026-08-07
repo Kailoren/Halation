@@ -1,11 +1,11 @@
-﻿using VibeCheck.Core;
-using VibeCheck.Core.Artifacts;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
-using VibeCheck.Core.Rules;
-using VibeCheck.Core.Scoring;
+﻿using Halation.Core;
+using Halation.Core.Artifacts;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
+using Halation.Core.Rules;
+using Halation.Core.Scoring;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Regressions for defects found by running the scanner against real, already-audited
@@ -117,7 +117,7 @@ public class ValidationRegressionTests : IDisposable
     [Theory]
     [InlineData("FleetFinder")]
     [InlineData("ColonyTracker")]
-    [InlineData("VibeCheck.Core")]
+    [InlineData("Halation.Core")]
     [InlineData("MyApp")]
     public void ApplicationAssemblies_AreNotExcluded(string name) =>
         Assert.False(DotNetRecoveryBackend.IsFrameworkAssembly(name), $"{name} should be scanned");

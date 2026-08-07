@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.Json;
 
-using VibeCheck.Core.Recovery;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 public class AsarReaderTests
 {

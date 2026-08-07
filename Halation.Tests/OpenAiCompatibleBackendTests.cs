@@ -3,12 +3,12 @@ using System.Security.Authentication;
 using System.Text;
 using System.Text.Json;
 
-using VibeCheck.Core;
-using VibeCheck.Core.DeepPass;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core;
+using Halation.Core.DeepPass;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The deep pass answered by something other than Anthropic.

@@ -1,6 +1,6 @@
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The declared kind of application, which frames the capability questions and decides nothing.

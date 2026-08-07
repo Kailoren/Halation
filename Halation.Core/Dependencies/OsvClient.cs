@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace VibeCheck.Core.Dependencies;
+namespace Halation.Core.Dependencies;
 
 /// <summary>
 /// Talks to the OSV.dev API.

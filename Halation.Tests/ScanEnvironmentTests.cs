@@ -1,12 +1,12 @@
 using System.Text.Json;
 
-using VibeCheck.Core.DeepPass;
-using VibeCheck.Core.Dependencies;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Reporting;
-using VibeCheck.Core.Scoring;
+using Halation.Core.DeepPass;
+using Halation.Core.Dependencies;
+using Halation.Core.Model;
+using Halation.Core.Reporting;
+using Halation.Core.Scoring;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// What the exported report says about the machine, which is what makes a local model report

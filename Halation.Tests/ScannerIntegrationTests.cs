@@ -1,10 +1,10 @@
 ﻿using System.Text.Json;
 
-using VibeCheck.Core;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Reporting;
+using Halation.Core;
+using Halation.Core.Model;
+using Halation.Core.Reporting;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// End-to-end scans over a synthetic project carrying the failures AI code generators

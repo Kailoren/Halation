@@ -1,10 +1,10 @@
 using System.Text;
 using System.Text.Json;
 
-using VibeCheck.Core.DeepPass;
-using VibeCheck.Core.Rules;
+using Halation.Core.DeepPass;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The text the deep pass produces, on its way from the agent to the report.

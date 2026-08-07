@@ -3,7 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Navigation;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 public partial class MainWindow : Window
 {

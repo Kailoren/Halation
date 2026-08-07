@@ -2,7 +2,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>
 /// Stores the optional deep pass API key on this machine, encrypted to this Windows account.

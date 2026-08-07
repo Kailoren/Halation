@@ -1,9 +1,9 @@
 using System.Reflection.PortableExecutable;
 
-using VibeCheck.Core.Artifacts;
-using VibeCheck.Core.Model;
+using Halation.Core.Artifacts;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Recovery;
+namespace Halation.Core.Recovery;
 
 /// <summary>
 /// Handles native binaries, where no source recovery is possible.

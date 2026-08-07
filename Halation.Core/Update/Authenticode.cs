@@ -3,7 +3,7 @@ using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
-namespace VibeCheck.Core.Update;
+namespace Halation.Core.Update;
 
 /// <summary>What Windows says about a file's code signature.</summary>
 public sealed record SignatureVerdict

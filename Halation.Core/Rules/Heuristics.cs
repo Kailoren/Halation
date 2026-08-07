@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace VibeCheck.Core.Rules;
+namespace Halation.Core.Rules;
 
 /// <summary>
 /// Shared tests used by rules to discard matches that are not real problems.

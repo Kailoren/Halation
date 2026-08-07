@@ -1,8 +1,8 @@
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
-using VibeCheck.Core.Rules;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The report now shows what passed, not only what failed. That is worth having, and it is

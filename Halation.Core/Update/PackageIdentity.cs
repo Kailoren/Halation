@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace VibeCheck.Core.Update;
+namespace Halation.Core.Update;
 
 /// <summary>
 /// Whether this process is running from an installed package rather than as a loose

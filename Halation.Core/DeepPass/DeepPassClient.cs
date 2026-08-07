@@ -1,10 +1,10 @@
 using Anthropic;
 using Anthropic.Models.Beta.Messages;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Rules;
+using Halation.Core.Model;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>
 /// What the API billed for.

@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.Model;
+namespace Halation.Core.Model;
 
 /// <summary>
 /// How much of the artifact could actually be read.

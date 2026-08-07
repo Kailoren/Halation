@@ -1,10 +1,10 @@
 using System.Text;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
-using VibeCheck.Core.Rules;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// A scanner is a program whose source contains, in quotation marks, every string it looks for.
@@ -207,7 +207,7 @@ public class PatternDefinitionTests
             FilesChecked = 1,
             PackagesResolved = 0,
             PackagesChecked = 0,
-            VulnerabilityData = VibeCheck.Core.Dependencies.VulnerabilityDataProvenance.Unavailable,
+            VulnerabilityData = Halation.Core.Dependencies.VulnerabilityDataProvenance.Unavailable,
             MatchesDiscounted = 28,
         };
 
@@ -231,7 +231,7 @@ public class PatternDefinitionTests
             FilesChecked = 1,
             PackagesResolved = 0,
             PackagesChecked = 0,
-            VulnerabilityData = VibeCheck.Core.Dependencies.VulnerabilityDataProvenance.Unavailable,
+            VulnerabilityData = Halation.Core.Dependencies.VulnerabilityDataProvenance.Unavailable,
         };
 
         Assert.DoesNotContain(

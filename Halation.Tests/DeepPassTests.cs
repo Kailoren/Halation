@@ -1,11 +1,11 @@
 using System.Text.Json;
 
-using VibeCheck.Core;
-using VibeCheck.Core.DeepPass;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core;
+using Halation.Core.DeepPass;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The deep pass costs the reader money and sends their code to a third party, so its

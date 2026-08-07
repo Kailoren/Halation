@@ -1,10 +1,10 @@
 using System.Text;
 using System.Text.Json;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Rules;
+using Halation.Core.Model;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>
 /// The question the deep pass asks, and how its answer is read back.

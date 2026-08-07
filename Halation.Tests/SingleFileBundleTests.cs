@@ -1,9 +1,9 @@
 using System.IO.Compression;
 using System.Text;
 
-using VibeCheck.Core.Recovery;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Covers the .NET single-file bundle reader against containers built from the format

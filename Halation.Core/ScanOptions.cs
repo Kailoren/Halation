@@ -1,8 +1,8 @@
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-using VibeCheck.Core.Dependencies;
+using Halation.Core.Dependencies;
 
-namespace VibeCheck.Core;
+namespace Halation.Core;
 
 /// <summary>
 /// How a scan should behave, chiefly around dependency checking and the optional deep pass.

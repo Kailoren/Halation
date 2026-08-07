@@ -1,6 +1,6 @@
-using VibeCheck.Core.DeepPass;
+using Halation.Core.DeepPass;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The presets, and the tidying that turns what somebody pastes into the URL that is requested.

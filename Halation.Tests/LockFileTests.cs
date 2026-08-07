@@ -1,7 +1,7 @@
-using VibeCheck.Core.Dependencies;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Dependencies;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Lock files from the ecosystems beyond npm, NuGet and PyPI.

@@ -2,10 +2,10 @@ using System.IO.Compression;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 
-using VibeCheck.Core.Artifacts;
-using VibeCheck.Core.Model;
+using Halation.Core.Artifacts;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Recovery;
+namespace Halation.Core.Recovery;
 
 /// <summary>
 /// Reads artifacts that already contain readable text: a source folder, a zipped project,

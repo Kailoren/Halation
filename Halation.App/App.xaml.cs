@@ -1,9 +1,9 @@
 using System.IO;
 using System.Windows;
 
-using VibeCheck.Core.Rules;
+using Halation.Core.Rules;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 public partial class App : Application
 {

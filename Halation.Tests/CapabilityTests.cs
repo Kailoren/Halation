@@ -1,9 +1,9 @@
-using VibeCheck.Core;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Reporting;
-using VibeCheck.Core.Rules;
+using Halation.Core;
+using Halation.Core.Model;
+using Halation.Core.Reporting;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// What an application can do, as opposed to what it does wrong.

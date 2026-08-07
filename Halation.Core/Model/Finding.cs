@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.Model;
+namespace Halation.Core.Model;
 
 /// <summary>
 /// One issue detected in the scanned artifact.

@@ -1,9 +1,9 @@
 using System.Net;
 using System.Text;
 
-using VibeCheck.Core.DeepPass;
+using Halation.Core.DeepPass;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Finding a model runtime already running here, and sizing models against the reader's card.

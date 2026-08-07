@@ -1,8 +1,8 @@
-using VibeCheck.Core;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Reporting;
+using Halation.Core;
+using Halation.Core.Model;
+using Halation.Core.Reporting;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Weighing what an application does against what it was said to be for.

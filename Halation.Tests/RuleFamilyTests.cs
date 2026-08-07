@@ -1,7 +1,7 @@
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Rules;
+using Halation.Core.Model;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The glossary behind the identifiers.

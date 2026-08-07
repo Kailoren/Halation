@@ -2,7 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>Where the window was last time, and how big.</summary>
 public sealed record WindowPlacement

@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Core.Rules;
+namespace Halation.Core.Rules;
 
 /// <summary>
 /// Handling of data that arrives from somewhere the application does not control.

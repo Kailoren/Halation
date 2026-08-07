@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Core.Rules;
+namespace Halation.Core.Rules;
 
 /// <summary>What the rule pass produced, including anything it could not complete.</summary>
 public sealed record RuleEngineResult

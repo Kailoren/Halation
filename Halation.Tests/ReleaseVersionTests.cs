@@ -1,6 +1,6 @@
-using VibeCheck.Core.Update;
+using Halation.Core.Update;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The comparison the updater rests on.
@@ -112,5 +112,5 @@ public class ReleaseVersionTests
     /// </summary>
     [Fact]
     public void ReadsTheRunningBuildsVersion() =>
-        Assert.True(ReleaseVersion.TryParse(VibeCheck.Core.Scanner.Version, out _));
+        Assert.True(ReleaseVersion.TryParse(Halation.Core.Scanner.Version, out _));
 }

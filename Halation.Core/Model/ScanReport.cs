@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.Model;
+namespace Halation.Core.Model;
 
 /// <summary>
 /// The complete result of one scan. This is what the in-app report view renders and what

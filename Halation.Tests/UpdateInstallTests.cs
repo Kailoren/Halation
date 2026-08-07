@@ -1,6 +1,6 @@
-using VibeCheck.Core.Update;
+using Halation.Core.Update;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Replacing the running application with a downloaded one.

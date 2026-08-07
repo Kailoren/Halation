@@ -1,8 +1,8 @@
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
-using VibeCheck.Core.Rules;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Which findings name a power a declared purpose could account for, and which sit outside

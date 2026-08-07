@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace VibeCheck.Core.Update;
+namespace Halation.Core.Update;
 
 /// <summary>
 /// A version as it appears on a release tag, ordered the way semantic versioning orders them.

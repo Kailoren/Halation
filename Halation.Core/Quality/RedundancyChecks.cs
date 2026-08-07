@@ -1,10 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Core.Quality;
+namespace Halation.Core.Quality;
 
 /// <summary>What the redundancy pass found, and what it deliberately did not look at.</summary>
 public sealed record RedundancyResult

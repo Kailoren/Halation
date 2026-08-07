@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 using System.IO.Compression;
 using System.Text;
 
-namespace VibeCheck.Core.Recovery;
+namespace Halation.Core.Recovery;
 
 /// <summary>Kind of payload a bundle entry holds, as recorded by the .NET host.</summary>
 public enum BundleFileType : byte

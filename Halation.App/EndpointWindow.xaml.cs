@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Windows;
 
-using VibeCheck.Core.DeepPass;
+using Halation.Core.DeepPass;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>One model already installed on this machine, as the button that selects it.</summary>
 /// <param name="Tag">The model id to request.</param>

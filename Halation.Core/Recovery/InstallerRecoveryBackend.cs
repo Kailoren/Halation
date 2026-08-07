@@ -4,10 +4,10 @@ using System.Reflection.PortableExecutable;
 using SharpCompress.Archives;
 using SharpCompress.Readers;
 
-using VibeCheck.Core.Artifacts;
-using VibeCheck.Core.Model;
+using Halation.Core.Artifacts;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Recovery;
+namespace Halation.Core.Recovery;
 
 /// <summary>
 /// Recovers the application packed inside a Windows installer.

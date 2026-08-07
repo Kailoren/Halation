@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.Model;
+namespace Halation.Core.Model;
 
 /// <summary>Who said the application has a reason for a capability.</summary>
 /// <remarks>

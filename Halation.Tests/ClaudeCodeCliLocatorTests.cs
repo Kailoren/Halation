@@ -1,6 +1,6 @@
-using VibeCheck.Core.DeepPass;
+using Halation.Core.DeepPass;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Finding the CLI is the whole of whether the deep pass is available to somebody who has not

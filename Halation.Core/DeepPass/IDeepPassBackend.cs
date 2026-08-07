@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>
 /// Something that can review one file and report what it found.

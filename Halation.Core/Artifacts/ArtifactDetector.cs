@@ -2,9 +2,9 @@ using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Artifacts;
+namespace Halation.Core.Artifacts;
 
 /// <summary>
 /// What a dropped path turned out to be, before any recovery is attempted.

@@ -1,14 +1,14 @@
 using System.Reflection;
 using System.Reflection.Emit;
 
-using VibeCheck.Core.Artifacts;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Artifacts;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
-/// Exercises the decompiler against VibeCheck.Core itself. Using a real compiler-produced
+/// Exercises the decompiler against Halation.Core itself. Using a real compiler-produced
 /// assembly with known contents means these tests verify that recognisable source actually
 /// comes back, not merely that the call did not throw.
 /// </summary>

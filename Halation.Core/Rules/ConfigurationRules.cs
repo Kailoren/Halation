@@ -1,9 +1,9 @@
 using System.Text.RegularExpressions;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Core.Rules;
+namespace Halation.Core.Rules;
 
 /// <summary>
 /// Misconfiguration checks, weighted to the platforms AI code generators reach for.

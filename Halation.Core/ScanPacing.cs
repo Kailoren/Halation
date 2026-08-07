@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace VibeCheck.Core;
+namespace Halation.Core;
 
 /// <summary>What to put on the progress bar and beside it, at one moment.</summary>
 public readonly record struct PacedProgress(int Percent, string Message);

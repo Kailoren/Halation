@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>Whether a model will fit in the video memory it has been offered.</summary>
 public enum ModelFit

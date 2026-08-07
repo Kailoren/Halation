@@ -5,14 +5,14 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-using VibeCheck.Core;
-using VibeCheck.Core.DeepPass;
-using VibeCheck.Core.Dependencies;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Reporting;
-using VibeCheck.Core.Rules;
+using Halation.Core;
+using Halation.Core.DeepPass;
+using Halation.Core.Dependencies;
+using Halation.Core.Model;
+using Halation.Core.Reporting;
+using Halation.Core.Rules;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 public enum AppState
 {

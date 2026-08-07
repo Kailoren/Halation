@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>What the reader has decided about update checks.</summary>
 public sealed record UpdateSettings

@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Reporting;
+namespace Halation.Core.Reporting;
 
 /// <summary>
 /// Serialises a report as JSON, for pipelines rather than people.

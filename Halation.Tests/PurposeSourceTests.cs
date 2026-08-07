@@ -1,6 +1,6 @@
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Who is allowed to settle a capability question, as opposed to merely raise it.

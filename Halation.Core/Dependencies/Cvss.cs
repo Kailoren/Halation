@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.Dependencies;
+namespace Halation.Core.Dependencies;
 
 /// <summary>
 /// Computes a CVSS v3 base score from its vector string.

@@ -2,12 +2,12 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
-using VibeCheck.Core.DeepPass;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
-using VibeCheck.Core.Rules;
+using Halation.Core.DeepPass;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
+using Halation.Core.Rules;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 public class RuleEngineTests
 {

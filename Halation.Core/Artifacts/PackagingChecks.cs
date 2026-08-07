@@ -1,6 +1,6 @@
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Artifacts;
+namespace Halation.Core.Artifacts;
 
 /// <summary>
 /// Checks on what a distribution ships, rather than on what its code does.

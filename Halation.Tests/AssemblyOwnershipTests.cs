@@ -1,6 +1,6 @@
-using VibeCheck.Core.Recovery;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Covers separating an application's own assemblies from the dependencies it ships.

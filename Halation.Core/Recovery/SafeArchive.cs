@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 
-namespace VibeCheck.Core.Recovery;
+namespace Halation.Core.Recovery;
 
 /// <summary>Bounds applied when reading an untrusted archive.</summary>
 public sealed record ArchiveLimits

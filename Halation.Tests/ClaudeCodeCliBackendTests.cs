@@ -1,11 +1,11 @@
 using System.Text.Json;
 
-using VibeCheck.Core;
-using VibeCheck.Core.DeepPass;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core;
+using Halation.Core.DeepPass;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// This backend hands source recovered from untrusted software to an agent that can act on the

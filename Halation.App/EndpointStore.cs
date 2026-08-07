@@ -3,9 +3,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-using VibeCheck.Core.DeepPass;
+using Halation.Core.DeepPass;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>
 /// Where the deep pass should go when it is answered by something other than Anthropic.

@@ -3,7 +3,7 @@ using System.IO.Compression;
 using System.Reflection.PortableExecutable;
 using System.Text;
 
-namespace VibeCheck.Core.Recovery;
+namespace Halation.Core.Recovery;
 
 /// <summary>
 /// Reads the payload out of an NSIS installer without running it.

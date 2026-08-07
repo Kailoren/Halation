@@ -3,7 +3,7 @@ using System.Text.Json;
 
 using Microsoft.Win32;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>The graphics card, and how much memory it has.</summary>
 /// <param name="Name">The adapter's own description, for showing back so it can be corrected.</param>

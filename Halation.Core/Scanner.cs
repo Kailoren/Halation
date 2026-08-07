@@ -1,14 +1,14 @@
 using System.Diagnostics;
 using System.Reflection;
 
-using VibeCheck.Core.Artifacts;
-using VibeCheck.Core.Dependencies;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
-using VibeCheck.Core.Rules;
-using VibeCheck.Core.Scoring;
+using Halation.Core.Artifacts;
+using Halation.Core.Dependencies;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
+using Halation.Core.Rules;
+using Halation.Core.Scoring;
 
-namespace VibeCheck.Core;
+namespace Halation.Core;
 
 /// <summary>Stage the scan has reached, for progress reporting in the UI.</summary>
 public enum ScanStage

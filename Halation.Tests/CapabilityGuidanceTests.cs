@@ -1,6 +1,6 @@
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// What a reader is told once they have said an application has a reason for something.

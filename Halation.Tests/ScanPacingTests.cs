@@ -1,6 +1,6 @@
-using VibeCheck.Core;
+using Halation.Core;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The paced progress readout.

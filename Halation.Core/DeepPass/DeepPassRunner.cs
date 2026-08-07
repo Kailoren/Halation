@@ -1,7 +1,7 @@
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>
 /// Runs the deep pass over the triaged files and collects what it found.

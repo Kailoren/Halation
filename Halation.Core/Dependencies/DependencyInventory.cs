@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-using VibeCheck.Core.Recovery;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Core.Dependencies;
+namespace Halation.Core.Dependencies;
 
 /// <summary>
 /// One resolved dependency, at the exact version shipped.

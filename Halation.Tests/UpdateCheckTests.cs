@@ -1,8 +1,8 @@
 using System.Text.Json;
 
-using VibeCheck.Core.Update;
+using Halation.Core.Update;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Reading the release list and deciding what, if anything, to offer.

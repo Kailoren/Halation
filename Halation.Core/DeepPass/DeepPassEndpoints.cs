@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>
 /// One provider a reader might point the deep pass at, and what it takes to reach it.
@@ -32,7 +32,7 @@ public sealed record DeepPassEndpointPreset(
 /// like a fault in this application rather than a typo in a field.
 /// </para>
 /// <para>
-/// In <see cref="VibeCheck.Core"/> rather than in the interface because it is testable here and
+/// In <see cref="Halation.Core"/> rather than in the interface because it is testable here and
 /// not there, and because the path a request goes to is a property of the protocol rather than
 /// of the window that collected it.
 /// </para>

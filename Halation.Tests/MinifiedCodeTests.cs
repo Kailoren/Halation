@@ -1,11 +1,11 @@
-using VibeCheck.Core.Dependencies;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
-using VibeCheck.Core.Reporting;
-using VibeCheck.Core.Rules;
-using VibeCheck.Core.Scoring;
+using Halation.Core.Dependencies;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
+using Halation.Core.Reporting;
+using Halation.Core.Rules;
+using Halation.Core.Scoring;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Code that ships as a bundle rather than as something a person could read.

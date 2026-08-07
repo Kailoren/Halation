@@ -7,10 +7,10 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 
-using VibeCheck.Core;
-using VibeCheck.Core.Update;
+using Halation.Core;
+using Halation.Core.Update;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 public enum UpdateStage
 {

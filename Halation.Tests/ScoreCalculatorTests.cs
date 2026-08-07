@@ -1,7 +1,7 @@
-﻿using VibeCheck.Core.Model;
-using VibeCheck.Core.Scoring;
+﻿using Halation.Core.Model;
+using Halation.Core.Scoring;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 public class ScoreCalculatorTests
 {

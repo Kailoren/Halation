@@ -1,10 +1,10 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Core.Rules;
+namespace Halation.Core.Rules;
 
 /// <summary>
 /// Detects credentials committed into source or baked into shipped bundles.

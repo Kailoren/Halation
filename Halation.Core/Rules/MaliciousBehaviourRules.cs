@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.Core.Rules;
+namespace Halation.Core.Rules;
 
 /// <summary>
 /// Behaviour that endangers the person installing the application.

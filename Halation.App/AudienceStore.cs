@@ -1,8 +1,8 @@
 using System.IO;
 
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>
 /// Remembers which of the two reports this person wants.

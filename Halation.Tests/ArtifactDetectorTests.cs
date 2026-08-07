@@ -1,10 +1,10 @@
 using System.IO.Compression;
 using System.Text;
 
-using VibeCheck.Core.Artifacts;
-using VibeCheck.Core.Model;
+using Halation.Core.Artifacts;
+using Halation.Core.Model;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 public class ArtifactDetectorTests : IDisposable
 {

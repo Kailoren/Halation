@@ -3,9 +3,9 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
 
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>Maps a finding's severity onto the palette.</summary>
 public sealed class SeverityBrushConverter : IValueConverter

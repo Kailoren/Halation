@@ -1,6 +1,6 @@
-using VibeCheck.Core.Dependencies;
+using Halation.Core.Dependencies;
 
-namespace VibeCheck.Core.Model;
+namespace Halation.Core.Model;
 
 /// <summary>
 /// What the scan actually did, stated in countable terms.

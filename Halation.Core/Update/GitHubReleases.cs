@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace VibeCheck.Core.Update;
+namespace Halation.Core.Update;
 
 /// <summary>
 /// Reads the published release list and decides whether anything on it is newer than the

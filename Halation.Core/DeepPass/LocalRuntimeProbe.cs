@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>One model a local runtime already has, and how big it is on disk.</summary>
 /// <param name="Id">The tag exactly as the runtime names it, which is what a request must say.</param>

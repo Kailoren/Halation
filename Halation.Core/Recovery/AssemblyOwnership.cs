@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace VibeCheck.Core.Recovery;
+namespace Halation.Core.Recovery;
 
 /// <summary>
 /// Decides which assemblies in a distribution are the application's own code and which are

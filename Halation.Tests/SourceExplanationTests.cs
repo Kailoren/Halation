@@ -1,8 +1,8 @@
-using VibeCheck.Core.DeepPass;
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
+using Halation.Core.DeepPass;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// The author's own stated reason, read out of the source by the deep pass.

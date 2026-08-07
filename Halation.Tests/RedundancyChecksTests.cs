@@ -1,8 +1,8 @@
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Quality;
-using VibeCheck.Core.Recovery;
+using Halation.Core.Model;
+using Halation.Core.Quality;
+using Halation.Core.Recovery;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Duplication is the one thing decompiled output is guaranteed to fake, so the gate keeping

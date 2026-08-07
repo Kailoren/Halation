@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace VibeCheck.Core.Update;
+namespace Halation.Core.Update;
 
 /// <summary>Whether this copy of the application is in a position to replace itself, and why.</summary>
 public sealed record InstallCapability

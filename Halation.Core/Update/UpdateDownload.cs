@@ -2,7 +2,7 @@ using System.IO;
 using System.Net;
 using System.Security.Cryptography;
 
-namespace VibeCheck.Core.Update;
+namespace Halation.Core.Update;
 
 /// <summary>A build fetched to disk, not yet trusted and not yet in place.</summary>
 public sealed record DownloadedBuild

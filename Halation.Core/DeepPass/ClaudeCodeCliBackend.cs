@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>Whether a located CLI can actually answer, and why not when it cannot.</summary>
 public sealed record ClaudeCodeCliAuth

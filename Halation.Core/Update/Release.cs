@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.Update;
+namespace Halation.Core.Update;
 
 /// <summary>One file attached to a release.</summary>
 public sealed record ReleaseAsset

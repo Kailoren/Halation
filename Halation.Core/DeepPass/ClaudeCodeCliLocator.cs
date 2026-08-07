@@ -1,4 +1,4 @@
-namespace VibeCheck.Core.DeepPass;
+namespace Halation.Core.DeepPass;
 
 /// <summary>
 /// Which install a Claude Code executable came from.

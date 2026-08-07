@@ -1,9 +1,9 @@
 using System.IO;
 using System.Windows;
 
-using VibeCheck.Core.Model;
+using Halation.Core.Model;
 
-namespace VibeCheck.App;
+namespace Halation.App;
 
 /// <summary>
 /// The step between choosing an application and scanning it.

@@ -1,8 +1,8 @@
-using VibeCheck.Core.Model;
-using VibeCheck.Core.Recovery;
-using VibeCheck.Core.Scoring;
+using Halation.Core.Model;
+using Halation.Core.Recovery;
+using Halation.Core.Scoring;
 
-namespace VibeCheck.Tests;
+namespace Halation.Tests;
 
 /// <summary>
 /// Whether anything ties a shipped executable to a publisher, which is VC-BIN-010.
