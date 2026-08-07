@@ -71,7 +71,26 @@ public static class DeepPassPrompt
                             user_severity = new { type = "string", @enum = new[] { "none", "low", "medium", "high", "critical" } },
                             user_impact = new { type = "string" },
                             file = new { type = "string" },
-                            evidence = new { type = "string" },
+
+                            // Asked for because the code arrives numbered and the answer is
+                            // resolved against this application's own copy of the file. A
+                            // description rather than a bare type: an unlabelled field called
+                            // "evidence" was being filled with prose about the file, which then
+                            // reached the reader inside a code fence looking like their own code.
+                            line = new
+                            {
+                                type = "integer",
+                                description = "The line number, from the numbers printed to the "
+                                    + "left of the code, where the problem is. Required, and it "
+                                    + "must be the line the quotation below is taken from.",
+                            },
+                            evidence = new
+                            {
+                                type = "string",
+                                description = "The code at that line, copied exactly as it "
+                                    + "appears, without the line number. Copy it; do not "
+                                    + "describe it, summarise it, or write a sentence about it.",
+                            },
                             reachability = new { type = "string" },
                             why_rules_miss_it = new { type = "string" },
                             remediation = new { type = "string" },
@@ -79,7 +98,7 @@ public static class DeepPassPrompt
                         },
                         required = new[]
                         {
-                            "title", "severity", "user_severity", "user_impact", "file",
+                            "title", "severity", "user_severity", "user_impact", "file", "line",
                             "evidence", "reachability", "why_rules_miss_it", "remediation",
                             "confidence",
                         },
@@ -196,8 +215,13 @@ public static class DeepPassPrompt
             prompt.AppendLine();
         }
 
+        // Numbered, and said out loud rather than left to be inferred from the gutter. The
+        // numbers are the only way back from an answer to a place in the file.
+        prompt.AppendLine("The code is printed with a line number and a bar before each line.");
+        prompt.AppendLine("Those numbers are not part of the file. Cite them.");
+        prompt.AppendLine();
         prompt.AppendLine("```");
-        prompt.AppendLine(DeepPassTriage.Excerpt(triaged.File));
+        prompt.AppendLine(DeepPassTriage.NumberedExcerpt(triaged.File));
         prompt.AppendLine("```");
 
         return prompt.ToString();
@@ -411,6 +435,20 @@ public static class DeepPassPrompt
 
         var confidence = Text("confidence") ?? "medium";
 
+        // The quotation is taken from the file this application already holds, using the line
+        // the model cited, rather than from whatever the model typed into the evidence field.
+        // See EvidenceLocator: the model's own text is a fallback for finding the place, never
+        // the thing printed. A quotation the reader cannot find in their own file is the one
+        // failure a code fence actively conceals.
+        var located = EvidenceLocator.Locate(
+            triaged.File.Content,
+            element.TryGetProperty("line", out var lineElement)
+                && lineElement.ValueKind == JsonValueKind.Number
+                && lineElement.TryGetInt32(out var claimed)
+                    ? claimed
+                    : null,
+            Text("evidence"));
+
         return new Finding
         {
             RuleId = "VC-AI-001",
@@ -434,14 +472,22 @@ public static class DeepPassPrompt
                    + "means for someone running the application.",
             // Through the same masking every rule finding's evidence goes through, which caps
             // the length and leaves nothing that could close the code fence it is printed in.
-            Evidence = Text("evidence") is { } quoted
+            Evidence = located.Evidence is { } quoted
                 ? Redaction.BuildEvidence(quoted)
                 : null,
             Remediation = Text("remediation"),
 
-            // A path, and only a path: it is printed as a location and a crafted one would
-            // otherwise be a second way into the same line of the report.
-            FilePath = Text("file", max: 200) ?? triaged.File.RelativePath,
+            // The file this request was about, never the one the answer names. Each call carries
+            // exactly one file, so the model's own "file" field can agree or be wrong and there
+            // is nothing it can add. It was wrong on a real run, returning a bare name for a
+            // file two directories down, which prints a location nobody can open. Now that the
+            // line comes from this application, the path has to as well, or half of a citation
+            // is trustworthy and the reader cannot tell which half.
+            FilePath = triaged.File.RelativePath,
+
+            // Only ever a line this application resolved itself, so "Location" cannot name a
+            // place that does not exist.
+            Line = located.Line,
         };
     }
 

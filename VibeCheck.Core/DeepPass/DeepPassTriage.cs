@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using VibeCheck.Core.Model;
@@ -199,5 +201,39 @@ public static class DeepPassTriage
         return file.Content.Length <= MaxFileChars
             ? file.Content
             : file.Content[..MaxFileChars] + "\n\n// [truncated by VibeCheck at 60,000 characters]";
+    }
+
+    /// <summary>
+    /// The same excerpt with every line numbered, which is what actually goes to the model.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A model cannot cite a line it was never shown the number of. Sent as plain text, the only
+    /// way for it to indicate where something is was to reproduce the code, which is a thing
+    /// small models do badly and sometimes do not do at all: they describe the file instead and
+    /// the description reaches the reader dressed as a quotation. Numbering costs a few
+    /// characters a line and turns the answer into a reference this application can resolve
+    /// against its own copy. See <see cref="EvidenceLocator"/>.
+    /// </para>
+    /// <para>
+    /// Numbering happens after the trim rather than before it, so the ceiling continues to bound
+    /// the amount of the reader's code that is sent rather than a total that mostly is not code.
+    /// The prompt is therefore a little larger than <see cref="MaxFileChars"/>, by roughly the
+    /// number of lines times six.
+    /// </para>
+    /// </remarks>
+    public static string NumberedExcerpt(RecoveredFile file)
+    {
+        var lines = Excerpt(file).ReplaceLineEndings("\n").Split('\n');
+        var builder = new StringBuilder(lines.Length * 8);
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            builder.Append((i + 1).ToString(CultureInfo.InvariantCulture).PadLeft(4))
+                   .Append("| ")
+                   .AppendLine(lines[i]);
+        }
+
+        return builder.ToString().TrimEnd('\n');
     }
 }

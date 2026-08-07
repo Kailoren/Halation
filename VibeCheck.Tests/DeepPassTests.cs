@@ -212,11 +212,19 @@ public class DeepPassTests
     /// The other half of the same attack: evidence is printed inside a code fence, and three
     /// backticks in the quoted text walk straight out of it.
     /// </summary>
+    /// <remarks>
+    /// The backticks are in the scanned file rather than in the model's answer, because that is
+    /// where they can still come from. The model's own evidence text stopped reaching the report
+    /// when quotations began being taken from the file; the file itself is the untrusted thing,
+    /// so the masking is still what stands between a crafted line and the report's structure.
+    /// </remarks>
     [Fact]
     public void QuotedEvidence_CannotEscapeTheCodeFence()
     {
+        var hostile = "```\n\n## Injected\n\n```";
+
         var answer = DeepPassPrompt.Parse(
-            Reply(title: "ok", evidence: "```\n\n## Injected\n\n```"), Triaged());
+            Reply(title: "ok", evidence: hostile, line: 1), Triaged(hostile));
 
         var finding = Assert.Single(answer.Findings);
 
@@ -224,7 +232,141 @@ public class DeepPassTests
         Assert.DoesNotContain("\n", finding.Evidence, StringComparison.Ordinal);
     }
 
-    private static string Reply(string title, string evidence) =>
+    /// <summary>
+    /// The defect this whole arrangement exists for: a model that describes the file instead of
+    /// quoting it must not have its description printed as the reader's own code.
+    /// </summary>
+    [Fact]
+    public void ProseInTheEvidenceField_IsNotPrintedAsAQuotation()
+    {
+        var answer = DeepPassPrompt.Parse(
+            Reply(
+                title: "ok",
+                evidence: "The QueryListings method builds SQL by string interpolation.",
+                line: 0),
+            Triaged("var connection = Open();\nvar rows = Query(id);"));
+
+        var finding = Assert.Single(answer.Findings);
+
+        Assert.Null(finding.Evidence);
+        Assert.Null(finding.Line);
+    }
+
+    /// <summary>A cited line is quoted from the file, not from what the model typed.</summary>
+    [Fact]
+    public void Evidence_ComesFromTheFileAtTheCitedLine()
+    {
+        var answer = DeepPassPrompt.Parse(
+            Reply(title: "ok", evidence: "something the model made up", line: 2),
+            Triaged("var a = 1;\nvar password = \"hunter2\";\nvar c = 3;"));
+
+        var finding = Assert.Single(answer.Findings);
+
+        Assert.Equal(2, finding.Line);
+        Assert.Contains("var password", finding.Evidence, StringComparison.Ordinal);
+        Assert.DoesNotContain("made up", finding.Evidence, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Pointing at the brace under a statement quotes the statement, because a lone brace tells
+    /// the reader exactly as much as no quotation at all.
+    /// </summary>
+    [Fact]
+    public void ABraceOnItsOwn_QuotesTheStatementAboveIt()
+    {
+        var answer = DeepPassPrompt.Parse(
+            Reply(title: "ok", evidence: "{", line: 2),
+            Triaged("if (untrusted != null)\n{\n    Run(untrusted);\n}"));
+
+        var finding = Assert.Single(answer.Findings);
+
+        Assert.Contains("if (untrusted != null)", finding.Evidence, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A documentation tag quotes the member under it, since a doc comment describes what
+    /// follows it. The opposite direction to a brace, which belongs to the statement above.
+    /// </summary>
+    [Fact]
+    public void ADocumentationTag_QuotesTheMemberBelowIt()
+    {
+        var answer = DeepPassPrompt.Parse(
+            Reply(title: "ok", evidence: "/// </summary>", line: 2),
+            Triaged("/// <summary>Reads it.</summary>\n/// </summary>\npublic void Read(string path)"));
+
+        var finding = Assert.Single(answer.Findings);
+
+        Assert.Contains("public void Read", finding.Evidence, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The location names the file that was sent, not the one the model typed back.
+    /// </summary>
+    /// <remarks>
+    /// Seen on a real run: a bare "FcMaterialsHandler.cs" for a file two directories down, which
+    /// is a location the reader cannot open. One file goes out per request, so the answer's own
+    /// path can only agree or be wrong.
+    /// </remarks>
+    [Fact]
+    public void TheLocation_IsTheFileThatWasSent()
+    {
+        var reply = JsonSerializer.Serialize(new
+        {
+            findings = new[]
+            {
+                new
+                {
+                    title = "ok",
+                    severity = "medium",
+                    user_severity = "low",
+                    user_impact = "x",
+                    file = "Elsewhere.cs",
+                    line = 1,
+                    evidence = "var x = 1;",
+                    reachability = "x",
+                    why_rules_miss_it = "x",
+                    remediation = "x",
+                    confidence = "high",
+                },
+            },
+        });
+
+        var answer = DeepPassPrompt.Parse(reply, Triaged());
+
+        Assert.Equal("app.cs", Assert.Single(answer.Findings).FilePath);
+    }
+
+    /// <summary>A comment with words in it is real evidence and is left alone.</summary>
+    [Fact]
+    public void ACommentWithContent_IsStillQuotable()
+    {
+        var answer = DeepPassPrompt.Parse(
+            Reply(title: "ok", evidence: "x", line: 1),
+            Triaged("// Deliberate: the path is ours, not the user's.\nLoad(path);"));
+
+        var finding = Assert.Single(answer.Findings);
+
+        Assert.Contains("Deliberate", finding.Evidence, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A model that quoted real code but miscounted its position is still pointing at something,
+    /// so its wording is used to find the place rather than the finding being thrown away.
+    /// </summary>
+    [Fact]
+    public void RealQuotationWithAWrongLine_IsLocatedAnyway()
+    {
+        var answer = DeepPassPrompt.Parse(
+            Reply(title: "ok", evidence: "var password = \"hunter2\";", line: 900),
+            Triaged("var a = 1;\nvar password = \"hunter2\";\nvar c = 3;"));
+
+        var finding = Assert.Single(answer.Findings);
+
+        Assert.Equal(2, finding.Line);
+        Assert.Contains("var password", finding.Evidence, StringComparison.Ordinal);
+    }
+
+    private static string Reply(string title, string evidence, int line = 1) =>
         JsonSerializer.Serialize(new
         {
             findings = new[]
@@ -236,6 +378,7 @@ public class DeepPassTests
                     user_severity = "low",
                     user_impact = "x",
                     file = "app.cs",
+                    line,
                     evidence,
                     reachability = "x",
                     why_rules_miss_it = "x",
@@ -245,9 +388,9 @@ public class DeepPassTests
             },
         });
 
-    private static TriagedFile Triaged() => new()
+    private static TriagedFile Triaged(string content = "var x = 1;") => new()
     {
-        File = File("app.cs", "var x = 1;"),
+        File = File("app.cs", content),
         Reason = "test",
     };
 
