@@ -117,8 +117,20 @@ public partial class EndpointWindow : Window
             : _adapter is not null ? "(detected)"
             : "(not detected, please fill in)";
 
-        HardwareAdvice.Text = LocalModelGuide.Advise(_videoBytes, _systemBytes);
+        RefreshAdvice();
     }
+
+    /// <summary>
+    /// The hardware sentence, named for whichever runtime is answering.
+    /// </summary>
+    /// <remarks>
+    /// Its own method because it depends on two things that arrive at different times: the card,
+    /// which is read as the dialog is built, and the runtime, which is found afterwards. Written
+    /// once at construction it named a runtime nothing had yet looked for.
+    /// </remarks>
+    private void RefreshAdvice() =>
+        HardwareAdvice.Text =
+            LocalModelGuide.Advise(_videoBytes, _systemBytes, _runtimes.Select(r => r.Name));
 
     /// <summary>
     /// Re-reads the box as the reader types, so the advice and the verdicts follow immediately.
@@ -147,7 +159,6 @@ public partial class EndpointWindow : Window
             ? "(detected)"
             : "(your figure)";
 
-        HardwareAdvice.Text = LocalModelGuide.Advise(_videoBytes, _systemBytes);
         ShowDetection();
     }
 
@@ -182,6 +193,10 @@ public partial class EndpointWindow : Window
     /// </remarks>
     private void ShowDetection()
     {
+        // Both inputs to the sentence can have moved since it was last written: the runtime by
+        // being detected, the card by the reader correcting the box.
+        RefreshAdvice();
+
         var rows = new List<(DetectedModelRow Row, ModelFit Fit, long Bytes)>();
         var many = _runtimes.Count > 1;
 

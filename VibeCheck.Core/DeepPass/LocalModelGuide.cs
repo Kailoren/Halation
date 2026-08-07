@@ -231,24 +231,6 @@ public static class LocalModelGuide
     };
 
     /// <summary>
-    /// What this machine can run, in a sentence, including when there is no usable card.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// System memory is part of the answer rather than a footnote. A model with no graphics card
-    /// to sit in runs on the processor out of ordinary memory, and that works: it is the reader's
-    /// decision whether it is fast enough, not this application's. An earlier version of this
-    /// sentence told anybody without a card to use one of the hosted routes instead, which
-    /// substituted a judgment about speed for the reader's own reason for wanting local at all.
-    /// </para>
-    /// <para>
-    /// <b>The advice inverts without a card.</b> With video memory the binding constraint is
-    /// capacity, so the largest model that fits is the best one. On a processor the constraint is
-    /// speed, and a machine with 64GB of memory can load a model far larger than it can run in
-    /// any reasonable time, so the right suggestion is a small one.
-    /// </para>
-    /// </remarks>
-    /// <summary>
     /// The caution about context length, worded for whichever runtime is actually answering.
     /// </summary>
     /// <remarks>
@@ -285,11 +267,62 @@ public static class LocalModelGuide
         };
     }
 
-    public static string Advise(long videoBytes, long systemBytes = 0)
+    /// <summary>
+    /// How a model is named to somebody running <paramref name="runtimeNames"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>The two runtimes spell the same model differently and neither accepts the other's
+    /// spelling</b>, so a sentence naming one of them is wrong for anybody running the other.
+    /// This method used to print Ollama's tag unconditionally, which put "qwen2.5-coder:7b is the
+    /// largest that fits" directly above a pull command reading <c>lms get
+    /// qwen/qwen2.5-coder-7b</c>: two names for one model on one screen, the prose naming the
+    /// runtime that was not installed. Exactly the defect already fixed for the command itself.
+    /// </para>
+    /// <para>
+    /// <b>With no single runtime detected the size is named instead of a tag.</b> Naming both
+    /// spellings mid-sentence is unreadable, and picking one is the bug. The reader who has not
+    /// chosen a runtime yet is offered a command for each below, so pointing at those rows is
+    /// both shorter and the only honest answer.
+    /// </para>
+    /// </remarks>
+    private static string NameFor(LocalModelChoice choice, IEnumerable<string>? runtimeNames)
+    {
+        var names = runtimeNames?.ToArray() ?? [];
+
+        return names.Length == 1
+            ? choice.TagFor(names[0])
+            : $"the {choice.Label} suggestion below";
+    }
+
+    /// <summary>
+    /// What this machine can run, in a sentence, including when there is no usable card.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// System memory is part of the answer rather than a footnote. A model with no graphics card
+    /// to sit in runs on the processor out of ordinary memory, and that works: it is the reader's
+    /// decision whether it is fast enough, not this application's. An earlier version of this
+    /// sentence told anybody without a card to use one of the hosted routes instead, which
+    /// substituted a judgment about speed for the reader's own reason for wanting local at all.
+    /// </para>
+    /// <para>
+    /// <b>The advice inverts without a card.</b> With video memory the binding constraint is
+    /// capacity, so the largest model that fits is the best one. On a processor the constraint is
+    /// speed, and a machine with 64GB of memory can load a model far larger than it can run in
+    /// any reasonable time, so the right suggestion is a small one.
+    /// </para>
+    /// <para>
+    /// <paramref name="runtimeNames"/> has no default on purpose. Forgetting it is what produced
+    /// the wrong spelling in the first place, and a parameter that can be left off is one that
+    /// will be.
+    /// </para>
+    /// </remarks>
+    public static string Advise(long videoBytes, long systemBytes, IEnumerable<string>? runtimeNames)
     {
         if (videoBytes <= 0)
         {
-            return OnTheProcessor(systemBytes);
+            return OnTheProcessor(systemBytes, runtimeNames);
         }
 
         var gb = videoBytes / (double)GB;
@@ -302,10 +335,10 @@ public static class LocalModelGuide
                    + "large application. The smallest is the one to try.";
         }
 
-        return $"With {gb:0.#}GB of video memory, {choice.Tag} is the largest that fits. A model "
-               + "needs roughly its own file size in video memory plus a gigabyte or two for the "
-               + "file it is reading, so anything larger runs partly on your processor and slows "
-               + "down sharply.";
+        return $"With {gb:0.#}GB of video memory, {NameFor(choice, runtimeNames)} is the largest "
+               + "that fits. A model needs roughly its own file size in video memory plus a "
+               + "gigabyte or two for the file it is reading, so anything larger runs partly on "
+               + "your processor and slows down sharply.";
     }
 
     /// <summary>
@@ -318,7 +351,7 @@ public static class LocalModelGuide
     /// heavier on the prompt than most things a model is asked to do. A reader told only "it
     /// will be slow" would reasonably go and buy more cores and find nothing changed.
     /// </remarks>
-    private static string OnTheProcessor(long systemBytes)
+    private static string OnTheProcessor(long systemBytes, IEnumerable<string>? runtimeNames)
     {
         // The smallest, and no fallback beneath it. There used to be one, and dropping 1.5B took
         // it away: what is left is the floor at which a local model returns anything useful at
@@ -339,8 +372,8 @@ public static class LocalModelGuide
                + "here than for chat: the deep pass sends whole files to be read, and reading a "
                + "long prompt is the part a processor is worst at. Speed depends on memory "
                + "bandwidth rather than core count, so more channels help and more cores mostly "
-               + $"do not. Start with {smallest.Tag}, which is the smallest size worth running "
-               + "for this, and expect a large application to take hours.";
+               + $"do not. Start with {NameFor(smallest, runtimeNames)}, which is the smallest "
+               + "size worth running for this, and expect a large application to take hours.";
     }
 
     /// <summary>

@@ -174,7 +174,11 @@ public sealed class LocalRuntimeTests
         // Null rather than the smallest. "It will technically start" is not advice, and dressing
         // it up as one sets somebody up for a scan that runs on the processor all night.
         Assert.Null(LocalModelGuide.Recommend(2 * GB));
-        Assert.Contains("none of the suggestions", LocalModelGuide.Advise(2 * GB), StringComparison.Ordinal);
+
+        Assert.Contains(
+            "none of the suggestions",
+            LocalModelGuide.Advise(2 * GB, systemBytes: 0, runtimeNames: null),
+            StringComparison.Ordinal);
 
         // 6GB used to be offered 1.5B and is now told nothing fits, which is the honest answer.
         // Measured 2026-08-06: 1.5B read every qualifying file and returned nothing at all, so
@@ -202,7 +206,10 @@ public sealed class LocalRuntimeTests
     [Fact]
     public void A_machine_with_no_graphics_card_is_told_it_can_still_do_this()
     {
-        var advice = LocalModelGuide.Advise(videoBytes: 0, systemBytes: 64 * GB);
+        var advice = LocalModelGuide.Advise(
+            videoBytes: 0,
+            systemBytes: 64 * GB,
+            runtimeNames: [LocalRuntimeProbe.OllamaName]);
 
         // It runs on the processor. Saying otherwise, or sending them off to a hosted route,
         // substitutes a judgment about speed for the reason they wanted local in the first
@@ -224,10 +231,61 @@ public sealed class LocalRuntimeTests
     [Fact]
     public void Still_says_something_useful_when_the_memory_is_unknown_too()
     {
-        var advice = LocalModelGuide.Advise(videoBytes: 0, systemBytes: 0);
+        var advice = LocalModelGuide.Advise(videoBytes: 0, systemBytes: 0, runtimeNames: null);
 
         Assert.Contains("processor", advice, StringComparison.Ordinal);
         Assert.DoesNotContain("0GB", advice, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(LocalRuntimeProbe.OllamaName, "qwen2.5-coder:7b", "qwen/qwen2.5-coder-7b")]
+    [InlineData(LocalRuntimeProbe.LmStudioName, "qwen/qwen2.5-coder-7b", "qwen2.5-coder:7b")]
+    public void The_advice_names_the_model_the_way_the_detected_runtime_does(
+        string runtime,
+        string expected,
+        string wrong)
+    {
+        // The defect this fixes: the sentence printed Ollama's tag whatever was running, so an
+        // LM Studio reader got "qwen2.5-coder:7b is the largest that fits" directly above a pull
+        // command reading "lms get qwen/qwen2.5-coder-7b". Two names for one model on one screen,
+        // and the prose named the runtime they had not installed.
+        var advice = LocalModelGuide.Advise(8 * GB, systemBytes: 0, runtimeNames: [runtime]);
+
+        Assert.Contains(expected, advice, StringComparison.Ordinal);
+        Assert.DoesNotContain(wrong, advice, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_advice_names_a_size_rather_than_guessing_a_spelling()
+    {
+        // Nothing detected, or both runtimes detected, means the reader has not chosen one. Two
+        // pull commands are offered below in that case, so the sentence points at them by size
+        // instead of picking a spelling that is wrong for half of them.
+        foreach (var names in new IEnumerable<string>?[]
+                 {
+                     null,
+                     [],
+                     [LocalRuntimeProbe.OllamaName, LocalRuntimeProbe.LmStudioName],
+                 })
+        {
+            var advice = LocalModelGuide.Advise(8 * GB, systemBytes: 0, runtimeNames: names);
+
+            Assert.Contains("the 7B suggestion below", advice, StringComparison.Ordinal);
+            Assert.DoesNotContain("qwen", advice, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void The_processor_advice_names_the_model_the_detected_runtime_way_too()
+    {
+        // The same bug lived in the no-card sentence, which names the smallest suggestion.
+        var advice = LocalModelGuide.Advise(
+            videoBytes: 0,
+            systemBytes: 64 * GB,
+            runtimeNames: [LocalRuntimeProbe.LmStudioName]);
+
+        Assert.Contains("qwen/qwen2.5-coder-7b", advice, StringComparison.Ordinal);
+        Assert.DoesNotContain("qwen2.5-coder:7b", advice, StringComparison.Ordinal);
     }
 
     [Fact]
