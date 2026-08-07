@@ -2,9 +2,15 @@
 
 Static HTML, no build step. GitHub Pages serves this folder as it stands.
 
-Six pages: `index`, `docs`, `setup`, `rules`, `faq`, `changelog`. The navigation and footer are
-repeated in each file rather than shared, because there is no build step to share them with;
-changing a nav item means changing it in six places.
+Seven pages: `index`, `docs`, `setup`, `rules`, `faq`, `changelog`, `discuss`. The navigation and
+footer are repeated in each file rather than shared, because there is no build step to share them
+with; changing a nav item means changing it in seven places.
+
+**A new page is best cut from an existing one rather than written from scratch**, taking
+everything before `<div class="page-head">` and everything from `</main>` onwards verbatim, then
+swapping the title, the description in both places it appears, and `og:url`. That is how
+`discuss.html` was made, and it is the only way the shell provably cannot drift. Check afterwards
+that the footer block still hashes the same as the others.
 
 ## Publishing it
 
@@ -18,7 +24,7 @@ add a `CNAME` file to this folder containing the bare hostname and point a DNS `
 
 **The one absolute URL in the site is `og:image`.** A social scraper does not resolve a
 relative image path, so those tags name `https://kailoren.github.io/VibeCheck/` in full. If the
-site ever moves to a custom domain, that base has to be updated in all six pages; everything
+site ever moves to a custom domain, that base has to be updated in all seven pages; everything
 else is relative and moves on its own.
 
 `.nojekyll` stops GitHub running the pages through Jekyll first. Nothing here needs it, and
@@ -106,7 +112,7 @@ whatever the scan says on the day.
 ## The Content-Security-Policy, and why it is a meta tag
 
 Every page carries the same policy in `<head>`, immediately after the charset. Keep it identical
-across all six; a policy that differs per page is one nobody can reason about.
+across all seven; a policy that differs per page is one nobody can reason about.
 
 ```
 default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline';

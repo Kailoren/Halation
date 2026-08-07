@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discussions · VibeCheck</title>
+<meta name="description" content="Where to report a result VibeCheck got wrong, suggest a check it should have, or get help with the deep pass. What belongs in each category, and what to send privately instead.">
+<link rel="icon" href="favicon.ico">
+<link rel="stylesheet" href="assets/css/site.css">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="VibeCheck">
+<meta property="og:title" content="Discussions · VibeCheck">
+<meta property="og:description" content="Where to report a result VibeCheck got wrong, suggest a check it should have, or get help with the deep pass. What belongs in each category, and what to send privately instead.">
+<meta property="og:url" content="https://kailoren.github.io/VibeCheck/discuss.html">
+<meta property="og:image" content="https://kailoren.github.io/VibeCheck/assets/img/social.png">
+<meta property="og:image:width" content="2560">
+<meta property="og:image:height" content="1280">
+<meta property="og:image:alt" content="VibeCheck, a drag-and-drop security scanner for AI-generated applications.">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<div class="backdrop" aria-hidden="true">
+  <div class="backdrop__grid"></div>
+  <div class="backdrop__sweep"></div>
+  <div class="backdrop__scan"></div>
+  <div class="backdrop__vignette"></div>
+</div>
+
+<header class="nav">
+  <div class="shell nav__inner">
+    <a class="brand" href="index.html">
+      <img src="assets/img/logo.png" alt="" width="26" height="26">
+      <span>VibeCheck</span>
+    </a>
+    <button class="nav__toggle" aria-expanded="false" aria-controls="nav-links">MENU</button>
+    <ul class="nav__links" id="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="docs.html">Documentation</a></li>
+      <li><a href="setup.html">Setup</a></li>
+      <li><a href="rules.html">Rules</a></li>
+      <li><a href="faq.html">FAQ</a></li>
+      <li><a href="changelog.html">Changelog</a></li>
+      <li><a href="discuss.html" aria-current="page">Discuss</a></li>
+      <li><a href="https://github.com/kailoren/vibecheck">GitHub</a></li>
+    </ul>
+  </div>
+</header>
+
+<div class="page-head">
+  <div class="shell">
+    <div class="section-label">Discussions</div>
+    <h1>Tell it where it was wrong</h1>
+    <p class="lede">
+      This is the part of the project that actually improves it. Nearly every real change to
+      VibeCheck came from somebody pointing it at an application and finding it wrong, rather
+      than from somebody sending a patch.
+    </p>
+    <div class="btn-row">
+      <a class="btn btn--primary" href="https://github.com/kailoren/vibecheck/discussions/new?category=it-got-this-wrong">Report a wrong result</a>
+      <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions">Browse everything</a>
+    </div>
+  </div>
+</div>
+
+<main id="content">
+<div class="shell doc">
+
+  <nav class="toc" aria-label="On this page">
+    <h4>On this page</h4>
+    <ul>
+      <li><a href="#where">Where to post</a></li>
+      <li><a href="#wrong">A result that looks wrong</a></li>
+      <li><a href="#rule">A check it should have</a></li>
+      <li><a href="#help">Something it would not read</a></li>
+      <li><a href="#elsewhere">What goes somewhere else</a></li>
+    </ul>
+  </nav>
+
+  <div class="doc__body">
+
+    <section id="where">
+      <h2>Where to post</h2>
+      <p class="lede">
+        Five categories. If you are not sure which, the first one is almost always right, and
+        nothing is lost by guessing wrong.
+      </p>
+
+      <div class="card reveal" style="margin-top:1.6rem">
+        <h3 style="margin-top:0">It got this wrong</h3>
+        <p>
+          A score, a finding, or a silence you think is mistaken. The most valuable thing on this
+          page, and the category most likely to change the tool. A false positive and a miss are
+          equally worth posting.
+        </p>
+        <div class="btn-row" style="margin-top:1.2rem">
+          <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions/new?category=it-got-this-wrong">Start one</a>
+          <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions/categories/it-got-this-wrong">Browse</a>
+        </div>
+      </div>
+      <div class="card reveal" style="margin-top:1rem">
+        <h3 style="margin-top:0">Rule ideas</h3>
+        <p>
+          A flaw it should catch and does not. Describe how it shows up in real code rather than
+          supplying a pattern, because the pattern is the easy half.
+        </p>
+        <div class="btn-row" style="margin-top:1.2rem">
+          <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions/new?category=rule-ideas">Suggest a check</a>
+          <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions/categories/rule-ideas">Browse</a>
+        </div>
+      </div>
+      <div class="card reveal" style="margin-top:1rem">
+        <h3 style="margin-top:0">Setup and help</h3>
+        <p>
+          Getting the optional deep pass working, local model runtimes, or an artifact it declined
+          to read. Answers can be marked as accepted here, so a question that gets solved stays
+          useful to the next person who asks it.
+        </p>
+        <div class="btn-row" style="margin-top:1.2rem">
+          <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions/new?category=setup-help">Ask something</a>
+          <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions/categories/setup-help">Browse</a>
+        </div>
+      </div>
+      <div class="card reveal" style="margin-top:1rem">
+        <h3 style="margin-top:0">Announcements</h3>
+        <p>
+          Releases, and changes worth knowing about before you update. Worth subscribing to if you
+          use VibeCheck regularly, since this is where a change in what a score means gets said
+          out loud.
+        </p>
+        <div class="btn-row" style="margin-top:1.2rem">
+          <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions/categories/announcements">Browse</a>
+        </div>
+      </div>
+      <div class="card reveal" style="margin-top:1rem">
+        <h3 style="margin-top:0">General</h3>
+        <p>
+          Everything else.
+        </p>
+        <div class="btn-row" style="margin-top:1.2rem">
+          <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions/new?category=general">Start one</a>
+          <a class="btn btn--ghost" href="https://github.com/kailoren/vibecheck/discussions/categories/general">Browse</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="wrong">
+      <h2>A result that looks wrong</h2>
+      <p>
+        The most useful report there is, and the one worth spending two extra minutes on. What
+        makes one actionable:
+      </p>
+      <ul>
+        <li><strong>What you scanned, and where it came from</strong>, with a link if it is public</li>
+        <li><strong>The score and the finding</strong>, or the finding you expected and did not get</li>
+        <li><strong>Why you think it is wrong</strong>, which is the part only you can supply</li>
+      </ul>
+      <p>
+        If it is your own application and you can share the source, say so. A false positive is
+        far easier to settle against real source than against a decompiled binary, because
+        <a href="setup.html">decompiling throws away every comment in the file</a> and the comment
+        is usually where the author already explained why the alarming-looking thing is fine.
+      </p>
+
+      <div class="callout">
+        <span class="callout__title">Exporting the report saves you retyping it</span>
+        <p>
+          The results screen has Export Markdown, which produces the findings, the score and the
+          receipt of what the scan actually did. Pasting that is more use than a screenshot,
+          because the receipt says what was read and what was skipped.
+        </p>
+      </div>
+    </section>
+
+    <section id="rule">
+      <h2>A check it should have</h2>
+      <p>
+        Say what the flaw is and how it appears in real code. What decides whether a rule can
+        exist is not the pattern: it is whether both severity judgments can be made honestly, and
+        whether it stays quiet on ordinary code.
+      </p>
+      <p>
+        Every finding is rated twice, once for whoever ships the application and once for whoever
+        runs it, and those genuinely differ. A committed private key is critical for the developer
+        and close to nothing for the person who downloaded the app, because it is the author's key
+        being burned rather than theirs. A rule that cannot answer both questions is not ready,
+        whatever its pattern matches.
+      </p>
+      <p>
+        The <a href="rules.html">rule reference</a> lists all thirty-nine that exist today, so you
+        can check whether something is already covered under a name you did not expect.
+      </p>
+    </section>
+
+    <section id="help">
+      <h2>Something it would not read</h2>
+      <p>
+        Coverage is bounded by what can be recovered, not by the rule table, so an artifact it
+        declined to open is worth reporting even though it is not a wrong answer. It is also the
+        failure that matters most, because a tool that cannot read your application is of no use
+        to you no matter how good its checks are.
+      </p>
+      <p>
+        Include the kind of artifact and how it was built. Solid-compressed NSIS installers and
+        Inno Setup installers are both known and stated limits rather than surprises, and
+        <a href="docs.html">the recovery table</a> says what each kind of artifact yields.
+      </p>
+    </section>
+
+    <section id="elsewhere">
+      <h2>What goes somewhere else</h2>
+
+      <div class="callout callout--warn">
+        <span class="callout__title">A security flaw in VibeCheck itself is private, not public</span>
+        <p>
+          Use
+          <a href="https://github.com/kailoren/vibecheck/security/advisories/new">private vulnerability reporting</a>
+          rather than a discussion. The line is narrower than it sounds, and it is worth stating
+          because for a scanner almost anything can be described as a security issue: the question
+          is whether <strong>an application being scanned can do something to the person scanning
+          it</strong>. A crafted archive that makes VibeCheck write outside the folder it was
+          given, or a path that leaks your API key, belongs in a private report. A wrong score does
+          not, and never did.
+        </p>
+      </div>
+
+      <div class="callout">
+        <span class="callout__title">Pull requests are closed, and the licence is why that costs you nothing</span>
+        <p>
+          One maintainer and a security tool, where a narrowed pattern suppresses findings as
+          easily as a widened one adds them. The guarantee is that every line in a release was
+          written by its maintainer.
+          <a href="https://github.com/kailoren/vibecheck/blob/main/CONTRIBUTING.md">The reasoning is written down</a>,
+          and since the licence is MIT you can fork it, change whatever you like and ship your own
+          build. Nothing restricts what you do with the code; it only decides what goes out under
+          this name.
+        </p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+</main>
+
+<footer class="footer">
+  <div class="shell">
+    <div class="footer__inner">
+      <div>
+        <a class="brand" href="index.html" style="margin-bottom:0.8rem">
+          <img src="assets/img/logo.png" alt="" width="26" height="26">
+          <span>VibeCheck</span>
+        </a>
+        <p style="color:var(--muted);font-size:0.9rem;max-width:34ch">
+          A drag-and-drop security scanner for AI-generated applications.
+        </p>
+      </div>
+      <div>
+        <h4>Documentation</h4>
+        <ul>
+          <li><a href="docs.html">How it works</a></li>
+          <li><a href="setup.html">Deep pass setup</a></li>
+          <li><a href="rules.html">Rule reference</a></li>
+          <li><a href="faq.html">Frequently asked</a></li>
+          <li><a href="changelog.html">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/kailoren/vibecheck">Source on GitHub</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/releases">Releases</a></li>
+          <li><a href="discuss.html">Discussions</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/issues">Report a problem</a></li>
+          <li><a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a></li>
+          <li><a href="https://ko-fi.com/kailodev">Support on Ko-fi</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer__note">
+      <span>© <span data-year>2026</span> Kailoren · MIT licensed</span>
+      <span>VibeCheck cannot tell you an application is safe, and does not claim to.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/site.js"></script>
+<script src="assets/js/toc.js"></script>
+</body>
+</html>
