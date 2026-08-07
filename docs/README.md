@@ -102,3 +102,33 @@ whatever the scan says on the day.
 - **Scroll work is throttled with timers, not `requestAnimationFrame`.** Frame callbacks are
   never delivered to a page that is not being drawn, and an element still waiting to be told to
   appear when somebody finally looks at it is a blank page.
+
+## The Content-Security-Policy, and why it is a meta tag
+
+Every page carries the same policy in `<head>`, immediately after the charset. Keep it identical
+across all six; a policy that differs per page is one nobody can reason about.
+
+```
+default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline';
+img-src 'self'; font-src 'self'; connect-src 'self';
+base-uri 'none'; form-action 'none'
+```
+
+- **A meta tag because GitHub Pages cannot set response headers.** There is no configuration for
+  it, and the `_headers` file is a Netlify and Cloudflare Pages feature that Pages ignores. If the
+  site ever moves behind a custom domain with Cloudflare in front, move this to a real header.
+- **`X-Content-Type-Options` and `X-Frame-Options` are therefore unavailable**, and the usual
+  substitute does not work either: **`frame-ancestors`, `sandbox` and `report-uri` are ignored
+  when a policy arrives by meta tag.** Do not add `frame-ancestors` here and assume the site is
+  protected against framing, because it is not.
+- **`'unsafe-inline'` on `style-src` is the one concession**, needed for about fifty inline
+  `style=` attributes. Everything else is genuinely strict: no inline `<script>`, no inline
+  handlers, no `data:` URIs, no forms. Moving those attributes into `site.css` would let
+  `style-src` drop to `'self'`, which is the only thing standing between this and a policy with
+  no escape hatch in it.
+- **Anything added from another origin needs a directive**, and that is the trap. A Ko-fi widget,
+  an analytics snippet or a CDN font would be silently blocked, so prefer a plain link styled
+  locally over an embedded third-party button.
+- **Verify by loading the site and watching for violations, not by reading the policy.** Check
+  that `rules.html` still fills its table, since that is the one page doing a `fetch`, and that
+  both typefaces report `loaded`.
