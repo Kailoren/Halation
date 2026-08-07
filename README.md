@@ -260,9 +260,15 @@ save a file, and what happens to it next is yours.
 | **Scorecard image** | Attaching to a readme or a post, for showing rather than reading | **No** |
 
 **The scorecard** is a 1200x630 image carrying the score, the band it falls in, how much of the
-application could be read, what was found by severity, and the SHA-256 of the file that was
-scanned. It also names the version that produced it, because rules are added between releases and
-a score is only reproducible against the build that made it.
+application could be read, what was found by severity, and, when a file was scanned, the SHA-256
+of that file. It also names the version that produced it, because rules are added between releases
+and a score is only reproducible against the build that made it.
+
+<img width="1200" height="630" alt="A Halation scorecard for Halation.exe, scoring 98 out of 100 under the heading No known issues found, with 100% of the application could be read beneath it, a findings column reading zero critical, zero high, zero medium and one low, and a footer giving the steps to check the card followed by the SHA-256 of the file." src="docs/assets/img/scorecard-file.png" />
+
+The one above is Halation scanning its own release build. The coverage figure sits beside the
+score at the same size on purpose: 99 out of 100 against a tenth of an application is not the
+claim that number makes on its own.
 
 **Checking somebody else's card** is three steps, because an image is not evidence and nothing
 about a PNG is signed:

@@ -433,6 +433,14 @@
         nothing is sent anywhere by any of them: they save a file, and what happens to it
         afterwards is yours to decide.
       </p>
+      <figure>
+        <div class="shot" style="--natural:560px">
+          <img src="assets/img/screen-export.png" alt="The Halation export chooser, naming the scanned application and offering four options as a radio list: Markdown and JSON, each marked contains your code in orange, and Markdown for sharing and Scorecard image, each marked safe to publish in green. A sentence under each says what it is for." width="1120" height="1004" loading="lazy">
+        </div>
+        <figcaption class="shot__caption">
+          The chooser. The coloured marker is the only difference that survives a file leaving your machine.
+        </figcaption>
+      </figure>
       <div class="table-wrap">
         <table>
           <thead>
@@ -470,13 +478,21 @@
       <h3>The scorecard</h3>
       <p>
         A 1200 by 630 image carrying the score, the band it falls in, how much of the application
-        could be read, what was found by severity, and the <strong>SHA-256 of the file that was
-        scanned</strong>. That last one is the point of it. An image proves nothing by itself and
-        anybody can draw one, so the hash is what lets a reader fetch the same file, rescan it,
-        and see whether they get the same answer. It also names the version that produced it,
-        because the rules change between releases and a score is only reproducible against the
-        build that made it.
+        could be read, what was found by severity, and, when a file was scanned, the
+        <strong>SHA-256 of that file</strong>. That last one is the point of it. An image proves
+        nothing by itself and anybody can draw one, so the hash is what lets a reader fetch the
+        same file, rescan it, and see whether they get the same answer. It also names the version
+        that produced it, because the rules change between releases and a score is only
+        reproducible against the build that made it.
       </p>
+      <figure>
+        <div class="shot" style="--natural:1200px">
+          <img src="assets/img/scorecard-file.png" alt="A Halation scorecard for Halation.exe, scoring 98 out of 100 in green under the heading No known issues found, with 100% of the application could be read beneath it, a findings column reading zero critical, zero high, zero medium and one low, and a footer giving the steps to check the card followed by the SHA-256 of the file." width="1200" height="630" loading="lazy">
+        </div>
+        <figcaption class="shot__caption">
+          A card from a file scan. The hash is on it, so the result can be reproduced by anyone holding the same binary.
+        </figcaption>
+      </figure>
       <p>
         The score never appears on it alone. The coverage figure is the same size beside it,
         because ninety-nine out of a hundred against 12% of an application is not the same claim
@@ -517,6 +533,14 @@
           than the source directory.
         </p>
       </div>
+      <figure>
+        <div class="shot" style="--natural:1200px">
+          <img src="assets/img/scorecard-folder.png" alt="A Halation scorecard for a folder named example-notes-app, scoring 11 out of 100 in red under the heading Critical issues, with a findings column reading five critical, seven high, two medium and zero low. Where the file card prints a hash, this one carries a line reading that a folder has no single hash, so this card cannot name the exact code it read." width="1200" height="630" loading="lazy">
+        </div>
+        <figcaption class="shot__caption">
+          The same card from a folder scan. No hash, and a line saying why, in the place the hash would have been.
+        </figcaption>
+      </figure>
       <p>
         The hash itself is safe to publish. It is one-way, and a file has far too much entropy to
         work backwards from; it is the same thing projects publish beside a download so people can
