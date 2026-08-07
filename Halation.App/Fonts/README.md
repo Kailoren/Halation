@@ -1,6 +1,6 @@
 # Fonts
 
-These are compiled into `VibeCheck.exe` as resources and addressed from
+These are compiled into `Halation.exe` as resources and addressed from
 [`Themes/Theme.xaml`](../Themes/Theme.xaml) by pack URI. Nothing here is installed on the
 machine running the application, and nothing here is read from disk at runtime.
 

@@ -101,16 +101,16 @@
          Themes/Fonts and found nothing; a font URI that resolves to nothing does not throw, it
          falls back, and on a machine with Barlow installed the fallback is Barlow. It looked
          perfect here and would have shipped drawing Segoe UI for everybody else. The absolute
-         pack URI names the assembly, which is VibeCheck rather than VibeCheck.App, and the part
+         pack URI names the assembly, which is Halation rather than Halation.App, and the part
          after the hash is the family's own internal name rather than its file name.
          Fonts/README.md records what each file is. -->
-    <FontFamily x:Key="UiFont">pack://application:,,,/VibeCheck;component/Fonts/#Barlow</FontFamily>
-    <FontFamily x:Key="MonoFont">pack://application:,,,/VibeCheck;component/Fonts/#Cascadia Mono</FontFamily>
+    <FontFamily x:Key="UiFont">pack://application:,,,/Halation;component/Fonts/#Barlow</FontFamily>
+    <FontFamily x:Key="MonoFont">pack://application:,,,/Halation;component/Fonts/#Cascadia Mono</FontFamily>
 
     <!-- Headings, the app name and the score. Separate from UiFont because display faces are
          usually wide and unreadable at body size, so a theme wanting one needs somewhere to
          put it that is not the paragraph text. -->
-    <FontFamily x:Key="DisplayFont">pack://application:,,,/VibeCheck;component/Fonts/#Oxanium</FontFamily>
+    <FontFamily x:Key="DisplayFont">pack://application:,,,/Halation;component/Fonts/#Oxanium</FontFamily>
 
     <!-- Segoe MDL2 Assets supplies the title bar glyphs. Replacing it means replacing the
          glyph codes in the window markup too. -->

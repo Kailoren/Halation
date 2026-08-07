@@ -8,7 +8,7 @@
        in its own title bar. WindowChrome hands the top strip to our content, so the icon a
        normal caption bar would draw has to be placed by hand. -->
   <ItemGroup>
-    <Resource Include="VibeCheck.ico" />
+    <Resource Include="Halation.ico" />
   </ItemGroup>
 
   <!-- The typefaces, compiled in rather than named and hoped for.
@@ -39,11 +39,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
 
-    <!-- The shipped executable is VibeCheck.exe; only the project is called VibeCheck.App. -->
-    <AssemblyName>VibeCheck</AssemblyName>
+    <!-- The shipped executable is Halation.exe; only the project is called Halation.App. -->
+    <AssemblyName>Halation</AssemblyName>
     <RootNamespace>VibeCheck.App</RootNamespace>
 
-    <ApplicationIcon>VibeCheck.ico</ApplicationIcon>
+    <ApplicationIcon>Halation.ico</ApplicationIcon>
 
     <!-- ICSharpCode.Decompiler ships translations of its diagnostics that the UI never
          surfaces; dropping them removes 13 satellite directories from the bundle. -->

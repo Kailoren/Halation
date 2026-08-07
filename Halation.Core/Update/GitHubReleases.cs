@@ -28,7 +28,7 @@ public static class GitHubReleases
     public const string Repo = "VibeCheck";
 
     /// <summary>The asset that is a whole application, as opposed to notes or checksums.</summary>
-    public const string ExecutableAssetName = "VibeCheck.exe";
+    public const string ExecutableAssetName = "Halation.exe";
 
     public static string ReleasesEndpoint { get; } =
         $"https://api.github.com/repos/{Owner}/{Repo}/releases?per_page=20";

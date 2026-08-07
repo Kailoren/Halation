@@ -84,8 +84,8 @@ public class UpdateInstallTests : IDisposable
     [Fact]
     public void RefusesADevelopmentBuild()
     {
-        var exe = Write("VibeCheck.exe", "not really");
-        Write("VibeCheck.deps.json", "{}");
+        var exe = Write("Halation.exe", "not really");
+        Write("Halation.deps.json", "{}");
 
         var capability = UpdateInstall.Assess(exe);
 
@@ -101,7 +101,7 @@ public class UpdateInstallTests : IDisposable
     [Fact]
     public void RefusesWhenThereIsNoPublisherToMatch()
     {
-        var exe = Write("VibeCheck.exe", "not really an executable");
+        var exe = Write("Halation.exe", "not really an executable");
 
         var capability = UpdateInstall.Assess(exe);
 
@@ -117,8 +117,8 @@ public class UpdateInstallTests : IDisposable
     [Fact]
     public void RefusesToInstallWhatItCannotVerify()
     {
-        var exe = Write("VibeCheck.exe", "not really an executable");
-        var download = Write("VibeCheck.exe.0.2.0.download", "also not an executable");
+        var exe = Write("Halation.exe", "not really an executable");
+        var download = Write("Halation.exe.0.2.0.download", "also not an executable");
 
         Assert.NotNull(UpdateInstall.Reject(download, UpdateInstall.Assess(exe)));
     }
@@ -135,7 +135,7 @@ public class UpdateInstallTests : IDisposable
         var pretend = new InstallCapability
         {
             CanInstall = true,
-            TargetPath = Path.Combine(_scratch, "VibeCheck.exe"),
+            TargetPath = Path.Combine(_scratch, "Halation.exe"),
             ExpectedPublisher = "CN=Somebody",
             Detail = "pretend",
         };
@@ -151,8 +151,8 @@ public class UpdateInstallTests : IDisposable
     [Fact]
     public void PutsTheNewBuildInPlaceAndKeepsTheOldOne()
     {
-        var target = Write("VibeCheck.exe", "old build");
-        var staged = Write("VibeCheck.exe.0.2.0.download", "new build");
+        var target = Write("Halation.exe", "old build");
+        var staged = Write("Halation.exe.0.2.0.download", "new build");
 
         UpdateInstall.Replace(staged, target);
 
@@ -168,7 +168,7 @@ public class UpdateInstallTests : IDisposable
     [Fact]
     public void PutsTheOldBuildBackWhenTheNewOneCannotBeMoved()
     {
-        var target = Write("VibeCheck.exe", "old build");
+        var target = Write("Halation.exe", "old build");
         var missing = Path.Combine(_scratch, "never-downloaded.exe");
 
         Assert.ThrowsAny<IOException>(() => UpdateInstall.Replace(missing, target));
@@ -182,9 +182,9 @@ public class UpdateInstallTests : IDisposable
     [Fact]
     public void MakesRoomForASecondUpdate()
     {
-        var target = Write("VibeCheck.exe", "first");
-        Write("VibeCheck.exe" + UpdateInstall.SupersededSuffix, "already there");
-        var staged = Write("VibeCheck.exe.0.3.0.download", "second");
+        var target = Write("Halation.exe", "first");
+        Write("Halation.exe" + UpdateInstall.SupersededSuffix, "already there");
+        var staged = Write("Halation.exe.0.3.0.download", "second");
 
         UpdateInstall.Replace(staged, target);
 
@@ -201,16 +201,16 @@ public class UpdateInstallTests : IDisposable
     [Fact]
     public void SweepsOnlyItsOwnLeftovers()
     {
-        var target = Write("VibeCheck.exe", "current");
-        Write("VibeCheck.exe" + UpdateInstall.SupersededSuffix, "previous");
-        Write("VibeCheck.exe.superseded-abc123", "the one before that");
-        Write("VibeCheck.exe.0.2.0.download", "half a download");
+        var target = Write("Halation.exe", "current");
+        Write("Halation.exe" + UpdateInstall.SupersededSuffix, "previous");
+        Write("Halation.exe.superseded-abc123", "the one before that");
+        Write("Halation.exe.0.2.0.download", "half a download");
 
         var keep = new[]
         {
             Write("notes.download", "somebody else's file"),
-            Write("VibeCheckReport.md", "a report"),
-            Write("VibeCheck.exe.config", "configuration"),
+            Write("HalationReport.md", "a report"),
+            Write("Halation.exe.config", "configuration"),
         };
 
         var removed = UpdateInstall.SweepSuperseded(target);
@@ -228,6 +228,6 @@ public class UpdateInstallTests : IDisposable
     public void SweepingSurvivesAMissingFolder()
     {
         Assert.Equal(0, UpdateInstall.SweepSuperseded(null));
-        Assert.Equal(0, UpdateInstall.SweepSuperseded(Path.Combine(_scratch, "gone", "VibeCheck.exe")));
+        Assert.Equal(0, UpdateInstall.SweepSuperseded(Path.Combine(_scratch, "gone", "Halation.exe")));
     }
 }

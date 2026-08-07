@@ -19,7 +19,7 @@ public class UpdateCheckTests
         string tag,
         bool prerelease = false,
         bool draft = false,
-        string? assetName = "VibeCheck.exe",
+        string? assetName = "Halation.exe",
         string? assetUrl = null,
         long size = 66446645) =>
         $$"""
@@ -63,7 +63,7 @@ public class UpdateCheckTests
 
         var asset = Assert.Single(release.Assets);
 
-        Assert.Equal("VibeCheck.exe", asset.Name);
+        Assert.Equal("Halation.exe", asset.Name);
         Assert.Equal(66446645, asset.Size);
     }
 
@@ -89,9 +89,9 @@ public class UpdateCheckTests
               "tag_name": "v0.2.0", "prerelease": false, "draft": false,
               "html_url": "https://github.com/Kailoren/VibeCheck/releases/tag/v0.2.0",
               "assets": [{
-                "name": "VibeCheck.exe", "state": "starter", "size": 10,
+                "name": "Halation.exe", "state": "starter", "size": 10,
                 "browser_download_url":
-                  "https://github.com/Kailoren/VibeCheck/releases/download/v0.2.0/VibeCheck.exe"
+                  "https://github.com/Kailoren/VibeCheck/releases/download/v0.2.0/Halation.exe"
               }]
             }]
             """));
@@ -112,19 +112,19 @@ public class UpdateCheckTests
     [Theory]
 
     // Not GitHub at all.
-    [InlineData("https://example.com/Kailoren/VibeCheck/releases/download/v1/VibeCheck.exe")]
+    [InlineData("https://example.com/Kailoren/VibeCheck/releases/download/v1/Halation.exe")]
 
     // A host that ends in the right letters but is not the right host.
-    [InlineData("https://notgithub.com/Kailoren/VibeCheck/releases/download/v1/VibeCheck.exe")]
+    [InlineData("https://notgithub.com/Kailoren/VibeCheck/releases/download/v1/Halation.exe")]
 
     // The right host, somewhere else on it.
     [InlineData("https://github.com/Kailoren/VibeCheck/raw/main/evil.exe")]
 
     // Somebody else's repository.
-    [InlineData("https://github.com/someone/else/releases/download/v1/VibeCheck.exe")]
+    [InlineData("https://github.com/someone/else/releases/download/v1/Halation.exe")]
 
     // Not encrypted.
-    [InlineData("http://github.com/Kailoren/VibeCheck/releases/download/v1/VibeCheck.exe")]
+    [InlineData("http://github.com/Kailoren/VibeCheck/releases/download/v1/Halation.exe")]
     [InlineData("file:///C:/Windows/System32/cmd.exe")]
     [InlineData("not a url")]
     [InlineData(null)]
@@ -134,14 +134,14 @@ public class UpdateCheckTests
     [Fact]
     public void AcceptsARealReleaseAssetAddress() =>
         Assert.NotNull(GitHubReleases.ValidateDownloadUrl(
-            "https://github.com/Kailoren/VibeCheck/releases/download/v0.1.0-beta/VibeCheck.exe"));
+            "https://github.com/Kailoren/VibeCheck/releases/download/v0.1.0-beta/Halation.exe"));
 
     /// <summary>An asset whose address is refused is dropped rather than carried along.</summary>
     [Fact]
     public void DropsAssetsPointingElsewhere()
     {
         var releases = GitHubReleases.Parse(Json(
-            $"[{Release("v0.2.0", assetUrl: "https://example.com/VibeCheck.exe")}]"));
+            $"[{Release("v0.2.0", assetUrl: "https://example.com/Halation.exe")}]"));
 
         Assert.Empty(Assert.Single(releases).Assets);
     }

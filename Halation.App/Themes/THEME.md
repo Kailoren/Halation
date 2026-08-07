@@ -1,4 +1,4 @@
-# VibeCheck theming
+# Halation theming
 
 Every colour, font and metric the interface uses is a named key in
 [`Theme.xaml`](Theme.xaml). Nothing visual is hardcoded in a window: if a value cannot be
@@ -6,7 +6,7 @@ changed from the theme, that is a bug in the theme rather than a preference of t
 
 ## The theme is compiled in
 
-`Theme.xaml` is built into `VibeCheck.exe`, along with every typeface it names. There is no
+`Theme.xaml` is built into `Halation.exe`, along with every typeface it names. There is no
 theme file beside the executable and no override read from disk, which is deliberate: what a
 reader sees has to be what was built and tested, and a security tool whose interface can be
 rearranged by a file in the user's profile is a security tool whose screenshots prove nothing.
@@ -34,13 +34,13 @@ different program, with nothing in a screenshot to say why.
 
 Two traps, both of which cost time here and are worth knowing before editing a font key:
 
-- **Use the absolute pack URI**, `pack://application:,,,/VibeCheck;component/Fonts/#Family`.
+- **Use the absolute pack URI**, `pack://application:,,,/Halation;component/Fonts/#Family`.
   A relative `./Fonts/#Family` resolves against the folder holding this dictionary, which is
   `Themes/`, so it finds nothing. A font URI that resolves to nothing does not throw. It falls
   back, and on a developer machine with the font installed the fallback is the correct font, so
   it looks perfect right up until somebody else runs it.
 - **The name after the hash is the family's internal name**, not the file name, and the assembly
-  is `VibeCheck` rather than `VibeCheck.App`.
+  is `Halation` rather than `Halation.App`.
 
 `Fonts/README.md` lists each file, what it is used for, and its licence. `IconFont` is the one
 exception: Segoe MDL2 Assets ships with Windows and is not ours to redistribute.

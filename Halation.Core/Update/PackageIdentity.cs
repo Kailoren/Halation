@@ -20,7 +20,7 @@ namespace VibeCheck.Core.Update;
 /// look like they would work do not. A package install directory is read-only, so the
 /// writability probe refuses correctly but says "cannot write to its own folder", which reads
 /// as a permissions fault. And a packaged build ships loose files including
-/// <c>VibeCheck.deps.json</c>, which the development-build check treats as proof of running
+/// <c>Halation.deps.json</c>, which the development-build check treats as proof of running
 /// from build output, so a Store install would announce itself as a developer's working copy.
 /// Both were observed in a real package built from this project.
 /// </para>
