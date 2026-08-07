@@ -370,9 +370,10 @@
         <h3>Any OpenAI-compatible endpoint</h3>
         <p>
           Ten providers preset, or Ollama and LM Studio on your own machine, which is the one
-          route where the files never leave the building at all. A model running on your own card
-          answers considerably worse than the hosted ones, and
-          <a href="setup.html#choose">the setup page is specific about how much worse</a>.
+          route where the files never leave the building at all. Running one on your own card is
+          <strong>experimental</strong>: it has been measured on a single configuration, and
+          <a href="setup.html#choose">the setup page says what that showed and what it still
+          needs</a>.
         </p>
       </div>
     </div>
@@ -466,12 +467,20 @@
     </div>
 
     <div class="callout callout--warn reveal" style="margin-top:2rem;text-align:left">
-      <span class="callout__title">Early development</span>
+      <span class="callout__title">This is an open beta, not a finished product</span>
       <p>
-        This is a beta, and releases are not yet code-signed, so Windows SmartScreen will warn
-        when you download one. That is also what stops VibeCheck installing its own updates: it
-        holds itself to the rule it applies to everyone else, which is that a download is
-        installed only when a signature validates.
+        Every release so far is a beta and is meant to be treated as one. The deterministic
+        checks, the score and the coverage figure are the settled part. The optional AI pass is
+        newer, and <a href="setup.html#choose">running a model on your own machine is the least
+        tested corner of it</a>, measured on a single configuration so far. Reports from other
+        hardware are the thing that moves it forward, and there is a
+        <a href="https://github.com/kailoren/vibecheck/discussions">place to post them</a>.
+      </p>
+      <p>
+        Releases are also not yet code-signed, so Windows SmartScreen will warn when you download
+        one. That is what stops VibeCheck installing its own updates too: it holds itself to the
+        rule it applies to everyone else, which is that a download is installed only when a
+        signature validates.
       </p>
     </div>
   </div>

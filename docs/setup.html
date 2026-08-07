@@ -119,7 +119,7 @@
               <td>URL, model id, key</td>
             </tr>
             <tr>
-              <td><strong>Local model</strong></td>
+              <td><strong>Local model</strong> <span style="color:var(--high)">· experimental</span></td>
               <td>Nothing, ever</td>
               <td><span style="color:var(--good)">Nowhere. Stays on your machine.</span></td>
               <td>Install a runtime, pull a model</td>
@@ -134,41 +134,67 @@
         available to you does not mean going without.
       </p>
       <p>
-        <strong>A local model is a privacy choice rather than a quality one.</strong> That is worth
-        saying plainly, because the table above makes it look like the obvious pick: it is the only
-        route where nothing leaves your machine, and the only one that is free forever. It is also
-        the one whose answers are worth the least, and not by a small margin.
+        <strong>The local route is experimental, and this section is a request for help rather
+        than a recommendation.</strong> It works. What nobody knows is how well it works on
+        anything other than the one machine it has been measured on, and that is a gap only
+        people running it on their own hardware can close.
       </p>
 
       <div class="callout callout--warn">
-        <span class="callout__title">What a local model actually produced, measured</span>
+        <span class="callout__title">Tested on exactly one configuration</span>
         <p>
-          A 7B model, the size this application recommends for an 8 GB card, was run over a real
-          42-file C# project that a frontier model had already read. It got through 18 files in
-          a little over two minutes and returned 24 findings, 16 of them rated High: very nearly
-          one per file, which is not the shape a real set of findings takes.
+          A 7B model on an 8 GB card, through Ollama, over a real 42-file C# project that a
+          frontier model had already read. That is the entire evidence base. A 24 GB card, a 70B
+          model, a machine with no card at all: all unknown, and none of them safe to guess at
+          from one data point.
         </p>
         <p>
-          Checked by hand, its most serious claim was simply wrong. It reported SQL injection in a
-          query that binds every value as a parameter, and rated its own confidence in that high.
-          Nine of the 24 answers put the model's own prose in the field meant for a quotation from
-          your code, describing the file rather than quoting it. None carried a line number. Both
-          of the flaws the frontier model found in that same code, which were real and have since
-          been fixed, were missed, although the local model had read both of those files.
+          On that one configuration it read 18 files in a little over two minutes and returned 24
+          findings, 16 of them rated High, very nearly one per file. Checked by hand, its most
+          serious claim was wrong: it reported SQL injection in a query that binds every value as
+          a parameter, and rated its own confidence in that high. It also missed both of the real
+          flaws the frontier model had found in that same code, despite having read both files.
         </p>
         <p>
-          One model, one project, one run, so read that as a shape rather than a score. The shape
-          was consistent: correct code, described in confident security vocabulary.
+          <strong>That test has already paid for itself once.</strong> It exposed a defect in
+          VibeCheck rather than in the model: findings were printing the model's own prose inside
+          a code fence, as though it were a line from your file. Evidence is now taken from the
+          file itself using a line number the model cites, so a quotation you cannot find in your
+          own code is no longer something that can be produced. That fix came out of one afternoon
+          on one machine, which is the argument for this whole section.
         </p>
       </div>
 
       <p>
-        None of which makes a local model useless. It reads every file it is given, it costs
-        nothing, and your source never leaves the machine. It is a reasonable way to look at
-        something you would otherwise not have looked at at all. Just do not read a quiet result
-        from one as evidence that there is nothing there, and check anything it does report against
-        the code before acting on it.
+        So: a local model is a privacy choice rather than a quality one, on the evidence available.
+        It reads every file it is given, it costs nothing, and your source never leaves the
+        machine. Do not read a quiet result from one as evidence that there is nothing there, and
+        check anything it does report against the code before acting on it. That last part is now
+        easy, because every finding names a line and quotes it.
       </p>
+
+      <div class="callout">
+        <span class="callout__title">If you run one, please post what happened</span>
+        <p>
+          Good result or bad, it is worth more than an opinion about local models in the
+          abstract. Scan something, press <strong>Export Markdown</strong> on the results screen,
+          and post it in
+          <a href="https://github.com/kailoren/vibecheck/discussions">Discussions</a>.
+        </p>
+        <p>
+          When a model on your own machine answered, the export ends with a <strong>This
+          machine</strong> section carrying your graphics card and its memory, your system memory,
+          the model, and which runtime served it. Those are the things that decide the answer, so
+          the report is worth reading with them and close to worthless without. <strong>Nothing is
+          sent anywhere by VibeCheck</strong>: it is written into the file so that you can read it
+          first and then choose to share it.
+        </p>
+        <p>
+          Worth saying in the post as well: what you scanned and roughly how big it was, and
+          whether anything it reported turned out to be real when you checked it against the code.
+          That last one is the number that matters most and the one we cannot measure from here.
+        </p>
+      </div>
       <div class="callout callout--warn">
         <span class="callout__title">Developer mode only</span>
         <p>
