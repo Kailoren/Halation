@@ -128,10 +128,46 @@
         </table>
       </div>
       <p>
-        If you have a Claude subscription, use it: it is the best model of the four routes and it
-        costs nothing on top of what you already pay. If privacy matters more than answer quality,
-        run a model locally. The hosted endpoints exist so that neither of those being unavailable
-        means going without.
+        <strong>Use Claude Code if you have a subscription, and an API key if you do not.</strong>
+        Those two read code properly, and they cost either nothing on top of what you already pay
+        or a few dollars at the ceiling. The hosted endpoints exist so that neither of those being
+        available to you does not mean going without.
+      </p>
+      <p>
+        <strong>A local model is a privacy choice rather than a quality one.</strong> That is worth
+        saying plainly, because the table above makes it look like the obvious pick: it is the only
+        route where nothing leaves your machine, and the only one that is free forever. It is also
+        the one whose answers are worth the least, and not by a small margin.
+      </p>
+
+      <div class="callout callout--warn">
+        <span class="callout__title">What a local model actually produced, measured</span>
+        <p>
+          A 7B model, the size this application recommends for an 8 GB card, was run over a real
+          42-file C# project that a frontier model had already read. It got through 18 files in
+          a little over two minutes and returned 24 findings, 16 of them rated High: very nearly
+          one per file, which is not the shape a real set of findings takes.
+        </p>
+        <p>
+          Checked by hand, its most serious claim was simply wrong. It reported SQL injection in a
+          query that binds every value as a parameter, and rated its own confidence in that high.
+          Nine of the 24 answers put the model's own prose in the field meant for a quotation from
+          your code, describing the file rather than quoting it. None carried a line number. Both
+          of the flaws the frontier model found in that same code, which were real and have since
+          been fixed, were missed, although the local model had read both of those files.
+        </p>
+        <p>
+          One model, one project, one run, so read that as a shape rather than a score. The shape
+          was consistent: correct code, described in confident security vocabulary.
+        </p>
+      </div>
+
+      <p>
+        None of which makes a local model useless. It reads every file it is given, it costs
+        nothing, and your source never leaves the machine. It is a reasonable way to look at
+        something you would otherwise not have looked at at all. Just do not read a quiet result
+        from one as evidence that there is nothing there, and check anything it does report against
+        the code before acting on it.
       </p>
       <div class="callout callout--warn">
         <span class="callout__title">Developer mode only</span>
