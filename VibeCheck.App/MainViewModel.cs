@@ -558,12 +558,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// </remarks>
     public string DeepPassCostLine => _deepPassSource switch
     {
-        // Not "unlimited". Anthropic meters non-interactive use like this separately from chat,
-        // so the honest word is allowance rather than quota: nothing is charged, and it is also
-        // not endless.
+        // The same limits as chat, which is worth saying rather than "free": a large scan comes
+        // out of what the reader has left for their own work that day.
+        //
+        // Anthropic announced moving this onto a separate monthly credit from 15 June 2026 and
+        // paused it that day, saying "nothing has changed: Claude Agent SDK, claude -p, and
+        // third-party app usage still draw from your subscription's usage limits", and that they
+        // will give notice before anything takes effect. Checked 2026-08-07. If it is ever
+        // unpaused this sentence is the first thing that becomes untrue.
         DeepPassSource.LocalCli =>
-            "Spends your Claude plan rather than money. Anthropic meters non-interactive use "
-            + "like this on its own allowance, so it is not unlimited.",
+            "Spends the Claude plan you already pay for rather than money, from the same usage "
+            + "limits as chat, so a large scan leaves you less for everything else.",
 
         DeepPassSource.Endpoint when DeepPassStaysLocal =>
             "Runs on your own hardware. Nothing is charged and nothing is uploaded.",
@@ -619,9 +624,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public string LocalCliRouteTooltip =>
         "Where your code goes: to Anthropic, the same as the key route. Claude Code is installed "
         + "on this machine, but the reading does not happen here.\n\n"
-        + "What it costs: the Claude plan you already pay for, rather than money. Anthropic "
-        + "meters non-interactive use like this on its own monthly allowance, separate from "
-        + "chat, so a scan spends that allowance rather than nothing at all.\n\n"
+        + "What it costs: the Claude plan you already pay for, rather than money. It draws on "
+        + "the same usage limits as chat and as Claude Code itself, so a scan is not free of "
+        + "consequence: a large one leaves you less for the rest of the day.\n\n"
         + "What you need: Claude Code installed and signed in.\n\n"
         + "Offered only for an application you built yourself, because Claude Code can act on "
         + "this computer and an API endpoint cannot.";
