@@ -34,6 +34,11 @@ public static class JsonReportWriter
             scannedAt = report.ScannedAt,
             durationSeconds = Math.Round(report.Duration.TotalSeconds, 2),
 
+            // Flagged rather than left to be inferred from absent keys. Anything consuming a
+            // batch of these has to be able to tell a report with no evidence from one where the
+            // evidence was removed before it counts anything.
+            shared = report.IsShared ? true : (bool?)null,
+
             // Present only when the application filled it in, and only ever written to this
             // file. It is what makes a local model report worth reading: the same model answers
             // very differently on a card it fits in than on one it does not.
@@ -59,7 +64,7 @@ public static class JsonReportWriter
                 kind = report.Kind.ToString(),
                 kindLabel = report.KindLabel,
                 bytes = report.ArtifactBytes,
-                sha256 = report.Sha256,
+                sha256 = report.IsShared ? null : report.Sha256,
             },
 
             verdict = new

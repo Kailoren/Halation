@@ -177,17 +177,29 @@
         <span class="callout__title">If you run one, please post what happened</span>
         <p>
           Good result or bad, it is worth more than an opinion about local models in the
-          abstract. Scan something, press <strong>Export Markdown</strong> on the results screen,
-          and post it in
+          abstract. Scan something, press <strong>Export for sharing</strong> on the results
+          screen, and post the file in
           <a href="https://github.com/kailoren/vibecheck/discussions">Discussions</a>.
         </p>
         <p>
-          When a model on your own machine answered, the export ends with a <strong>This
-          machine</strong> section carrying your graphics card and its memory, your system memory,
-          the model, and which runtime served it. Those are the things that decide the answer, so
-          the report is worth reading with them and close to worthless without. <strong>Nothing is
-          sent anywhere by VibeCheck</strong>: it is written into the file so that you can read it
-          first and then choose to share it.
+          <strong>That button exists because the ordinary export is not safe to post.</strong>
+          Every finding quotes a line of the code it was found in and names the file, which is the
+          point of it and also the reason helping out would otherwise mean publishing your own
+          source. The sharing copy takes out the quoted lines, the file names, the line numbers,
+          and the name and hash of what you scanned. Findings are still listed, counted and rated
+          exactly as they were, and the file says at the top that it is the redacted one.
+        </p>
+        <p>
+          What it keeps is the part that makes it worth reading: your graphics card and its
+          memory, your system memory, the model, and which runtime served it. Those are the things
+          that decide the answer. <strong>Nothing is sent anywhere by VibeCheck</strong>, and none
+          of this is either: it is written into a file you can read first and then choose to
+          share.
+        </p>
+        <p>
+          Wording an AI model wrote is kept, since without it there is nothing to discuss, and it
+          can name a method or a class from the code it read. That is a much smaller disclosure
+          than a quoted line, but it is not nothing, so have a look before you post.
         </p>
         <p>
           Worth saying in the post as well: what you scanned and roughly how big it was, and

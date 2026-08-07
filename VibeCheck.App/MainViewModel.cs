@@ -74,6 +74,12 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ResetCommand = new RelayCommand(_ => Reset(), _ => State != AppState.Scanning);
         ExportMarkdownCommand = new RelayCommand(_ => Export("md"), _ => Report is not null);
         ExportJsonCommand = new RelayCommand(_ => Export("json"), _ => Report is not null);
+
+        // Offered separately rather than as a tick box on the other two, because the difference
+        // is what may be published rather than a formatting preference, and a setting somebody
+        // forgot the state of is the wrong shape for that decision.
+        ExportForSharingCommand = new RelayCommand(
+            _ => Export("md", forSharing: true), _ => Report is not null);
         ChooseAudienceCommand = new RelayCommand(a => ChooseAudience(a as string));
         SwitchAudienceCommand = new RelayCommand(_ => Audience =
             Audience == Audience.EndUser ? Audience.Developer : Audience.EndUser);
@@ -1288,6 +1294,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public ICommand ExportJsonCommand { get; }
 
+    /// <summary>Markdown with the reader's own code removed, for posting somewhere public.</summary>
+    public ICommand ExportForSharingCommand { get; }
+
     /// <summary>
     /// What to record about this machine, for a reader who later wants to report the result.
     /// </summary>
@@ -1716,16 +1725,29 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    private void Export(string format)
+    /// <summary>
+    /// Writes a report out, either in full or with the reader's own code taken out of it.
+    /// </summary>
+    /// <remarks>
+    /// The sharing copy exists because the ordinary one is not safe to post. Every finding quotes
+    /// a line of the scanned source and names the file it came from, which is the point of it and
+    /// also the reason a reader helping with a local model test would be publishing their own
+    /// code to do it. <see cref="ScanReport.ForSharing"/> decides what goes.
+    /// </remarks>
+    private void Export(string format, bool forSharing = false)
     {
         if (Report is null)
         {
             return;
         }
 
+        // The name says which one it is, because the two files are otherwise easy to confuse
+        // and only one of them is safe to attach to anything.
+        var suffix = forSharing ? "-vibecheck-shared" : "-vibecheck";
+
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            FileName = $"{Report.ArtifactName}-vibecheck.{format}",
+            FileName = $"{Report.ArtifactName}{suffix}.{format}",
             Filter = format == "md"
                 ? "Markdown (*.md)|*.md"
                 : "JSON (*.json)|*.json",
@@ -1736,11 +1758,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
             return;
         }
 
+        var report = forSharing ? Report.ForSharing() : Report;
+
         try
         {
             File.WriteAllText(dialog.FileName, format == "md"
-                ? MarkdownReportWriter.Write(Report)
-                : JsonReportWriter.Write(Report));
+                ? MarkdownReportWriter.Write(report)
+                : JsonReportWriter.Write(report));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

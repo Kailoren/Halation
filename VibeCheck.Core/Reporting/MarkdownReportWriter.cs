@@ -230,10 +230,32 @@ public static class MarkdownReportWriter
         output.AppendLine();
         output.AppendLine($"- **Type:** {report.KindLabel}");
         output.AppendLine($"- **Size:** {FormatBytes(report.ArtifactBytes)}");
-        output.AppendLine($"- **SHA-256:** `{report.Sha256}`");
+
+        if (!report.IsShared)
+        {
+            output.AppendLine($"- **SHA-256:** `{report.Sha256}`");
+        }
+
         output.AppendLine($"- **Scanned:** {report.ScannedAt:yyyy-MM-dd HH:mm} "
                           + $"(took {report.Duration.TotalSeconds:F1}s)");
         output.AppendLine();
+
+        // Said at the top, before any of the missing parts are noticed. A redacted report that
+        // does not announce itself invites somebody comparing two of them to read absence as
+        // evidence, which is the one mistake this whole application is built to prevent.
+        if (report.IsShared)
+        {
+            output.AppendLine("> **This is the sharing copy.** The quoted lines of code, the file "
+                              + "names, the line numbers, and the name and hash of what was "
+                              + "scanned have all been taken out, so it can be posted in public "
+                              + "without publishing anyone's source. Findings are still listed, "
+                              + "counted and rated exactly as they were.");
+            output.AppendLine(">");
+            output.AppendLine("> Wording written by an AI model is kept, because it is most of "
+                              + "what makes a report worth reading. It can name a method or a "
+                              + "class from the code it read. Have a look before you post.");
+            output.AppendLine();
+        }
     }
 
     private static void WriteVerdict(StringBuilder output, ScanReport report)

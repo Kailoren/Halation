@@ -100,6 +100,114 @@ public sealed class ScanEnvironmentTests
     public void ALocalRuntime_IsNamedByThePortItListensOn(string url, string? expected) =>
         Assert.Equal(expected, LocalRuntimeProbe.NameFor(new Uri(url)));
 
+    // ---- The sharing copy --------------------------------------------------
+
+    /// <summary>
+    /// The whole point: a reader helping with a local model test must not have to publish their
+    /// own source to do it.
+    /// </summary>
+    [Fact]
+    public void TheSharingCopy_CarriesNoCodeNoPathsAndNoHash()
+    {
+        var shared = WithFindings().ForSharing();
+        var markdown = MarkdownReportWriter.Write(shared);
+        var json = JsonReportWriter.Write(shared);
+
+        foreach (var text in new[] { markdown, json })
+        {
+            Assert.DoesNotContain("var password = \"hunter2\";", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("src/Secrets/Vault.cs", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("CustomerPortal.exe", text, StringComparison.Ordinal);
+            Assert.DoesNotContain(new string('a', 64), text, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>The findings themselves survive: this is a redaction, not a summary.</summary>
+    [Fact]
+    public void TheSharingCopy_KeepsTheFindingsAndTheirRatings()
+    {
+        var shared = WithFindings().ForSharing();
+
+        var finding = Assert.Single(shared.Findings);
+
+        Assert.Equal("Hardcoded credential", finding.Title);
+        Assert.Equal(Severity.Critical, finding.Severity);
+        Assert.Null(finding.Evidence);
+        Assert.Null(finding.Line);
+    }
+
+    /// <summary>
+    /// Paths become stable labels rather than vanishing, so "all of them in one file" still reads
+    /// as that, and the extension stays because the language changes what the checks could do.
+    /// </summary>
+    [Fact]
+    public void TheSharingCopy_GroupsByFileWithoutNamingIt()
+    {
+        var report = WithFindings(
+            Finding("src/A.cs", "one"),
+            Finding("src/A.cs", "two"),
+            Finding("src/B.cs", "three"));
+
+        var paths = report.ForSharing().Findings.Select(f => f.FilePath).ToArray();
+
+        Assert.Equal(paths[0], paths[1]);
+        Assert.NotEqual(paths[1], paths[2]);
+        Assert.All(paths, p => Assert.Contains("(.cs)", p, StringComparison.Ordinal));
+        Assert.All(paths, p => Assert.DoesNotContain("src", p, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A redacted report that does not announce itself lets somebody read absent findings as
+    /// findings that were not there.
+    /// </summary>
+    [Fact]
+    public void TheSharingCopy_SaysThatItIsOne()
+    {
+        Assert.Contains("This is the sharing copy",
+            MarkdownReportWriter.Write(WithFindings().ForSharing()), StringComparison.Ordinal);
+
+        using var document = JsonDocument.Parse(JsonReportWriter.Write(WithFindings().ForSharing()));
+        Assert.True(document.RootElement.GetProperty("shared").GetBoolean());
+    }
+
+    [Fact]
+    public void TheOrdinaryCopy_IsUntouched()
+    {
+        var markdown = MarkdownReportWriter.Write(WithFindings());
+
+        Assert.Contains("var password = \"hunter2\";", markdown, StringComparison.Ordinal);
+        Assert.DoesNotContain("This is the sharing copy", markdown, StringComparison.Ordinal);
+    }
+
+    private static Finding Finding(string path, string title) => new()
+    {
+        RuleId = "VC-SEC-001",
+        Title = title,
+        Severity = Severity.Critical,
+        UserSeverity = Severity.Low,
+        Category = FindingCategory.Secrets,
+        Description = "d",
+        UserDescription = "u",
+        FilePath = path,
+        Line = 12,
+        Evidence = "var password = \"hunter2\";",
+    };
+
+    private static ScanReport WithFindings(params Finding[] findings)
+    {
+        var list = findings.Length > 0
+            ? findings
+            : [Finding("src/Secrets/Vault.cs", "Hardcoded credential")];
+
+        return Report(null) with
+        {
+            ArtifactName = "CustomerPortal.exe",
+            Sha256 = new string('a', 64),
+            Findings = list,
+            Verdict = ScoreCalculator.Calculate(list),
+        };
+    }
+
     private static ScanReport Report(ScanEnvironment? machine) => new()
     {
         ArtifactName = "fixture",

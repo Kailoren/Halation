@@ -130,6 +130,85 @@ public sealed record ScanReport
     /// </remarks>
     public ScanEnvironment? Environment { get; init; }
 
+    /// <summary>Whether this copy has had the reader's own code taken out of it.</summary>
+    /// <remarks>
+    /// Read by the writers so a shared report says what is missing from it. A redacted report
+    /// that does not announce itself is worse than none: somebody comparing two of them would
+    /// read absent findings as findings that were not there.
+    /// </remarks>
+    public bool IsShared { get; init; }
+
+    /// <summary>
+    /// A copy safe to post in public, with the reader's own code removed.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Redaction happens here, to the data, and never in a writer.</b> Both exports render
+    /// from this same object, so a field added to a writer later is covered by construction
+    /// rather than by somebody remembering. Doing it in the writers would mean each new one is
+    /// a fresh chance to leak.
+    /// </para>
+    /// <para>
+    /// What goes: the quoted lines, which are literal source; the file paths, which are the shape
+    /// of somebody's project; the line numbers, which say nothing useful once the first two are
+    /// gone; and the artifact's name and hash, which identify the thing and sometimes the client
+    /// it was written for.
+    /// </para>
+    /// <para>
+    /// <b>What stays, deliberately: the text the model wrote.</b> Titles and explanations can name
+    /// a method or a class, and that is a far smaller disclosure than a quoted line while being
+    /// most of what makes a report worth reading. The header says so, and the reader sees the file
+    /// before deciding to post it. Rule findings' wording is this application's own and carries
+    /// nothing of theirs.
+    /// </para>
+    /// <para>
+    /// Paths become stable labels rather than disappearing, so "nine findings, all in one file"
+    /// still reads as that. The extension is kept because the language changes what the checks
+    /// could do.
+    /// </para>
+    /// </remarks>
+    public ScanReport ForSharing()
+    {
+        var labels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        string? Label(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            if (!labels.TryGetValue(path, out var label))
+            {
+                var extension = System.IO.Path.GetExtension(path);
+
+                label = string.IsNullOrEmpty(extension)
+                    ? $"file {labels.Count + 1}"
+                    : $"file {labels.Count + 1} ({extension})";
+
+                labels[path] = label;
+            }
+
+            return label;
+        }
+
+        Finding Strip(Finding finding) => finding with
+        {
+            Evidence = null,
+            FilePath = Label(finding.FilePath),
+            Line = null,
+        };
+
+        return this with
+        {
+            IsShared = true,
+            ArtifactName = KindLabel,
+            Sha256 = "",
+            Findings = [.. Findings.Select(Strip)],
+            Capabilities = [.. Capabilities.Select(Strip)],
+        };
+    }
+
     /// <summary>How long the scan took, for the UI and for spotting pathological inputs.</summary>
     public TimeSpan Duration { get; init; }
 
