@@ -248,16 +248,25 @@ depend on whether the reader happened to have a key or a subscription.
 
 ## Exporting a report, including one you can post in public
 
-Three buttons on the results screen. Nothing is written until you press one and nothing is sent
-by any of them; they save a file, and what happens to it next is yours.
+One **Export report** button on the results screen, which asks which of four you want and says
+what is in each. Nothing is written until you choose one and nothing is sent by any of them; they
+save a file, and what happens to it next is yours.
 
 | Export | For | Contains your code |
 |---|---|---|
 | **Markdown** | Reading, keeping, pasting into your own notes or a private ticket | Yes |
 | **JSON** | Feeding to something else. Every field, structured, versioned | Yes |
-| **For sharing** | Posting in public, or sending to someone who should not see the source | **No** |
+| **Markdown for sharing** | Posting in public, or sending to someone who should not see the source | **No** |
+| **Scorecard image** | Attaching to a readme or a post, for showing rather than reading | **No** |
 
-**Why the third exists.** Every finding in an ordinary report quotes the line of code it was found
+**The scorecard** is a 1200x630 image carrying the score, the band it falls in, how much of the
+application could be read, what was found by severity, and the SHA-256 of the file that was
+scanned. That last one is the point: an image proves nothing by itself, and the hash is what lets
+anybody rescan the same file and check they get the same answer. It also names the version that
+produced it, because the rules change between releases and a score is only reproducible against
+the build that made it.
+
+**Why the sharing export exists.** Every finding in an ordinary report quotes the line of code it was found
 in and names the file and line. That is the most valuable thing in it, because it is what lets you
 check a claim rather than believe it, and it also makes the ordinary export a document full of your
 own source. Sending one to anybody is publishing that source.

@@ -536,16 +536,11 @@
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                                 VerticalAlignment="Center">
-                        <Button Content="Export Markdown" Style="{StaticResource Btn}"
-                                Command="{Binding ExportMarkdownCommand}"/>
-                        <Button Content="Export JSON" Style="{StaticResource Btn}" Margin="8,0,0,0"
-                                Command="{Binding ExportJsonCommand}"/>
-                        <!-- Its own button rather than an option on the two above. The choice is
-                             what may be published, not how it is formatted, and a tick box whose
-                             state somebody has forgotten is the wrong way to make that one. -->
-                        <Button Content="Export for sharing" Style="{StaticResource Btn}" Margin="8,0,0,0"
-                                ToolTip="Markdown with the quoted code, file names and hash removed, so it can be posted in public."
-                                Command="{Binding ExportForSharingCommand}"/>
+                        <!-- One button rather than one per format. The difference between these
+                             files is what may be published, which needs a sentence each to
+                             explain and cannot be carried by four similar words in a row. -->
+                        <Button Content="Export report" Style="{StaticResource Btn}"
+                                IsEnabled="{Binding HasReport}" Click="OnExportReport"/>
                         <Button Content="Scan another" Style="{StaticResource Btn}" Margin="8,0,0,0"
                                 Command="{Binding ResetCommand}"/>
                     </StackPanel>

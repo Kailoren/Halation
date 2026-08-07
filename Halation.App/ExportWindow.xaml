@@ -1,0 +1,100 @@
+<Window x:Class="Halation.App.ExportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Export report"
+        Width="560"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="{StaticResource Bg}"
+        FontFamily="{DynamicResource UiFont}" FontSize="{DynamicResource BodySize}"
+        WindowStyle="None" AllowsTransparency="False">
+
+    <!-- Sized to content like the other dialogs: the descriptions wrap to a different number of
+         lines depending on font and DPI, so any fixed height is wrong on somebody's machine. -->
+    <Window.SizeToContent>Height</Window.SizeToContent>
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="36" ResizeBorderThickness="0"
+                            GlassFrameThickness="0" CornerRadius="0"
+                            UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="36"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource Panel}"
+                BorderBrush="{StaticResource Edge}" BorderThickness="0,0,0,1">
+            <Grid>
+                <TextBlock Text="Export report" FontWeight="SemiBold"
+                           Margin="14,0" VerticalAlignment="Center"/>
+
+                <Button Style="{StaticResource CloseBtn}" Content="&#xE8BB;"
+                        HorizontalAlignment="Right" Click="OnCancel"/>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="20">
+
+                <TextBlock x:Name="ArtifactName" Style="{StaticResource Heading}"
+                           TextTrimming="CharacterEllipsis"/>
+
+                <TextBlock Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,4,0,16"
+                           Text="Nothing is written until you choose one, and none of them send anything anywhere. They save a file, and what happens to it afterwards is yours."/>
+
+                <!-- Radio buttons rather than a drop-down, for the same reason the kind selector
+                     uses them: every option and its consequence visible without a click. The
+                     difference between these is what may be published, which is not a thing to
+                     hide behind a collapsed control. -->
+                <ItemsControl x:Name="Formats">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <!-- The description sits outside the RadioButton rather than inside
+                                 it. The theme centres the bullet against whatever it contains,
+                                 which is right for the single-line lists elsewhere and would
+                                 here park the bullet beside the paragraph instead of the option
+                                 it belongs to. Indented by the bullet's own width so it still
+                                 reads as one block. -->
+                            <StackPanel Margin="0,0,0,15">
+                                <RadioButton GroupName="ExportFormat"
+                                             IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                             Foreground="{StaticResource Text}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold"/>
+
+                                        <!-- The one fact worth pulling out of the sentence: it is
+                                             the only difference that still matters once the file
+                                             has left this machine. -->
+                                        <TextBlock Text="{Binding CodeNote}" Margin="9,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{DynamicResource CaptionSize}"
+                                                   Foreground="{Binding CodeNoteBrush}"/>
+                                    </StackPanel>
+                                </RadioButton>
+
+                                <TextBlock Text="{Binding Description}"
+                                           Style="{StaticResource Caption}"
+                                           TextWrapping="Wrap"
+                                           Margin="24,4,0,0"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                    <!-- IsCancel so Escape still works: replacing the system title bar took away
+                         the usual way out of a dialog. -->
+                    <Button Content="Cancel" Style="{StaticResource Btn}"
+                            IsCancel="True" Click="OnCancel"/>
+                    <Button Content="Export" Style="{StaticResource Btn}" Margin="8,0,0,0"
+                            Click="OnExport" IsDefault="True"/>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

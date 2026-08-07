@@ -109,6 +109,29 @@ public partial class MainWindow : Window
         _model.ClearSelection();
     }
 
+    /// <summary>
+    /// Asks which export is wanted, then writes it.
+    /// </summary>
+    /// <remarks>
+    /// Opened from here rather than from a command on the view model, for the same reason the
+    /// scan setup dialog is: owning a window is the window's job, and it is what keeps the
+    /// dialog centred on this one instead of on the desktop.
+    /// </remarks>
+    private void OnExportReport(object sender, RoutedEventArgs e)
+    {
+        if (_model.Report is not { } report)
+        {
+            return;
+        }
+
+        var chooser = new ExportWindow(report.ArtifactName) { Owner = this };
+
+        if (chooser.ShowDialog() == true && chooser.Chosen is { } format)
+        {
+            _model.Export(format);
+        }
+    }
+
     // ---- Browse ------------------------------------------------------------
 
     /// <summary>

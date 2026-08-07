@@ -421,15 +421,16 @@
       <p>
         Sending a report somewhere is a separate decision, and one you make by saving a file
         rather than by ticking anything. <a href="#exports">Taking a report away</a> covers the
-        three exports, and which of them is safe to post in public.
+        four exports, and which of them is safe to post in public.
       </p>
     </section>
 
     <section id="exports">
       <h2>Taking a report away</h2>
       <p>
-        The results screen offers three. Nothing is written anywhere until you press one of them,
-        and nothing is sent anywhere by any of them: they save a file, and what happens to it
+        One <strong>Export report</strong> button on the results screen, which asks which of four
+        you want and says what is in each. Nothing is written anywhere until you choose one, and
+        nothing is sent anywhere by any of them: they save a file, and what happens to it
         afterwards is yours to decide.
       </p>
       <div class="table-wrap">
@@ -443,25 +444,47 @@
           </thead>
           <tbody>
             <tr>
-              <td><strong>Export Markdown</strong></td>
+              <td><strong>Markdown</strong></td>
               <td>Reading it, keeping it, pasting it into your own notes or a private ticket</td>
               <td><span style="color:var(--high)">Yes</span></td>
             </tr>
             <tr>
-              <td><strong>Export JSON</strong></td>
+              <td><strong>JSON</strong></td>
               <td>Feeding it to something else. Every field, structured, with a version number</td>
               <td><span style="color:var(--high)">Yes</span></td>
             </tr>
             <tr>
-              <td><strong>Export for sharing</strong></td>
+              <td><strong>Markdown for sharing</strong></td>
               <td>Posting in public, or sending to somebody who should not see the source</td>
+              <td><span style="color:var(--good)">No</span></td>
+            </tr>
+            <tr>
+              <td><strong>Scorecard image</strong></td>
+              <td>Attaching to a readme or a post, for showing rather than reading</td>
               <td><span style="color:var(--good)">No</span></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <h3>Why the third one exists</h3>
+      <h3>The scorecard</h3>
+      <p>
+        A 1200 by 630 image carrying the score, the band it falls in, how much of the application
+        could be read, what was found by severity, and the <strong>SHA-256 of the file that was
+        scanned</strong>. That last one is the point of it. An image proves nothing by itself and
+        anybody can draw one, so the hash is what lets a reader fetch the same file, rescan it,
+        and see whether they get the same answer. It also names the version that produced it,
+        because the rules change between releases and a score is only reproducible against the
+        build that made it.
+      </p>
+      <p>
+        The score never appears on it alone. The coverage figure is the same size beside it,
+        because ninety-nine out of a hundred against 12% of an application is not the same claim
+        as the same number against all of it, and a badge showing only the number invites being
+        read as the second.
+      </p>
+
+      <h3>Why the sharing export exists</h3>
       <p>
         Every finding in an ordinary report <strong>quotes the line of code it was found in</strong>
         and names the file and line it came from. That is deliberate, and it is the most important

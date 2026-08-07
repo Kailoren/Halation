@@ -72,14 +72,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         ScanCommand = new RelayCommand(_ => { }, _ => false);
         CancelCommand = new RelayCommand(_ => _cancellation?.Cancel(), _ => State == AppState.Scanning);
         ResetCommand = new RelayCommand(_ => Reset(), _ => State != AppState.Scanning);
-        ExportMarkdownCommand = new RelayCommand(_ => Export("md"), _ => Report is not null);
-        ExportJsonCommand = new RelayCommand(_ => Export("json"), _ => Report is not null);
-
-        // Offered separately rather than as a tick box on the other two, because the difference
-        // is what may be published rather than a formatting preference, and a setting somebody
-        // forgot the state of is the wrong shape for that decision.
-        ExportForSharingCommand = new RelayCommand(
-            _ => Export("md", forSharing: true), _ => Report is not null);
         ChooseAudienceCommand = new RelayCommand(a => ChooseAudience(a as string));
         SwitchAudienceCommand = new RelayCommand(_ => Audience =
             Audience == Audience.EndUser ? Audience.Developer : Audience.EndUser);
@@ -1117,6 +1109,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                              nameof(DurationLabel), nameof(ScoreCaption),
                              nameof(AwaitingAnswer), nameof(ShowInstallBanner),
                              nameof(AccountedForReasons), nameof(HasAccountedFor),
+                             nameof(HasReport),
                          })
                 {
                     Notify(name);
@@ -1290,12 +1283,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public ICommand ResetCommand { get; }
 
-    public ICommand ExportMarkdownCommand { get; }
-
-    public ICommand ExportJsonCommand { get; }
-
-    /// <summary>Markdown with the reader's own code removed, for posting somewhere public.</summary>
-    public ICommand ExportForSharingCommand { get; }
+    /// <summary>Whether there is a finished report to take away.</summary>
+    public bool HasReport => Report is not null;
 
     /// <summary>
     /// What to record about this machine, for a reader who later wants to report the result.
@@ -1734,23 +1723,24 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// also the reason a reader helping with a local model test would be publishing their own
     /// code to do it. <see cref="ScanReport.ForSharing"/> decides what goes.
     /// </remarks>
-    private void Export(string format, bool forSharing = false)
+    /// <summary>Writes the report out in the chosen shape, asking where to put it first.</summary>
+    /// <remarks>
+    /// Which formats exist and what each one contains is decided in
+    /// <see cref="ExportFormats"/>, so this stays a matter of writing bytes.
+    /// </remarks>
+    public void Export(ExportFormat format)
     {
         if (Report is null)
         {
             return;
         }
 
-        // The name says which one it is, because the two files are otherwise easy to confuse
-        // and only one of them is safe to attach to anything.
-        var suffix = forSharing ? "-halation-shared" : "-halation";
-
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            FileName = $"{Report.ArtifactName}{suffix}.{format}",
-            Filter = format == "md"
-                ? "Markdown (*.md)|*.md"
-                : "JSON (*.json)|*.json",
+            // The name says which one it is: two of these are Markdown with the same extension
+            // and only one of them is safe to attach to anything.
+            FileName = $"{Report.ArtifactName}{format.FileSuffix()}.{format.Extension()}",
+            Filter = format.FileFilter(),
         };
 
         if (dialog.ShowDialog() != true)
@@ -1758,13 +1748,19 @@ public sealed class MainViewModel : INotifyPropertyChanged
             return;
         }
 
-        var report = forSharing ? Report.ForSharing() : Report;
-
         try
         {
-            File.WriteAllText(dialog.FileName, format == "md"
-                ? MarkdownReportWriter.Write(report)
-                : JsonReportWriter.Write(report));
+            if (format == ExportFormat.Scorecard)
+            {
+                ScorecardImage.Save(Scorecard.From(Report), dialog.FileName);
+                return;
+            }
+
+            var report = format == ExportFormat.Sharing ? Report.ForSharing() : Report;
+
+            File.WriteAllText(dialog.FileName, format == ExportFormat.Json
+                ? JsonReportWriter.Write(report)
+                : MarkdownReportWriter.Write(report));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
