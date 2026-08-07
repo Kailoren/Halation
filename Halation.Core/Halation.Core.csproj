@@ -11,7 +11,7 @@
        the argument list and the envelope handling directly rather than inferring them from
        behaviour, which needs to see inside. -->
   <ItemGroup>
-    <InternalsVisibleTo Include="VibeCheck.Tests" />
+    <InternalsVisibleTo Include="Halation.Tests" />
   </ItemGroup>
 
   <ItemGroup>

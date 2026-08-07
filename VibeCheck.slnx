@@ -1,5 +1,0 @@
-<Solution>
-  <Project Path="VibeCheck.App/VibeCheck.App.csproj" />
-  <Project Path="VibeCheck.Core/VibeCheck.Core.csproj" />
-  <Project Path="VibeCheck.Tests/VibeCheck.Tests.csproj" />
-</Solution>

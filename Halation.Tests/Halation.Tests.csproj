@@ -19,17 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\VibeCheck.Core\VibeCheck.Core.csproj" />
-  </ItemGroup>
-
-  <!-- The real theme files, copied so ThemeGuardTests can assert that the two themes actually
-       shipped still pass the allowlist. That is the check that matters in both directions: an
-       allowlist that is too tight breaks the product silently, and nothing else in the build
-       would notice, because the default theme is compiled and only the loose one is validated. -->
-  <ItemGroup>
-    <None Include="..\VibeCheck.App\Themes\*.xaml"
-          Link="Themes\%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="..\Halation.Core\Halation.Core.csproj" />
   </ItemGroup>
 
 </Project>

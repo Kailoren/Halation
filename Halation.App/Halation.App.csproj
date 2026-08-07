@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\VibeCheck.Core\VibeCheck.Core.csproj" />
+    <ProjectReference Include="..\Halation.Core\Halation.Core.csproj" />
   </ItemGroup>
 
   <!-- Once as the executable's shell icon, and again as a resource so the window can draw it
