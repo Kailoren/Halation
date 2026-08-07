@@ -970,10 +970,17 @@ figure .shot__caption { margin-top: 0.8rem; }
 
 .callout--warn { border-left-color: var(--high); }
 
+/* Barlow rather than --mono, which resolves to whatever monospace the reader's
+   system supplies and is the one place on the site not set in its own faces.
+   These titles are also sentences rather than labels, up to fifteen words, and
+   0.16em of tracking on a sentence in caps takes word shapes apart. Wider size,
+   a third of the tracking, and a real semibold face instead of the weight the
+   browser synthesises. */
 .callout__title {
-  font-family: var(--mono);
-  font-size: 0.74rem;
-  letter-spacing: 0.16em;
+  font-family: var(--ui);
+  font-weight: 600;
+  font-size: 0.78rem;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--accent);
   display: block;
