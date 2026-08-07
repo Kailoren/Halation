@@ -318,3 +318,12 @@ A release build is a single self-contained `VibeCheck.exe` with no runtime to in
 ```
 dotnet publish VibeCheck.App -p:PublishProfile=win-x64 -o <output folder>
 ```
+
+## Supporting it
+
+[**Ko-fi**](https://ko-fi.com/kailodev), if you would like to. Nothing is behind it and nothing
+will be: there is one build, everything in it is unlocked, and the licence is MIT either way.
+This is one person's work, and what it costs is time and the occasional certificate.
+
+The most useful thing you can send costs nothing at all, which is an application this tool got
+wrong. See [CONTRIBUTING.md](CONTRIBUTING.md) for why that beats a patch here.
