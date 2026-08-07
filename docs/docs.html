@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Documentation — VibeCheck</title>
+<title>Documentation · VibeCheck</title>
 <meta name="description" content="How VibeCheck reads an application, how the score is calculated, what the optional deep pass sends, and what never leaves your machine.">
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="assets/css/site.css">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VibeCheck">
-<meta property="og:title" content="Documentation — VibeCheck">
+<meta property="og:title" content="Documentation · VibeCheck">
 <meta property="og:description" content="How VibeCheck reads an application, how the score is calculated, what the optional deep pass sends, and what never leaves your machine.">
 <meta property="og:url" content="https://kailoren.github.io/VibeCheck/docs.html">
 <meta property="og:image" content="https://kailoren.github.io/VibeCheck/assets/img/social.png">
@@ -223,14 +223,14 @@
       </div>
       <p>Dependencies are resolved from every lock format worth reading:</p>
       <ul>
-        <li><strong>npm</strong> — <code>package-lock.json</code>, <code>yarn.lock</code> (classic and Berry), <code>pnpm-lock.yaml</code>, and vendored <code>node_modules</code> manifests</li>
-        <li><strong>NuGet</strong> — <code>*.deps.json</code>, <code>packages.lock.json</code></li>
-        <li><strong>PyPI</strong> — <code>requirements.txt</code>, <code>Pipfile.lock</code>, <code>poetry.lock</code></li>
-        <li><strong>Go</strong> — <code>go.sum</code></li>
-        <li><strong>crates.io</strong> — <code>Cargo.lock</code></li>
-        <li><strong>Packagist</strong> — <code>composer.lock</code></li>
-        <li><strong>RubyGems</strong> — <code>Gemfile.lock</code></li>
-        <li><strong>Maven</strong> — <code>gradle.lockfile</code></li>
+        <li><strong>npm</strong>: <code>package-lock.json</code>, <code>yarn.lock</code> (classic and Berry), <code>pnpm-lock.yaml</code>, and vendored <code>node_modules</code> manifests</li>
+        <li><strong>NuGet</strong>: <code>*.deps.json</code>, <code>packages.lock.json</code></li>
+        <li><strong>PyPI</strong>: <code>requirements.txt</code>, <code>Pipfile.lock</code>, <code>poetry.lock</code></li>
+        <li><strong>Go</strong>: <code>go.sum</code></li>
+        <li><strong>crates.io</strong>: <code>Cargo.lock</code></li>
+        <li><strong>Packagist</strong>: <code>composer.lock</code></li>
+        <li><strong>RubyGems</strong>: <code>Gemfile.lock</code></li>
+        <li><strong>Maven</strong>: <code>gradle.lockfile</code></li>
       </ul>
       <p>
         A lock file is the only artifact that says what a project actually installed rather than
@@ -315,8 +315,8 @@
       <p>
         An explicit "do not install" comes only from specific high-confidence deterministic
         rules, never from a low score, and never from the deep pass. It is reserved for findings
-        that endanger the <em>installing user</em> — credential harvesting, wallet theft — not
-        the developer. A leaked key is critical but never blocking.
+        that endanger the <em>installing user</em> (credential harvesting, wallet theft) rather
+        than the developer. A leaked key is critical but never blocking.
       </p>
     </section>
 

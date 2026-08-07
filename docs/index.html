@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VibeCheck — a security scanner for AI-generated applications</title>
+<title>VibeCheck: a security scanner for AI-generated applications</title>
 <meta name="description" content="Drag any application in. VibeCheck recovers what source it can, checks it against the vulnerability classes AI code generators actually produce, and reports what it found and what it could not reach. Free, MIT licensed, runs entirely on your machine.">
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="assets/css/site.css">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VibeCheck">
-<meta property="og:title" content="VibeCheck — a security scanner for AI-generated applications">
+<meta property="og:title" content="VibeCheck: a security scanner for AI-generated applications">
 <meta property="og:description" content="Drag any application in. VibeCheck recovers what source it can, checks it against the vulnerability classes AI code generators actually produce, and reports what it found and what it could not reach. Free, MIT licensed, runs entirely on your machine.">
 <meta property="og:url" content="https://kailoren.github.io/VibeCheck/">
 <meta property="og:image" content="https://kailoren.github.io/VibeCheck/assets/img/social.png">
@@ -298,6 +298,27 @@
     </div>
 
     <div class="callout reveal" style="margin-top:2rem">
+      <span class="callout__title">Which one to pick, and what to give it</span>
+      <p>
+        <strong>You downloaded something and want to know if it is safe to run.</strong> Pick
+        the second one and drop in whatever you downloaded: the installer, the <code>.exe</code>,
+        the zip. VibeCheck opens it and reads what is inside. There is nothing to set up and
+        nothing to pay for.
+      </p>
+      <p>
+        <strong>You are building something and want it checked before you ship.</strong> Pick the
+        first one and give it your <em>source folder</em>, not the build you just produced. The
+        pattern checks read either equally well, but the optional AI pass is a far better
+        instrument against real source, because
+        <a href="setup.html#source">decompiling a binary throws away every comment in it</a> and
+        the comments are usually where the author already explained why something that looks
+        alarming is fine. Against one decompiled release, three findings from a frontier model
+        were checked by hand and all three were wrong, each answered by a comment the decompiler
+        had discarded.
+      </p>
+    </div>
+
+    <div class="callout reveal" style="margin-top:1rem">
       <span class="callout__title">Only the wording changes</span>
       <p>
         Which findings appear, how they are worded, what can be done about them and what order

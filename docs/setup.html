@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deep pass setup — VibeCheck</title>
+<title>Deep pass setup · VibeCheck</title>
 <meta name="description" content="Setting up the optional deep pass: connect Claude Code, paste an Anthropic API key, or point VibeCheck at any OpenAI-compatible endpoint including Ollama or LM Studio on your own machine. With model recommendations by graphics card.">
 <link rel="icon" href="favicon.ico">
 <link rel="stylesheet" href="assets/css/site.css">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VibeCheck">
-<meta property="og:title" content="Deep pass setup — VibeCheck">
+<meta property="og:title" content="Deep pass setup · VibeCheck">
 <meta property="og:description" content="Setting up the optional deep pass: connect Claude Code, paste an Anthropic API key, or point VibeCheck at any OpenAI-compatible endpoint including Ollama or LM Studio on your own machine. With model recommendations by graphics card.">
 <meta property="og:url" content="https://kailoren.github.io/VibeCheck/setup.html">
 <meta property="og:image" content="https://kailoren.github.io/VibeCheck/assets/img/social.png">
@@ -105,7 +105,7 @@
             </tr>
             <tr>
               <td><strong>Anthropic API key</strong></td>
-              <td>A few cents per scan, billed to prepaid credit</td>
+              <td>Cents on a small project, a few dollars on a large one. Billed to prepaid credit</td>
               <td>Anthropic</td>
               <td>Paste a key</td>
             </tr>
@@ -187,8 +187,8 @@
       <p>
         This spends the usage allowance of the subscription you already pay for, and nothing is
         charged on top. A deep pass is a handful of requests, so on a Pro or Max plan it is a
-        small share of a day's allowance — but it does come out of the same pot as your own work
-        with Claude, and a large application read at the file ceiling will make a dent in it. The
+        small share of a day's allowance. It does come out of the same pot as your own work with
+        Claude, though, and a large application read at the file ceiling will make a dent in it. The
         report says which installation answered and states plainly that no money was charged.
       </p>
       <h3>Why this route is fenced in</h3>
@@ -221,9 +221,19 @@
           the two, so a Pro or Max plan does not cover it and its allowance is not touched.
         </p>
         <p>
-          A typical pass over a dozen files runs to a few cents. The report prints the estimate
-          with the tokens it is based on, so you can see what a scan cost rather than find out at
-          the end of the month.
+          <strong>What it costs depends on how much code there is, and the range is wide.</strong>
+          A dozen small files runs to a few cents. A large application that reaches the ceiling of
+          forty files, each up to sixty thousand characters, is a different order of magnitude: at
+          Claude Opus 5's published rates of US$5 per million input tokens and US$25 per million
+          output, that worst case lands somewhere around <strong>four to five dollars for a single
+          scan</strong>. Cost scales with the bytes sent, so treat the small-project figure as the
+          floor rather than the typical case.
+        </p>
+        <p>
+          The report prints the estimate alongside the token counts it is based on, so you can see
+          what a scan cost rather than find out at the end of the month. The forty-file ceiling
+          exists to stop a large application running away with your credit; it is a limit, not a
+          target, and most scans land nowhere near it.
         </p>
       </div>
       <p>
@@ -374,7 +384,7 @@
       </p>
       <p>
         If you already have models installed, the window lists them with a verdict against your
-        card — comfortable, tight, or spills onto the processor — and sorts code-trained models
+        card (comfortable, tight, or spills onto the processor) and sorts code-trained models
         above general chat ones.
       </p>
       <div class="callout callout--warn">
@@ -385,6 +395,35 @@
           forwards the request. A loopback address is not proof that anything stayed on your
           machine, so VibeCheck reads the suffix and says so rather than claiming nothing was
           uploaded while your source code was.
+        </p>
+      </div>
+
+      <div class="callout callout--warn">
+        <span class="callout__title">A local model works your graphics card hard, for as long as the scan runs</span>
+        <p>
+          This is not a quiet background task. The model occupies most of your video memory for
+          the whole pass and holds the card at full utilisation while it reads. Measured on the
+          machine these figures come from, a 7B model on an 8 GB card sat at 7.7 GB of 8 GB and
+          100% utilisation for the duration of the scan. Expect games, video calls, editing and
+          anything else that wants the card to stutter or slow down until it finishes, along with
+          the fan noise, heat and power draw that go with any sustained load. A large application
+          takes minutes on a card the model fits, and hours on one it does not.
+        </p>
+        <p>
+          <strong>Run a local model at your own risk.</strong> The load is ordinary, no different
+          in kind from a demanding game or a long render, but sustained load is also what finds
+          hardware that was already marginal: failing cooling, an unstable overclock, a dying fan,
+          a power supply with nothing left in reserve. <strong>Kailoren and VibeCheck accept no
+          responsibility or liability of any kind</strong> for damage to your graphics card or to
+          any other part of your machine, however it arises from running a local model. The
+          software is provided under the
+          <a href="https://github.com/kailoren/vibecheck/blob/main/LICENSE">MIT licence</a>,
+          without warranty of any kind, express or implied.
+        </p>
+        <p>
+          If that is not a trade you want to make, nothing is lost. The Claude Code route and the
+          hosted providers do not touch your card at all, and the ordinary scan, which is the part
+          that produces the score, never did.
         </p>
       </div>
     </section>
@@ -412,7 +451,7 @@
         <p>
           as a system environment variable and restart Ollama. VibeCheck compares the reported
           prompt tokens against the characters it sent and reports a mismatch, so a truncated read
-          is caught rather than trusted — but it is better not to have one.
+          is caught rather than trusted. Better not to have one at all, though.
         </p>
       </div>
     </section>
@@ -457,14 +496,14 @@
           <tbody>
             <tr><td><a href="https://ollama.com">Ollama</a></td><td>Not needed</td><td>On this machine. Nothing uploaded, nothing charged.</td></tr>
             <tr><td><a href="https://lmstudio.ai">LM Studio</a></td><td>Not needed</td><td>On this machine. Start its local server first.</td></tr>
-            <tr><td>OpenAI</td><td>Required</td><td>Keys and current model ids at platform.openai.com.</td></tr>
-            <tr><td>OpenRouter</td><td>Required</td><td>Many models behind one key. Ids look like <code>vendor/model</code>.</td></tr>
-            <tr><td>Google Gemini</td><td>Required</td><td>Google's own OpenAI-compatible endpoint, not the Gemini API shape.</td></tr>
+            <tr><td><a href="https://openai.com">OpenAI</a></td><td>Required</td><td>Keys and current model ids at platform.openai.com.</td></tr>
+            <tr><td><a href="https://openrouter.ai">OpenRouter</a></td><td>Required</td><td>Many models behind one key. Ids look like <code>vendor/model</code>.</td></tr>
+            <tr><td><a href="https://ai.google.dev">Google Gemini</a></td><td>Required</td><td>Google's own OpenAI-compatible endpoint, not the Gemini API shape.</td></tr>
             <tr><td><a href="https://groq.com">Groq</a></td><td>Required</td><td>Open-weight models, quickly. Ids at console.groq.com. <strong>Not xAI</strong>, despite the name.</td></tr>
             <tr><td><a href="https://x.ai">xAI (Grok)</a></td><td>Required</td><td>Grok, from xAI. A different company to Groq above. Keys and ids at console.x.ai.</td></tr>
-            <tr><td>Together</td><td>Required</td><td>Open-weight models. Ids look like <code>vendor/model</code>.</td></tr>
-            <tr><td>DeepSeek</td><td>Required</td><td>Keys at platform.deepseek.com.</td></tr>
-            <tr><td>Mistral</td><td>Required</td><td>Keys and model ids at console.mistral.ai.</td></tr>
+            <tr><td><a href="https://together.ai">Together</a></td><td>Required</td><td>Open-weight models. Ids look like <code>vendor/model</code>.</td></tr>
+            <tr><td><a href="https://deepseek.com">DeepSeek</a></td><td>Required</td><td>Keys at platform.deepseek.com.</td></tr>
+            <tr><td><a href="https://mistral.ai">Mistral</a></td><td>Required</td><td>Keys and model ids at console.mistral.ai.</td></tr>
           </tbody>
         </table>
       </div>

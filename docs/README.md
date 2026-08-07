@@ -62,7 +62,7 @@ Serialised with `WriteIndented`, `JsonIgnoreCondition.WhenWritingNull` and
 `RuleFamily.NameOf` and `RuleFamily.DescribeOf`. The page reads `rules`, `families` and nothing
 else, so extra keys are harmless.
 
-The five families with no rule list of their own — `DEP`, `PKG`, `BIN`, `DUP`, `AI` — are
+The five families with no rule list of their own (`DEP`, `PKG`, `BIN`, `DUP`, `AI`) are
 described on the page but not enumerated, because their checks are produced by the recovery,
 packaging and dependency stages rather than declared in a table.
 
