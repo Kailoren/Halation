@@ -5,7 +5,7 @@
 
 # Halation
 [![License](https://img.shields.io/github/license/kailoren/halation?style=plastic)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/kailoren/halation?style=plastic)](https://github.com/kailoren/halation/releases/latest)
+[![Release](https://img.shields.io/github/v/release/kailoren/halation?include_prereleases&style=plastic)](https://github.com/kailoren/halation/releases)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?style=plastic)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/T3N624MRS4)
