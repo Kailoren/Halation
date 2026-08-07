@@ -366,7 +366,7 @@ public static class Heuristics
     /// <para>
     /// A security scanner is a program whose source contains, in quotation marks, every string
     /// it looks for. Pointed at itself or at any other detection tool it reports its own rule
-    /// table as the thing the rules detect: VibeCheck's published build scored 16/100 on nine
+    /// table as the thing the rules detect: Halation's published build scored 16/100 on nine
     /// findings, none of them real, including a "do not install" for reading cryptocurrency
     /// wallets. Antivirus signatures, WAF rules and linter configurations all have this shape.
     /// </para>

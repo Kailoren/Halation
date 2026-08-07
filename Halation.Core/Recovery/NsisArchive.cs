@@ -190,7 +190,7 @@ public static class NsisArchive
             || inflated != headerSize)
         {
             warnings.Add(
-                "This installer uses a compression mode VibeCheck cannot read (its payload is "
+                "This installer uses a compression mode Halation cannot read (its payload is "
                 + "one solid stream, or a codec other than deflate). Nothing inside it was "
                 + "examined.");
             return [];

@@ -181,7 +181,7 @@ public sealed record Finding
     /// <b>An accounted-for capability needs different advice, not the same advice quieter.</b>
     /// A remediation is written for the case where nobody has a reason: VC-MAL-002's says "Do not
     /// run this application. If it has already been run, sign out of your accounts everywhere."
-    /// Correct for a credential stealer, and printed directly beneath "You told VibeCheck this
+    /// Correct for a credential stealer, and printed directly beneath "You told Halation this
     /// application has a reason to read your browser cookies" it contradicted the sentence above
     /// it, in the same card, for the exact application the purpose feature exists to serve.
     /// </para>

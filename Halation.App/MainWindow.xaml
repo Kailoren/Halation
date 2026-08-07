@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:app="clr-namespace:Halation.App"
         mc:Ignorable="d"
-        Title="VibeCheck"
+        Title="Halation"
         Icon="/Halation;component/Halation.ico"
         Height="820" Width="1120" MinHeight="560" MinWidth="820"
         Background="{StaticResource Bg}"
@@ -69,7 +69,7 @@
                     <Image Source="/Halation;component/Halation.ico" Width="20" Height="20"
                            VerticalAlignment="Center" Margin="0,0,9,0"
                            RenderOptions.BitmapScalingMode="HighQuality"/>
-                    <TextBlock Text="VibeCheck" FontWeight="SemiBold"
+                    <TextBlock Text="Halation" FontWeight="SemiBold"
                                FontFamily="{DynamicResource DisplayFont}"
                                VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding Version, StringFormat=v{0}}"
@@ -170,7 +170,7 @@
 
                 <TextBlock Style="{StaticResource Caption}" Margin="0,10,0,0" TextWrapping="Wrap"
                            TextAlignment="Center"
-                           Text="The same application is a different risk depending on whether you wrote it or downloaded it, so VibeCheck answers a different question for each. Asked every time, because the answer belongs to what you are about to check rather than to you. You can change it during a scan too."/>
+                           Text="The same application is a different risk depending on whether you wrote it or downloaded it, so Halation answers a different question for each. Asked every time, because the answer belongs to what you are about to check rather than to you. You can change it during a scan too."/>
 
                 <ContentControl Style="{StaticResource Card}" Margin="0,22,0,0">
                     <StackPanel>
@@ -476,7 +476,7 @@
                      it is the same kind of statement: this is the other connection the
                      application makes, and one that could not be turned off would be an
                      exception to a claim made in the sentence above it. -->
-                <CheckBox Content="Ask GitHub for new versions when VibeCheck starts"
+                <CheckBox Content="Ask GitHub for new versions when Halation starts"
                           IsChecked="{Binding Update.CheckOnStartup}"
                           Foreground="{StaticResource Muted}"
                           FontSize="{DynamicResource CaptionSize}"
@@ -629,7 +629,7 @@
                                        FontSize="16" FontWeight="SemiBold"
                                        Foreground="{StaticResource Medium}"/>
                             <TextBlock Margin="0,6,0,0" TextWrapping="Wrap" Style="{StaticResource Caption}"
-                                       Text="You told VibeCheck this application has a reason for the following. Without that, each would advise against installing it."/>
+                                       Text="You told Halation this application has a reason for the following. Without that, each would advise against installing it."/>
                             <TextBlock Text="{Binding AccountedForReasons}" Margin="0,6,0,0"
                                        TextWrapping="Wrap"/>
                         </StackPanel>

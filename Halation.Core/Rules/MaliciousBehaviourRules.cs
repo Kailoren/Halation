@@ -77,7 +77,7 @@ public static class MaliciousBehaviourRules
     /// </summary>
     /// <remarks>
     /// The patterns in this file are string literals that survive decompilation, so scanning
-    /// VibeCheck's own build made the rules match their own definitions and advise against
+    /// Halation's own build made the rules match their own definitions and advise against
     /// installing the scanner. Any application shipping pattern-based detection has the same
     /// shape.
     /// </remarks>

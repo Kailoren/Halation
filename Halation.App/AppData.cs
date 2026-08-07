@@ -19,7 +19,10 @@ internal static class AppData
 {
     internal const string FolderName = "Halation";
 
-    /// <summary>The folder this application used before it was renamed, in 0.1.4-beta.</summary>
+    /// <summary>
+    /// The folder this application used before it was renamed, in 0.1.4-beta. Load-bearing: it
+    /// is the only reason a reader who configured the old build keeps their settings.
+    /// </summary>
     internal const string LegacyFolderName = "VibeCheck";
 
     internal static string Directory => System.IO.Path.Combine(

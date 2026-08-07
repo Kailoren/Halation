@@ -7,14 +7,12 @@
         <ResourceDictionary>
 
             <!-- Everything visual lives in the theme; this file keeps only the converters,
-                 which are behaviour rather than appearance. A loose theme.xaml in the user's
-                 data folder is merged over this at startup, so the two are kept apart on
-                 purpose: an override should not have to redeclare a converter in order to
-                 change a colour. See ThemeLoader. -->
+                 which are behaviour rather than appearance. Kept apart so that changing a
+                 colour never means touching a converter. -->
             <ResourceDictionary.MergedDictionaries>
-                <!-- The one shipped theme. A loose copy at %LOCALAPPDATA%\VibeCheck\theme.xaml
-                     is merged over this at startup by ThemeLoader if one exists, so a reader
-                     can still restyle the application without a rebuild. -->
+                <!-- The one theme, compiled in. Reading a theme from disk was removed: it
+                     handed a user-supplied file to XamlReader, and XAML names types the parser
+                     then builds, so a theme file was an executable. -->
                 <ResourceDictionary Source="Themes/Theme.xaml"/>
             </ResourceDictionary.MergedDictionaries>
 

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
-    The VibeCheck theme. The only one that ships, and compiled into the assembly.
+    The Halation theme. The only one that ships, and compiled into the assembly.
 
     Every colour, font and metric the interface uses is a named key in here. Nothing visual
     should be hardcoded in a window: if a value cannot be changed from this file, that is a
@@ -12,13 +12,10 @@
     templates, and the window holds only arrangement. A theme that wants notched corners, a
     glow, or a slower hover overrides a template rather than asking for a code change.
 
-    To experiment without rebuilding, copy this file to
-
-        %LOCALAPPDATA%\VibeCheck\theme.xaml
-
-    and edit it there. It is merged over this one at startup, so it only needs to contain the
-    keys being changed. Delete that file to go back to what is in here. A theme that fails to
-    parse is reported once and ignored, so a bad edit cannot stop the application starting.
+    This is the only theme and it is compiled in, so restyling means editing this file and
+    rebuilding. Loading one from disk was removed deliberately: it handed a user-supplied file
+    to XamlReader, and XAML names types that the parser then constructs, so "drop this theme in
+    your folder" ran whatever it named.
 
     See THEME.md beside this file for what each key controls.
 -->

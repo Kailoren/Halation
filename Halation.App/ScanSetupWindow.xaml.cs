@@ -47,7 +47,7 @@ public partial class ScanSetupWindow : Window
         ReadyNote.Text = model.Audience == Core.Model.Audience.EndUser
             ? "Ready to scan. What this is meant to be decides which of its behaviours are "
               + "worth worrying about."
-            : "Ready to scan. Telling VibeCheck what kind of application this is changes how "
+            : "Ready to scan. Telling Halation what kind of application this is changes how "
               + "anything unusual is explained to you afterwards.";
 
         Kinds.ItemsSource = model.ApplicationKindChoices;

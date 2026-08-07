@@ -42,7 +42,7 @@ public class ArtifactDetectorTests : IDisposable
     [Fact]
     public void NativeBinary_DetectedAsNative()
     {
-        // VibeCheck targets Windows, so kernel32.dll is a dependable native-PE fixture.
+        // Halation targets Windows, so kernel32.dll is a dependable native-PE fixture.
         var kernel32 = System.IO.Path.Combine(Environment.SystemDirectory, "kernel32.dll");
         Assert.True(File.Exists(kernel32), $"expected a native PE fixture at {kernel32}");
 

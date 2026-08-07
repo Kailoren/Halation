@@ -118,7 +118,7 @@ public static class UpdateDownload
             {
                 throw new InvalidOperationException(
                     $"The release asset is {expected / (1024 * 1024)} MB, which is larger than "
-                    + "VibeCheck will download.");
+                    + "Halation will download.");
             }
 
             var (bytes, hash) = await WriteAsync(response, stagedPath, expected, progress, cancellationToken)
@@ -217,7 +217,7 @@ public static class UpdateDownload
             // afterwards is a full disk.
             if (total > MaxBytes)
             {
-                throw new InvalidOperationException("The download exceeded the size VibeCheck will accept.");
+                throw new InvalidOperationException("The download exceeded the size Halation will accept.");
             }
 
             hasher.AppendData(buffer.AsSpan(0, read));

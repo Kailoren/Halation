@@ -34,7 +34,7 @@ public sealed record SignatureVerdict
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is the gate on replacing the running application with a download. VibeCheck's own
+/// This is the gate on replacing the running application with a download. Halation's own
 /// VC-MAL-007 tells other applications that an updater must verify what it fetched against
 /// something better than a hash served from the same place as the file, and an application
 /// that says so while doing otherwise is worth less than one that says nothing.

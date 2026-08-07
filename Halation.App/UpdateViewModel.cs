@@ -94,7 +94,7 @@ public sealed class UpdateViewModel : INotifyPropertyChanged
     // ---- What the reader has decided ---------------------------------------
 
     /// <summary>
-    /// Whether VibeCheck asks GitHub what has been published when it starts.
+    /// Whether Halation asks GitHub what has been published when it starts.
     /// </summary>
     /// <remarks>
     /// Switchable because the application's standing promise is that it says what leaves the
@@ -217,7 +217,7 @@ public sealed class UpdateViewModel : INotifyPropertyChanged
 
         if (available.Executable is null)
         {
-            return line + " That release has no VibeCheck.exe attached, so it has to be fetched by hand.";
+            return line + " That release has no Halation.exe attached, so it has to be fetched by hand.";
         }
 
         // The refusal, stated where the button would be rather than as an absence. Today this
@@ -319,8 +319,8 @@ public sealed class UpdateViewModel : INotifyPropertyChanged
             // Installed but not restarted, which is worth saying: the window about to close
             // would otherwise be the last thing the reader saw.
             MessageBox.Show(
-                $"VibeCheck was updated but could not restart itself.\n\n{ex.Message}",
-                "VibeCheck",
+                $"Halation was updated but could not restart itself.\n\n{ex.Message}",
+                "Halation",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
         }

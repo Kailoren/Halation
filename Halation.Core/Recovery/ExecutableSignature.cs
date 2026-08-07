@@ -13,7 +13,7 @@ namespace Halation.Core.Recovery;
 /// <para>
 /// Shared rather than owned by one backend, which is how it came to be missing where it was most
 /// needed. The check lived inside the native recovery path, so it ran on a C or C++ binary and
-/// never on a .NET one: VibeCheck could decompile an unsigned .NET application, read every line
+/// never on a .NET one: Halation could decompile an unsigned .NET application, read every line
 /// of it, and never mention that nothing tied it to a publisher. Most of what this scanner is
 /// pointed at is .NET or Electron.
 /// </para>

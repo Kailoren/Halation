@@ -154,7 +154,7 @@ public class DeclaredPurposeTests : IDisposable
         var markdown = MarkdownReportWriter.Write(report);
 
         Assert.Contains("Accounted for", markdown, StringComparison.Ordinal);
-        Assert.Contains("You told VibeCheck", markdown, StringComparison.Ordinal);
+        Assert.Contains("You told Halation", markdown, StringComparison.Ordinal);
         Assert.Contains("read your browser cookies", markdown, StringComparison.OrdinalIgnoreCase);
     }
 

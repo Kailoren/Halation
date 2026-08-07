@@ -16,7 +16,7 @@ namespace Halation.Tests;
 /// </para>
 /// <para>
 /// The check used to live inside the native recovery path alone, so it ran on a C or C++ binary
-/// and never on a .NET one. Most of what VibeCheck is pointed at is .NET or Electron.
+/// and never on a .NET one. Most of what Halation is pointed at is .NET or Electron.
 /// </para>
 /// </remarks>
 public class ExecutableSignatureTests

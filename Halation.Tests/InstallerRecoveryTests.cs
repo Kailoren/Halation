@@ -34,7 +34,7 @@ public class InstallerRecoveryTests
     }
 
     /// <summary>
-    /// The gap this closed. VibeCheck decompiled a .NET assembly dropped in on its own from the
+    /// The gap this closed. Halation decompiled a .NET assembly dropped in on its own from the
     /// first release, and reported the same assembly wrapped in an installer as holding nothing
     /// readable, which is the wrong answer given in the words of an honest one.
     /// </summary>

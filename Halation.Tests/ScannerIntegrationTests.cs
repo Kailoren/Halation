@@ -253,7 +253,7 @@ public class ScannerIntegrationTests : IDisposable
             Path.Combine(Path.GetTempPath(), "halation-sample-report.md"),
             markdown);
 
-        Assert.Contains("# VibeCheck report", markdown, StringComparison.Ordinal);
+        Assert.Contains("# Halation report", markdown, StringComparison.Ordinal);
         Assert.Contains("/100", markdown, StringComparison.Ordinal);
         Assert.Contains("## Coverage", markdown, StringComparison.Ordinal);
 

@@ -10,7 +10,7 @@ namespace Halation.Tests;
 /// A scanner is a program whose source contains, in quotation marks, every string it looks for.
 /// </summary>
 /// <remarks>
-/// Pointed at its own published build, VibeCheck scored 16/100 on nine findings, none of them
+/// Pointed at its own published build, Halation scored 16/100 on nine findings, none of them
 /// real, and advised against installing itself for reading cryptocurrency wallets. Every other
 /// detection tool has the same shape. These tests hold both ends of the fix: that a rule table
 /// is not mistaken for the behaviour it describes, and that ordinary code is untouched by it.

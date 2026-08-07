@@ -91,7 +91,7 @@ public partial class App : Application
         MessageBox.Show(
             $"{Redaction.Scrub($"{exception.GetType().Name}: {exception.Message}")}"
             + $"\n\nDetails written to:\n{log}",
-            "VibeCheck encountered a problem",
+            "Halation encountered a problem",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
     }

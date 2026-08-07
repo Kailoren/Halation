@@ -75,7 +75,7 @@ public class PurposeSourceTests
             Source = PurposeSource.SourceComment,
         };
 
-        Assert.StartsWith("You told VibeCheck", reader.Attribution(Capability.BrowserCookies),
+        Assert.StartsWith("You told Halation", reader.Attribution(Capability.BrowserCookies),
             StringComparison.Ordinal);
 
         // The untrusted ones have to disclaim themselves in the sentence a reader actually sees,

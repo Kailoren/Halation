@@ -8,7 +8,7 @@ namespace Halation.Tests;
 /// <remarks>
 /// The defect these were written for was live and contradicted itself in a single card: a
 /// cleaner's author affirmed a reason to read browser cookies, and the report printed "You told
-/// VibeCheck this application has a reason to read your browser cookies" directly above
+/// Halation this application has a reason to read your browser cookies" directly above
 /// VC-MAL-002's remediation, which reads "Do not run this application." The remediation was
 /// written for the case where nobody has a reason, and nothing rewrote it when the capability
 /// split landed.

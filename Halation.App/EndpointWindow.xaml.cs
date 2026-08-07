@@ -435,7 +435,7 @@ public partial class EndpointWindow : Window
 
         if (DeepPassEndpoints.Normalise(UrlBox.Text) is not { } endpoint)
         {
-            Show("That is not an address VibeCheck can request. It should look like "
+            Show("That is not an address Halation can request. It should look like "
                  + "https://api.openai.com/v1 or http://localhost:11434/v1.");
 
             return;

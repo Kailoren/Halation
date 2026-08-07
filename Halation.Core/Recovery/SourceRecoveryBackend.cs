@@ -330,7 +330,7 @@ public sealed class SourceRecoveryBackend : IRecoveryBackend
     /// </summary>
     /// <remarks>
     /// The download shape, and the one that produced the worst result this scanner has given:
-    /// VibeCheck's own release zip scored 100/100 on the strength of one theme file while the
+    /// Halation's own release zip scored 100/100 on the strength of one theme file while the
     /// 65 MB executable beside it went unopened and unmentioned. A second pass rather than a
     /// wider first one, so ordinary source archives keep the limits they had.
     /// </remarks>

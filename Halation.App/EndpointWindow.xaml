@@ -135,7 +135,7 @@
                  what asked for the load. -->
             <TextBlock x:Name="LoadCaution" Style="{StaticResource Caption}" TextWrapping="Wrap"
                        Foreground="{DynamicResource High}" Margin="0,10,0,0"
-                       Text="A local model works your graphics card hard for as long as the scan runs, holding most of its memory and full utilisation throughout. Expect games, calls and anything else wanting the card to stutter until it finishes, with the heat and fan noise of any sustained load. Run one at your own risk: the load is ordinary, but sustained load is also what finds hardware that was already marginal, and no responsibility or liability is accepted for damage to your card or machine. VibeCheck is provided under the MIT licence, without warranty of any kind."/>
+                       Text="A local model works your graphics card hard for as long as the scan runs, holding most of its memory and full utilisation throughout. Expect games, calls and anything else wanting the card to stutter until it finishes, with the heat and fan noise of any sustained load. Run one at your own risk: the load is ordinary, but sustained load is also what finds hardware that was already marginal, and no responsibility or liability is accepted for damage to your card or machine. Halation is provided under the MIT licence, without warranty of any kind."/>
 
             <Border Height="1" Background="{StaticResource Edge}" Margin="0,16,0,14"/>
 

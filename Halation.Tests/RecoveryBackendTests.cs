@@ -179,7 +179,7 @@ public class RecoveryBackendTests : IDisposable
     /// <remarks>
     /// Archive recovery kept entries it recognised as text and coverage counted only those, so
     /// an executable inside the archive was absent from the numerator and the denominator both.
-    /// VibeCheck's own release zip therefore scored 100 out of 100 with "no known issues found",
+    /// Halation's own release zip therefore scored 100 out of 100 with "no known issues found",
     /// on the strength of the one theme file shipped beside a 65 MB program that was never
     /// opened. The application inside an archive is now recovered like any other artifact.
     /// </remarks>

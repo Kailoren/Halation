@@ -213,7 +213,7 @@ public static class MarkdownReportWriter
         Row("Runtime", machine.DeepPassRuntime);
 
         output.AppendLine();
-        output.AppendLine("Local models are the least-tested part of VibeCheck, measured so far on "
+        output.AppendLine("Local models are the least-tested part of Halation, measured so far on "
                           + "one configuration only. If this result was poor, or surprisingly "
                           + "good, posting this report is the most useful thing you can do with "
                           + "it: <https://github.com/kailoren/halation/discussions>");
@@ -226,7 +226,7 @@ public static class MarkdownReportWriter
 
     private static void WriteHeader(StringBuilder output, ScanReport report)
     {
-        output.AppendLine($"# VibeCheck report: {report.ArtifactName}");
+        output.AppendLine($"# Halation report: {report.ArtifactName}");
         output.AppendLine();
         output.AppendLine($"- **Type:** {report.KindLabel}");
         output.AppendLine($"- **Size:** {FormatBytes(report.ArtifactBytes)}");
@@ -691,7 +691,7 @@ public static class MarkdownReportWriter
 
         output.AppendLine("---");
         output.AppendLine();
-        output.AppendLine($"VibeCheck {report.ScannerVersion}");
+        output.AppendLine($"Halation {report.ScannerVersion}");
 
         if (report.DeepPassRan)
         {

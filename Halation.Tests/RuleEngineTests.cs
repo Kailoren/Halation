@@ -447,7 +447,7 @@ public class RuleEngineTests
     /// A pattern that describes the technique is not the technique.
     /// </summary>
     /// <remarks>
-    /// Found by scanning VibeCheck's own published build with VibeCheck. Its rule patterns are
+    /// Found by scanning Halation's own published build with Halation. Its rule patterns are
     /// string literals, they survive decompilation intact, and both dropper rules matched their
     /// own definitions: the scanner advised against installing itself, with 13/100 and a
     /// do-not-install banner. Every application shipping pattern-based detection has this shape.

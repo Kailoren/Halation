@@ -200,7 +200,7 @@ public static class DeepPassTriage
 
         return file.Content.Length <= MaxFileChars
             ? file.Content
-            : file.Content[..MaxFileChars] + "\n\n// [truncated by VibeCheck at 60,000 characters]";
+            : file.Content[..MaxFileChars] + "\n\n// [truncated by Halation at 60,000 characters]";
     }
 
     /// <summary>

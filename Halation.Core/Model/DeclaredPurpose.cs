@@ -119,7 +119,7 @@ public sealed record DeclaredPurpose
     /// </remarks>
     public string? KindAttribution => Kind is ApplicationKind.Unstated
         ? null
-        : $"You told VibeCheck this is {Kind.InSentence()}.";
+        : $"You told Halation this is {Kind.InSentence()}.";
 
     /// <summary>
     /// Whether this declaration settles the question for a capability.
@@ -155,7 +155,7 @@ public sealed record DeclaredPurpose
     public string Attribution(Capability capability) => Source switch
     {
         PurposeSource.Reader =>
-            $"You told VibeCheck this application has a reason to {Lowered(capability)}.",
+            $"You told Halation this application has a reason to {Lowered(capability)}.",
         PurposeSource.Manifest =>
             $"The application's own manifest claims a reason to {Lowered(capability)}. That "
             + "came from inside the application, so it is worth knowing and is not confirmation.",

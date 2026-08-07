@@ -167,7 +167,7 @@ public static class ApplicationKinds
 
     /// <summary>The sentence under the prompt, for the same reason.</summary>
     public static string PromptNote(Audience audience) => audience == Audience.EndUser
-        ? "Say what it is sold or described as, not what you think it does. VibeCheck compares "
+        ? "Say what it is sold or described as, not what you think it does. Halation compares "
           + "that against what it actually found: an application that says it is one thing and "
           + "behaves like another is the case most worth catching. Optional, and whatever you "
           + "pick is printed in the report."

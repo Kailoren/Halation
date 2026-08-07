@@ -510,7 +510,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// </summary>
     /// <remarks>
     /// The credential never passes through this application: Claude Code opens its own browser
-    /// flow and VibeCheck learns only what <c>auth status</c> says afterwards. The arguments are
+    /// flow and Halation learns only what <c>auth status</c> says afterwards. The arguments are
     /// a fixed literal and the only variable is the executable path, which came from the
     /// locator. <c>UseShellExecute</c> is on because an interactive sign-in needs a console.
     /// </remarks>
@@ -584,7 +584,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             + "that costs is between you and them, so the report states tokens rather than money.",
 
         DeepPassSource.Endpoint =>
-            "Billed by whoever runs that endpoint, at rates VibeCheck has no way to know. The "
+            "Billed by whoever runs that endpoint, at rates Halation has no way to know. The "
             + "report states the tokens spent rather than inventing what they cost.",
 
         // The ceiling rather than the typical figure. "Cents per scan" was true of the small
@@ -674,9 +674,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
             + "but it is a trade: this is not the route where nothing is uploaded.",
 
         _ =>
-            $"Where your code goes: to {EndpointHost}, over an encrypted connection. VibeCheck "
+            $"Where your code goes: to {EndpointHost}, over an encrypted connection. Halation "
             + "knows nothing about what happens to it there.\n\n"
-            + "What it costs: whatever that provider charges. VibeCheck has no way to know their "
+            + "What it costs: whatever that provider charges. Halation has no way to know their "
             + "prices, so the report states the tokens spent rather than inventing a figure.\n\n"
             + "What you need: the endpoint, a model id, and usually a key.\n\n"
             + "Point this same route at Ollama or LM Studio instead and nothing leaves this "

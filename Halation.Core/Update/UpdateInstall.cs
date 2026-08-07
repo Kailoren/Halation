@@ -120,7 +120,7 @@ public static class UpdateInstall
 
         if (!IsWritable(directory))
         {
-            return Refuse($"VibeCheck cannot write to its own folder ({directory}).");
+            return Refuse($"Halation cannot write to its own folder ({directory}).");
         }
 
         var expected = ExpectedPublisher(processPath);
@@ -136,7 +136,7 @@ public static class UpdateInstall
                 // applications not to run a download they cannot verify, and this one is held
                 // to it: no publisher to check against means no install, not a quiet exception.
                 Detail = "This build is not code-signed, so a download cannot be checked "
-                         + "against a known publisher. VibeCheck will not replace itself with "
+                         + "against a known publisher. Halation will not replace itself with "
                          + "something it cannot verify.",
             };
         }
@@ -224,7 +224,7 @@ public static class UpdateInstall
     /// </para>
     /// <para>
     /// The rollback matters: a failure between the two moves would otherwise leave the machine
-    /// with no VibeCheck at all under the name every shortcut points at.
+    /// with no Halation at all under the name every shortcut points at.
     /// </para>
     /// </remarks>
     public static void Replace(string downloadedPath, string targetPath)
