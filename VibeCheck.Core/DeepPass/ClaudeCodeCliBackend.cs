@@ -202,7 +202,25 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
 
         // The boundary. Stated explicitly rather than inferred from a permission mode, because
         // a permission mode governs what is allowed and this governs what exists.
+        //
+        // It is not the whole boundary. The CLI's own help says this disables all tools "from
+        // the built-in set", and an MCP server the reader has configured is not in that set: its
+        // tools were still reachable. On any other file that would be untidy. Here the model is
+        // reading an application nobody trusts, so text inside that application could steer an
+        // agent that still had tools, on the machine of the person trying to find out whether
+        // the application was safe.
         "--tools", "",
+
+        // Closes it. "Only use MCP servers from --mcp-config, ignoring all other MCP
+        // configurations", and no --mcp-config is passed, so the set is empty. Removal rather
+        // than refusal, which is the same principle as the line above.
+        "--strict-mcp-config",
+
+        // A second lock on the same door, and deliberately a weaker kind. If the flag above ever
+        // stops meaning what its help says, this still refuses the calls; it is listed second
+        // because refusing a call a model can see is worth less than the tool not existing, and
+        // nobody should read this line as the guarantee.
+        "--disallowed-tools", "mcp__*",
 
         "--safe-mode",
         "--no-session-persistence",

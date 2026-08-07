@@ -97,6 +97,32 @@ public class ClaudeCodeCliBackendTests
         Assert.Equal(string.Empty, arguments[index + 1]);
     }
 
+    /// <summary>
+    /// The other half of the same boundary, and the half that was missing.
+    /// </summary>
+    /// <remarks>
+    /// <c>--tools ""</c> disables the built-in set, in the CLI's own words, and an MCP server the
+    /// reader has configured is not in that set. Since the model is reading an application nobody
+    /// trusts, a tool left reachable is a way for the scanned code to act on the machine of the
+    /// person scanning it.
+    /// </remarks>
+    [Fact]
+    public void Leaves_no_mcp_server_reachable()
+    {
+        using var backend = new ClaudeCodeCliBackend(Cli);
+
+        var arguments = backend.Arguments();
+
+        Assert.Contains("--strict-mcp-config", arguments);
+
+        // And nothing may hand it a configuration to be strict about.
+        Assert.DoesNotContain("--mcp-config", arguments);
+
+        var denied = arguments.ToList().IndexOf("--disallowed-tools");
+        Assert.True(denied >= 0, "the backstop against MCP tools must be set");
+        Assert.Equal("mcp__*", arguments[denied + 1]);
+    }
+
     /// <summary>The value after <c>--tools</c> must be the empty string and nothing else.</summary>
     [Fact]
     public void Never_names_a_tool_it_would_allow()
