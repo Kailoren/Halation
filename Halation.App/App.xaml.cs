@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 
 using Halation.Core.Rules;
+using Halation.Core.Update;
 
 namespace Halation.App;
 
@@ -28,6 +29,11 @@ public partial class App : Application
 
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
             ReportCrash(args.ExceptionObject as Exception);
+
+        // After the handlers above, so a fault in here reaches the crash dialog rather than
+        // closing the process with nothing on screen. Before anything reads a setting, which
+        // StartupUri guarantees: the window is constructed once this returns.
+        SettingsMigration.Carry(AppData.LegacyDirectory, AppData.Directory);
 
         var path = e.Args.FirstOrDefault(a => !a.StartsWith('-'));
 
@@ -56,10 +62,7 @@ public partial class App : Application
             return;
         }
 
-        var log = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "VibeCheck",
-            "crash.log");
+        var log = AppData.PathTo("crash.log");
 
         // Scrubbed and capped. This file is named in the dialog below, which is an invitation to
         // attach it to a bug report, and an exception from a third-party SDK is text this

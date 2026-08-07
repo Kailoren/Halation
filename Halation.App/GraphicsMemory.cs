@@ -137,10 +137,7 @@ public static class GraphicsMemory
 /// </remarks>
 public static class HardwareStore
 {
-    private static string Path => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "VibeCheck",
-        "hardware.json");
+    private static string Path => AppData.PathTo("hardware.json");
 
     private sealed record Stored(long? VideoBytes);
 

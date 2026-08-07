@@ -36,10 +36,7 @@ public static class WindowPlacementStore
     /// </summary>
     private const double MinimumVisible = 120;
 
-    private static string Path => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "VibeCheck",
-        "window");
+    private static string Path => AppData.PathTo("window");
 
     public static WindowPlacement? Load()
     {

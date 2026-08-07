@@ -28,10 +28,7 @@ public sealed record UpdateSettings
 /// </remarks>
 public static class UpdateSettingsStore
 {
-    private static string Path => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "VibeCheck",
-        "updates");
+    private static string Path => AppData.PathTo("updates");
 
     public static UpdateSettings Load()
     {

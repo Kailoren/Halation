@@ -72,10 +72,7 @@ public sealed record DeepPassEndpointSettings(Uri Endpoint, string Model, string
 /// </remarks>
 public static class EndpointStore
 {
-    private static string Path => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "VibeCheck",
-        "deep-pass-endpoint");
+    private static string Path => AppData.PathTo("deep-pass-endpoint");
 
     /// <summary>The stored shape. Separate from the record above so the file is plain JSON.</summary>
     private sealed record Stored(string? Url, string? Model, string? Key);

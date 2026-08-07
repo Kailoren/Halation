@@ -15,10 +15,7 @@ namespace Halation.App;
 /// </remarks>
 public static class AudienceStore
 {
-    private static string Path => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "VibeCheck",
-        "audience");
+    private static string Path => AppData.PathTo("audience");
 
     /// <summary>The stored choice, or null when this person has not been asked yet.</summary>
     public static Audience? Load()

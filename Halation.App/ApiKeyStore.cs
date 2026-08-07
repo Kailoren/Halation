@@ -15,10 +15,7 @@ namespace Halation.App;
 /// </remarks>
 public static class ApiKeyStore
 {
-    private static string Path => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "VibeCheck",
-        "deep-pass.key");
+    private static string Path => AppData.PathTo("deep-pass.key");
 
     /// <summary>Returns the stored key, or null when none is saved or it cannot be decrypted.</summary>
     public static string? Load()
