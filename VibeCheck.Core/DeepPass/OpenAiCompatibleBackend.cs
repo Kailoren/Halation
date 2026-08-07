@@ -71,7 +71,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
                 new SocketsHttpHandler { ConnectCallback = ConnectAsync }, disposeHandler: true)
             : new HttpClient(handler, disposeHandler: false);
 
-        _http.Timeout = TimeSpan.FromMinutes(5);
+        _http.Timeout = PatienceFor(endpoint);
 
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
@@ -79,6 +79,42 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
                 new AuthenticationHeaderValue("Bearer", apiKey.Trim());
         }
     }
+
+    /// <summary>
+    /// How long to wait for one file's answer, which is not the same question on a hosted
+    /// provider as on the reader's own graphics card.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Measured, after a whole pass failed.</b> Five minutes suits a hosted provider, where a
+    /// request that has not answered by then is wedged rather than working. It is not enough for
+    /// a local model, and the arithmetic says so exactly: a 7B model on an 8GB card generates at
+    /// about 69 tokens a second, so the <see cref="MaxTokens"/> ceiling of 16,000 is <b>232
+    /// seconds of generation on its own</b>, and reading a file at this pass's
+    /// sixty-thousand-character limit adds roughly 43 seconds of prompt processing on top. That
+    /// lands within a few seconds of five minutes, which is why <i>every</i> request was
+    /// cancelled and why they were a suspiciously round five minutes apart. The scan was not
+    /// slow, it was failing.
+    /// </para>
+    /// <para>
+    /// The ceiling only binds when the model rambles to its output limit, which small models do
+    /// and frontier models mostly do not. That is the case worth surviving: it is the same model
+    /// size this application recommends to somebody with an 8GB card.
+    /// </para>
+    /// <para>
+    /// Loopback is the discriminator because it is the one that tracks the actual cause. A local
+    /// endpoint is slow in proportion to the reader's hardware, which this application does not
+    /// get to choose; a hosted one that goes quiet for five minutes is broken, and failing fast
+    /// there is the useful behaviour. Raising the ceiling for everybody would have hidden that.
+    /// </para>
+    /// <para>
+    /// This governs one file, not the pass, so a large application is bounded by the file ceiling
+    /// rather than by this. A timeout is still reported per file rather than absorbed, so a
+    /// machine too slow even for this says so instead of returning a quiet scan.
+    /// </para>
+    /// </remarks>
+    private static TimeSpan PatienceFor(Uri endpoint) =>
+        endpoint.IsLoopback ? TimeSpan.FromMinutes(30) : TimeSpan.FromMinutes(5);
 
     /// <summary>
     /// Names the host as well as the model, because the reader is entitled to know where their
