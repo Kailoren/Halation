@@ -67,6 +67,7 @@ public static class DependencyInventory
         var found = new Dictionary<string, DependencyRef>(StringComparer.OrdinalIgnoreCase);
         var unresolved = new List<string>();
         var notes = new List<string>();
+        var vendoredLocks = new List<string>();
 
         foreach (var file in files)
         {
@@ -77,6 +78,18 @@ public static class DependencyInventory
             }
 
             var name = Path.GetFileName(file.RelativePath);
+
+            // A lock file inside an installed package is that package's own build record,
+            // usually years stale, and npm never reads it downstream. Counting it pins
+            // someone else's abandoned toolchain on this application. A nested package.json
+            // is a different thing and is still read: it gives the name and exact version of
+            // the package it sits in.
+            if (IsVendored(file.RelativePath)
+                && LockFileNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+            {
+                vendoredLocks.Add(file.RelativePath);
+                continue;
+            }
 
             try
             {
@@ -89,8 +102,7 @@ public static class DependencyInventory
                 // sitting in node_modules with its own exact manifest, so counting these
                 // resolved 149 packages and then reported the same 149 as unchecked.
                 if (name.Equals("package.json", StringComparison.OrdinalIgnoreCase)
-                    && !file.RelativePath.Replace('\\', '/')
-                            .Contains("node_modules/", StringComparison.Ordinal)
+                    && !IsVendored(file.RelativePath)
                     && DeclaresRanges(file.Content))
                 {
                     unresolved.Add(file.RelativePath);
@@ -109,10 +121,24 @@ public static class DependencyInventory
                 + "shipped, so no dependency could be checked.");
         }
 
+        // Dropping these is a call about what counts as evidence rather than something the
+        // scan failed to reach, but it still has to say which files it dropped.
+        if (vendoredLocks.Count > 0)
+        {
+            var shown = string.Join(", ", vendoredLocks.Take(3));
+            var rest = vendoredLocks.Count > 3 ? $", and {vendoredLocks.Count - 3} more" : "";
+            var opening = vendoredLocks.Count == 1
+                ? "One lock file inside an installed package was not counted"
+                : $"{vendoredLocks.Count} lock files inside installed packages were not counted";
+
+            notes.Add(
+                $"{opening}, because a lock file records how the package holding it was "
+                + $"built rather than what this application installs: {shown}{rest}.");
+        }
+
         // Both of these bound what the resolved list means, and neither is visible from the
         // list itself, so they are stated rather than left for the reader to infer.
-        if (found.Values.Any(d => d.DeclaredIn.Replace('\\', '/')
-                .Contains("node_modules/", StringComparison.Ordinal)))
+        if (found.Values.Any(d => IsVendored(d.DeclaredIn)))
         {
             notes.Add(
                 "Package versions were read from the bundled node_modules tree, which shows "
@@ -131,6 +157,22 @@ public static class DependencyInventory
             Notes = notes,
         };
     }
+
+    /// <summary>
+    /// The lock files recovery lets through from inside a vendored tree. The other manifests
+    /// <see cref="ReadManifest"/> handles never turn up in one, so they are not listed here.
+    /// </summary>
+    private static readonly string[] LockFileNames =
+    [
+        "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "pipfile.lock", "poetry.lock",
+        "composer.lock", "cargo.lock", "gemfile.lock", "gradle.lockfile", "go.sum",
+    ];
+
+    /// <summary>
+    /// Whether a path sits inside an installed dependency rather than the application itself.
+    /// </summary>
+    private static bool IsVendored(string relativePath) =>
+        relativePath.Replace('\\', '/').Contains("node_modules/", StringComparison.Ordinal);
 
     private static IEnumerable<DependencyRef> ReadManifest(string fileName, RecoveredFile file) =>
         fileName.ToLowerInvariant() switch

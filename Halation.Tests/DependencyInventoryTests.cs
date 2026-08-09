@@ -119,6 +119,68 @@ public class DependencyInventoryTests
         Assert.Empty(result.Dependencies);
     }
 
+    /// <summary>
+    /// uri-js ships its own build-time yarn.lock as a package file. A real scan read that as
+    /// the application's dependency graph and produced 23 findings, two of them Critical,
+    /// against a rollup and babel toolchain that was installed nowhere in the tree.
+    /// </summary>
+    [Fact]
+    public void Lock_file_inside_an_installed_package_is_not_counted()
+    {
+        var result = Extract(
+            ("node_modules/uri-js/yarn.lock", """
+                # yarn lockfile v1
+
+                rollup@^0.41.6:
+                  version "0.41.6"
+                """));
+
+        Assert.Empty(result.Dependencies);
+    }
+
+    /// <summary>Dropping it without saying so would just be a quieter wrong answer.</summary>
+    [Fact]
+    public void Skipped_vendored_lock_file_is_named_in_the_notes()
+    {
+        var result = Extract(
+            ("node_modules/uri-js/yarn.lock", "# yarn lockfile v1\n\nrollup@^0.41.6:\n  version \"0.41.6\""));
+
+        Assert.Contains(
+            result.Notes,
+            n => n.Contains("node_modules/uri-js/yarn.lock", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// What gets it dropped is sitting inside an installed package. Key it on the file name
+    /// instead and the application's own lock file goes too, leaving nothing to check.
+    /// </summary>
+    [Fact]
+    public void The_applications_own_lock_file_is_still_read()
+    {
+        var result = Extract(
+            ("package-lock.json", """
+                {
+                  "lockfileVersion": 3,
+                  "packages": { "node_modules/nanoid": { "version": "3.3.15" } }
+                }
+                """));
+
+        var dependency = Assert.Single(result.Dependencies);
+        Assert.Equal("npm:nanoid@3.3.15", dependency.Coordinate);
+    }
+
+    /// <summary>Skipping the lock file must not cost us the package sitting next to it.</summary>
+    [Fact]
+    public void Vendored_manifest_is_still_read_alongside_a_skipped_lock_file()
+    {
+        var result = Extract(
+            ("node_modules/uri-js/yarn.lock", "# yarn lockfile v1\n\nrollup@^0.41.6:\n  version \"0.41.6\""),
+            ("node_modules/uri-js/package.json", Manifest("uri-js", "4.4.1")));
+
+        var dependency = Assert.Single(result.Dependencies);
+        Assert.Equal("npm:uri-js@4.4.1", dependency.Coordinate);
+    }
+
     [Fact]
     public void Bundled_packages_carry_a_note_about_what_the_list_means()
     {

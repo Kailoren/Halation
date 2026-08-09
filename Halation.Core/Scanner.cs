@@ -461,10 +461,18 @@ public sealed class Scanner
 
         if (dependencies.Unresolved.Count > 0)
         {
+            var shown = string.Join(", ", dependencies.Unresolved.Take(5));
+            var rest = dependencies.Unresolved.Count > 5
+                ? $", and {dependencies.Unresolved.Count - 5} more"
+                : "";
+
+            var (subject, pronoun) = dependencies.Unresolved.Count == 1
+                ? ("One manifest declares", "it")
+                : ($"{dependencies.Unresolved.Count} manifests declare", "they");
+
             limitations.Add(
-                $"{dependencies.Unresolved.Count} manifest(s) declared only version ranges with "
-                + "no lock file, so those dependencies could not be checked: "
-                + string.Join(", ", dependencies.Unresolved.Take(5)));
+                $"{subject} only version ranges with no lock file, so the dependencies "
+                + $"{pronoun} name could not be checked: {shown}{rest}");
         }
 
         return limitations.Count == coverage.ChecksNotPossible.Count

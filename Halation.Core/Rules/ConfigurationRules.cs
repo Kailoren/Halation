@@ -220,6 +220,9 @@ public static class ConfigurationRules
             match.Value.Contains("://www.w3.org", StringComparison.OrdinalIgnoreCase)
             || match.Value.Contains("://schemas.", StringComparison.OrdinalIgnoreCase)
             || match.Value.Contains("://xmlns.", StringComparison.OrdinalIgnoreCase)
+            // JSON Schema names its dialect with a URI, so anything bundling ajv or another
+            // validator carries one. Nothing ever fetches it.
+            || match.Value.Contains("://json-schema.org", StringComparison.OrdinalIgnoreCase)
             || match.Value.Contains(".xsd", StringComparison.OrdinalIgnoreCase)
             || match.Value.Contains(".dtd", StringComparison.OrdinalIgnoreCase)
             || IsPackageMetadata(match, context)

@@ -209,6 +209,9 @@ public class RuleEngineTests
     [InlineData("""xmlns="http://www.w3.org/2000/svg" """)]
     [InlineData("""const schema = "http://schemas.microsoft.com/winfx/2006/xaml";""")]
     [InlineData("""const local = "http://localhost:3000/api";""")]
+    // JSON Schema names its dialect with a URI, so any bundle with a validator in it carries
+    // one. Turned up in a webpacked Companion module that makes no http call at all.
+    [InlineData("""s.code='require("ajv")';t.$schema="http://json-schema.org/draft-07/schema#";""")]
     public void NonNetworkHttpUrls_AreNotFlaggedAsCleartext(string line) =>
         Assert.False(Fired("VC-CFG-007", line), $"false positive on: {line}");
 
