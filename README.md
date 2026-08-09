@@ -334,23 +334,6 @@ trusted about the one thing nobody can check, so the report says how many matche
 and why. Secrets are exempt: a credential in quotation marks is a leaked credential wherever it
 lives, including in the source of a security tool.
 
-## The progress bar takes longer than the scan
-
-A scan of a typical application finishes in a second or two, and in testing nobody believed it.
-The results screen says exactly what was examined and how much of it was readable, but a reader
-who watched the bar flash past has already decided nothing happened and does not go looking.
-
-So the readout is paced: between five and twenty seconds depending on how much there was to
-look at, with each stage on screen while the bar is inside that stage's share of the whole.
-**The work is not slowed and nothing is invented.** The bar shows the lower of two figures, how
-far the scan has actually got and how far there has been time to read, which means it can never
-claim progress that has not happened and never finishes before its stages can be read. A scan
-that genuinely takes longer than that, such as one running the deep pass, is not padded at all;
-the bar simply follows it.
-
-The duration in the report is the real one, so a report saying `0.8s` after a twelve second bar
-is not a contradiction. The receipt records the work; the bar reports it at reading speed.
-
 ## Updates
 
 On startup Halation asks GitHub for the public release list and compares it with the build
