@@ -180,10 +180,17 @@ public static class MarkdownReportWriter
     /// because somebody about to paste this into a public discussion should be told what is in it
     /// rather than find out afterwards.
     /// </para>
+    /// <para>
+    /// And only when it actually answered. The route is chosen before the scan runs, so this
+    /// would otherwise print "a model on your own hardware answered this scan" under a pass that
+    /// never got a reply out of it.
+    /// </para>
     /// </remarks>
     private static void WriteEnvironment(StringBuilder output, ScanReport report)
     {
-        if (report.Environment is not { } machine || machine.DeepPassRanLocally is not true)
+        if (report.Environment is not { } machine
+            || machine.DeepPassRanLocally is not true
+            || !report.DeepPassRan)
         {
             return;
         }

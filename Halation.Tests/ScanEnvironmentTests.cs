@@ -233,5 +233,32 @@ public sealed class ScanEnvironmentTests
         },
         ScannerVersion = "test",
         Environment = machine,
+
+        // The section describes the machine a local model answered on, so the fixture has to be
+        // a report where one did. See the test below for what happens when it did not.
+        DeepPassState = DeepPassOutcome.Reviewed,
+        DeepPassCodeReviewedPercent = 100,
+        DeepPassTokens = 1_000,
     };
+
+    /// <summary>
+    /// The route is chosen before the scan runs, so a failed pass still carries "answered
+    /// locally". The section says a model on this hardware answered, which it did not.
+    /// </summary>
+    [Fact]
+    public void TheMachineSection_IsWithheldWhenTheLocalModelAnsweredNothing()
+    {
+        var failed = Report(new ScanEnvironment
+        {
+            GraphicsAdapter = "NVIDIA GeForce RTX 4060",
+            DeepPassModel = "qwen2.5-coder:7b",
+            DeepPassRanLocally = true,
+        }) with
+        {
+            DeepPassState = DeepPassOutcome.Failed,
+        };
+
+        Assert.DoesNotContain(
+            "## This machine", MarkdownReportWriter.Write(failed), StringComparison.Ordinal);
+    }
 }
