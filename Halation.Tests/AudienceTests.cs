@@ -201,6 +201,39 @@ public class AudienceTests
         Assert.True(caveat - verdict < 600, $"and sit beside it, not {caveat - verdict} characters later");
     }
 
+    /// <summary>
+    /// The quietest version of the same failure. An Electron build declares no dependencies at
+    /// all because its build tool compiled them in, so nothing was resolved, nothing was
+    /// unresolved, and the report said nothing while four libraries went unexamined.
+    /// </summary>
+    [Fact]
+    public void Libraries_compiled_into_the_application_are_said_beside_the_score()
+    {
+        var report = Report([], Audience.Developer) with
+        {
+            Effort = Effort(resolved: 0, checkedCount: 0, unresolved: 0) with
+            {
+                PackagesBundled = 4,
+            },
+        };
+
+        Assert.NotNull(report.DependencyCaveat);
+        Assert.Contains("4 libraries are compiled into", report.DependencyCaveat!,
+            StringComparison.Ordinal);
+
+        // Said even when the declared dependencies were checked, because a clean advisory
+        // result for nine packages says nothing about four more that were inlined.
+        var alsoChecked = Report([], Audience.Developer) with
+        {
+            Effort = Effort(resolved: 9, checkedCount: 9, unresolved: 0) with
+            {
+                PackagesBundled = 4,
+            },
+        };
+
+        Assert.NotNull(alsoChecked.DependencyCaveat);
+    }
+
     /// <summary>Resolved but unanswered is a different sentence from never resolved.</summary>
     [Fact]
     public void Dependencies_resolved_but_never_looked_up_say_so()

@@ -773,6 +773,20 @@
                                            Text="{Binding MinificationCaveat}"/>
                             </Border>
 
+                            <!-- And this one says the second opinion the reader asked for is not
+                                 in the result. A deep pass that failed on every file used to be
+                                 visible only as a line in "what could not be checked", while
+                                 everything above it read as a pass that had run. -->
+                            <Border Margin="0,12,0,0" Padding="12"
+                                    CornerRadius="{DynamicResource ButtonRadius}"
+                                    Background="{StaticResource PanelRaised}"
+                                    BorderBrush="{StaticResource Medium}" BorderThickness="1"
+                                    Visibility="{Binding DeepPassCaveat,
+                                                         Converter={StaticResource NullToVisibility}}">
+                                <TextBlock TextWrapping="Wrap" Style="{StaticResource Caption}"
+                                           Text="{Binding DeepPassCaveat}"/>
+                            </Border>
+
                             <TextBlock Margin="0,12,0,0" TextWrapping="Wrap" Style="{StaticResource Caption}"
                                        Text="A clean result is not proof that an application is safe. Static analysis can show that problems are present; it cannot show that none are."/>
                         </StackPanel>

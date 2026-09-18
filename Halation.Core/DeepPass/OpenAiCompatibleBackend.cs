@@ -289,14 +289,14 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
 
     /// <inheritdoc/>
     public async Task<FileReview> ReviewAsync(
-        TriagedFile triaged,
+        DeepPassChunk chunk,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(triaged);
+        ArgumentNullException.ThrowIfNull(chunk);
 
         try
         {
-            var review = await AskAsync(triaged, _schemaSupported, cancellationToken)
+            var review = await AskAsync(chunk, _schemaSupported, cancellationToken)
                 .ConfigureAwait(false);
 
             // A server that cannot constrain to a schema says so with a 400 naming the field.
@@ -306,24 +306,27 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
             {
                 _schemaSupported = false;
 
-                return await AskAsync(triaged, schema: false, cancellationToken)
+                return await AskAsync(chunk, schema: false, cancellationToken)
                            .ConfigureAwait(false)
-                       ?? Failed(triaged, "the endpoint rejected the request twice");
+                       ?? Failed(chunk, "the endpoint rejected the request twice");
             }
 
-            return review ?? Failed(triaged, "the endpoint rejected the request");
+            return review ?? Failed(chunk, "the endpoint rejected the request");
         }
         catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Failed(triaged, "the endpoint did not answer in time");
+            return Failed(chunk, "the endpoint did not answer in time");
         }
         catch (HttpRequestException ex)
         {
-            return Failed(triaged, ex.Message);
+            // Nothing is reachable, and the next request will not be either. Stopping keeps a
+            // report of a pass that never happened from listing one failure per file as though
+            // each had been tried on its merits.
+            return Failed(chunk, ex.Message, stops: true);
         }
         catch (JsonException)
         {
-            return Failed(triaged, "the endpoint's reply was not JSON");
+            return Failed(chunk, "the endpoint's reply was not JSON");
         }
     }
 
@@ -332,19 +335,25 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
     /// signal to retry without the schema.
     /// </summary>
     private async Task<FileReview?> AskAsync(
-        TriagedFile triaged,
+        DeepPassChunk chunk,
         bool schema,
         CancellationToken cancellationToken)
     {
         using var response = await _http
-            .PostAsJsonAsync(_endpoint, BuildBody(triaged, schema, out var promptChars), cancellationToken)
+            .PostAsJsonAsync(_endpoint, BuildBody(chunk, schema, out var promptChars), cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {
-            return (int)response.StatusCode == 400 ? null : Failed(
-                triaged,
-                $"the endpoint answered {(int)response.StatusCode} {response.ReasonPhrase}");
+            var status = (int)response.StatusCode;
+
+            return status == 400 ? null : Failed(
+                chunk,
+                $"the endpoint answered {status} {response.ReasonPhrase}",
+
+                // A key the endpoint refuses is refused on every later request too, so the pass
+                // stops rather than spending the rest of the budget collecting the same answer.
+                stops: status is 401 or 403);
         }
 
         using var document = await response.Content
@@ -358,7 +367,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
             || choices.ValueKind != JsonValueKind.Array
             || choices.GetArrayLength() == 0)
         {
-            return Failed(triaged, "the endpoint returned no answer");
+            return Failed(chunk, "the endpoint returned no answer");
         }
 
         var message = choices[0].TryGetProperty("message", out var m) ? m : default;
@@ -371,7 +380,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
             && refusal.ValueKind == JsonValueKind.String
             && refusal.GetString() is { Length: > 0 } refused)
         {
-            return Failed(triaged, $"the model declined to review it: {refused}");
+            return Failed(chunk, $"the model declined to review it: {refused}");
         }
 
         var content = message.ValueKind == JsonValueKind.Object
@@ -387,15 +396,15 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
         // matches, so a truncated file reads as an unguarded one.
         if (DiscardedInput(promptChars, usage) is { } truncation)
         {
-            return Failed(triaged, truncation, usage);
+            return Failed(chunk, truncation, usage);
         }
 
         if (string.IsNullOrWhiteSpace(content))
         {
-            return Failed(triaged, "the endpoint returned an empty answer", usage);
+            return Failed(chunk, "the endpoint returned an empty answer", usage);
         }
 
-        var answer = DeepPassPrompt.Parse(content, triaged);
+        var answer = DeepPassPrompt.Parse(content, chunk);
 
         return new FileReview
         {
@@ -463,7 +472,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
                + "it. Raise the context length where the model is served, then scan again";
     }
 
-    private object BuildBody(TriagedFile triaged, bool schema, out int promptChars)
+    private object BuildBody(DeepPassChunk chunk, bool schema, out int promptChars)
     {
         // The schema is restated in the prompt whenever it cannot be enforced, so a server with
         // no structured-output support still knows the shape it is being asked for. Belt and
@@ -475,7 +484,7 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
               + "\n\nAnswer with JSON only, matching this schema exactly:\n"
               + JsonSerializer.Serialize(DeepPassPrompt.FindingSchema);
 
-        var prompt = DeepPassPrompt.BuildPrompt(triaged);
+        var prompt = DeepPassPrompt.BuildPrompt(chunk);
 
         // Both halves, because both are sent and a server truncating the request drops from the
         // whole conversation rather than from the file alone.
@@ -535,10 +544,16 @@ public sealed class OpenAiCompatibleBackend : IDeepPassBackend
         return new TokenUsage { Input = Read("prompt_tokens"), Output = Read("completion_tokens") };
     }
 
-    private static FileReview Failed(TriagedFile triaged, string why, TokenUsage? usage = null) =>
+    private static FileReview Failed(
+        DeepPassChunk chunk, string why, TokenUsage? usage = null, bool stops = false) =>
         new()
         {
-            Limitation = $"{triaged.File.RelativePath} was not reviewed: {Redaction.Scrub(why)}.",
+            Outcome = ReviewOutcome.Failed,
+            StopsPass = stops,
+            Limitation = stops
+                ? $"The deep pass stopped: {Redaction.Scrub(why)}. Nothing from "
+                  + $"{DeepPassClient.Describe(chunk)} onwards was read."
+                : $"{DeepPassClient.Describe(chunk)} was not reviewed: {Redaction.Scrub(why)}.",
             Usage = usage ?? new TokenUsage(),
         };
 

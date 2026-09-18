@@ -190,24 +190,55 @@ public static class DeepPassPrompt
         """;
 
     /// <summary>
-    /// The file, why it was chosen, and what the pattern scanner already said about it.
+    /// The code being sent, why it was chosen, and what the pattern scanner already said about it.
     /// </summary>
-    public static string BuildPrompt(TriagedFile triaged)
+    /// <remarks>
+    /// <para>
+    /// One request carries one part of one file. When the file took more than one, the prompt
+    /// says which part this is and which lines it covers, because a model that thinks it has the
+    /// whole file will answer reachability questions it cannot actually answer.
+    /// </para>
+    /// <para>
+    /// The findings listed are the ones sitting in these lines and no others. Listing all of a
+    /// file's findings on every part asked the model to judge code it had not been shown, which
+    /// is how a review starts being written from the finding's title.
+    /// </para>
+    /// </remarks>
+    public static string BuildPrompt(DeepPassChunk chunk)
     {
-        ArgumentNullException.ThrowIfNull(triaged);
+        ArgumentNullException.ThrowIfNull(chunk);
 
         var prompt = new StringBuilder();
 
-        prompt.AppendLine($"File: {triaged.File.RelativePath}");
-        prompt.AppendLine($"Selected because: {triaged.Reason}");
+        prompt.AppendLine($"File: {chunk.File.RelativePath}");
+        prompt.AppendLine($"Selected because: {chunk.Source.Reason}");
+
+        if (chunk.Of > 1)
+        {
+            prompt.AppendLine(
+                $"This is part {chunk.Index} of {chunk.Of}: lines {chunk.FirstLine:N0} to "
+                + $"{chunk.LastLine:N0} of {chunk.File.LineCount:N0}. The other parts are sent "
+                + "separately. Judge only what is printed here, and when something you would "
+                + "need to check is elsewhere in the file, say so in the reachability field.");
+        }
+
+        if (chunk.Omitted.Count > 0)
+        {
+            var named = string.Join(", ", chunk.Omitted.Select(r => r.Name).Distinct());
+
+            prompt.AppendLine(
+                $"Left out of these lines: third-party code a bundler inlined ({named}). It is "
+                + "not this application's own code and is reported separately.");
+        }
+
         prompt.AppendLine();
 
-        if (triaged.KnownFindings.Count > 0)
+        if (chunk.KnownFindings.Count > 0)
         {
             prompt.AppendLine("The pattern scanner already reported the following here. Do not");
             prompt.AppendLine("repeat them; judge whether they are real and how far they reach.");
 
-            foreach (var finding in triaged.KnownFindings)
+            foreach (var finding in chunk.KnownFindings)
             {
                 prompt.AppendLine($"- [{finding.RuleId}] {finding.Title}");
             }
@@ -218,10 +249,10 @@ public static class DeepPassPrompt
         // Numbered, and said out loud rather than left to be inferred from the gutter. The
         // numbers are the only way back from an answer to a place in the file.
         prompt.AppendLine("The code is printed with a line number and a bar before each line.");
-        prompt.AppendLine("Those numbers are not part of the file. Cite them.");
+        prompt.AppendLine("Those numbers are the file's own and are not part of it. Cite them.");
         prompt.AppendLine();
         prompt.AppendLine("```");
-        prompt.AppendLine(DeepPassTriage.NumberedExcerpt(triaged.File));
+        prompt.AppendLine(chunk.NumberedCode);
         prompt.AppendLine("```");
 
         return prompt.ToString();
@@ -239,9 +270,9 @@ public static class DeepPassPrompt
     /// swallowed, because "we found nothing else" and "we found things we did not trust enough
     /// to show you" are different statements and the reader is owed the right one.
     /// </remarks>
-    public static DeepPassAnswer Parse(string json, TriagedFile triaged)
+    public static DeepPassAnswer Parse(string json, DeepPassChunk chunk)
     {
-        ArgumentNullException.ThrowIfNull(triaged);
+        ArgumentNullException.ThrowIfNull(chunk);
 
         var findings = new List<Finding>();
         var explains = new Dictionary<Capability, string>();
@@ -270,14 +301,14 @@ public static class DeepPassPrompt
                         continue;
                     }
 
-                    if (ReadFinding(element, triaged) is { } finding)
+                    if (ReadFinding(element, chunk) is { } finding)
                     {
                         findings.Add(finding);
                     }
                 }
             }
 
-            ReadExplanations(document.RootElement, triaged.File.Content, explains);
+            ReadExplanations(document.RootElement, chunk.File.Content, explains);
         }
         catch (JsonException)
         {
@@ -418,7 +449,7 @@ public static class DeepPassPrompt
     /// prose. See <see cref="Redaction.Flatten"/> for what a title containing two newlines was
     /// able to do to an exported report.
     /// </remarks>
-    private static Finding? ReadFinding(JsonElement element, TriagedFile triaged)
+    private static Finding? ReadFinding(JsonElement element, DeepPassChunk chunk)
     {
         if (!element.TryGetProperty("title", out var title)
             || Redaction.Flatten(title.GetString(), max: 160) is not { Length: > 0 } titleText)
@@ -441,7 +472,7 @@ public static class DeepPassPrompt
         // the thing printed. A quotation the reader cannot find in their own file is the one
         // failure a code fence actively conceals.
         var located = EvidenceLocator.Locate(
-            triaged.File.Content,
+            chunk.File.Content,
             element.TryGetProperty("line", out var lineElement)
                 && lineElement.ValueKind == JsonValueKind.Number
                 && lineElement.TryGetInt32(out var claimed)
@@ -483,7 +514,7 @@ public static class DeepPassPrompt
             // file two directories down, which prints a location nobody can open. Now that the
             // line comes from this application, the path has to as well, or half of a citation
             // is trustworthy and the reader cannot tell which half.
-            FilePath = triaged.File.RelativePath,
+            FilePath = chunk.File.RelativePath,
 
             // Only ever a line this application resolved itself, so "Location" cannot name a
             // place that does not exist.

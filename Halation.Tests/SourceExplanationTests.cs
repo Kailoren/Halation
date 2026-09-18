@@ -17,20 +17,21 @@ public class SourceExplanationTests
     /// <summary>
     /// A file whose comments really do say why, since a quote is now checked against them.
     /// </summary>
-    private static TriagedFile File() => new()
-    {
-        File = new RecoveredFile
+    private static DeepPassChunk File() =>
+        DeepPassChunker.Split(new TriagedFile
         {
-            RelativePath = "src/Cleaner.cs",
-            Content = """
-                      // Clears stale sessions left by the browser.
-                      // Registered at startup so the sweep runs before anything else opens.
-                      public void Clear() { }
-                      """,
-            Language = SourceLanguage.CSharp,
-        },
-        Reason = "handles untrusted input",
-    };
+            File = new RecoveredFile
+            {
+                RelativePath = "src/Cleaner.cs",
+                Content = """
+                          // Clears stale sessions left by the browser.
+                          // Registered at startup so the sweep runs before anything else opens.
+                          public void Clear() { }
+                          """,
+                Language = SourceLanguage.CSharp,
+            },
+            Reason = "handles untrusted input",
+        }).Chunks[0];
 
     [Fact]
     public void A_stated_reason_is_read_back_against_its_capability()

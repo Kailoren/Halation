@@ -582,12 +582,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
         // The ceiling rather than the typical figure. "Cents per scan" was true of the small
         // projects it was measured on and badly wrong at the other end, and somebody who learns
         // the real number from their invoice has been misled by this application rather than by
-        // Anthropic. The file count is interpolated so the sentence cannot drift from the limit
-        // it describes.
-        _ => "Billed to your Anthropic API key, per file read. A small project costs cents. The "
-             + $"ceiling is {DeepPassTriage.DefaultMaxFiles} files, and an application large "
-             + "enough to reach it can cost around five dollars in a single scan, so treat cents "
-             + "as the floor rather than the usual figure. The report states what was spent.",
+        // Anthropic. Both limits are interpolated so the sentence cannot drift from what the
+        // scan will actually do: a large file is now read a piece at a time rather than cut off
+        // at sixty thousand characters, so the file ceiling alone stopped describing the bill.
+        _ => "Billed to your Anthropic API key, per request. A small project costs cents. At most "
+             + $"{DeepPassTriage.DefaultMaxFiles} files are read, in up to "
+             + $"{DeepPassTriage.DefaultMaxRequests} requests, because a large file takes several; "
+             + "an application big enough to reach that can cost around five dollars in a single "
+             + "scan, so treat cents as the floor rather than the usual figure. The report states "
+             + "what was spent and how much of the application was read.",
     };
 
     /// <summary>
@@ -1105,6 +1108,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
                              nameof(CoveragePercent), nameof(CoverageBasis), nameof(CoverageIsLow),
                              nameof(SummaryLine), nameof(VulnerabilitySummary), nameof(Sha256),
                              nameof(DependencyCaveat), nameof(MinificationCaveat),
+                             nameof(DeepPassCaveat),
                              nameof(InferredSummary), nameof(DeclaredKindAttribution),
                              nameof(DurationLabel), nameof(ScoreCaption),
                              nameof(AwaitingAnswer), nameof(ShowInstallBanner),
@@ -1270,6 +1274,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// way as the caveat above, and null for the same reason.
     /// </summary>
     public string? MinificationCaveat => Report?.MinificationCaveat;
+
+    /// <summary>
+    /// Shown beside the score when the deep pass was asked for and did not deliver it. Null
+    /// hides the panel, as above.
+    /// </summary>
+    /// <remarks>
+    /// Somebody who switched the deep pass on is reading the result as one that had a second
+    /// opinion in it. When it failed or read only part of the application, that belongs where
+    /// they are looking rather than in the list of notes further down.
+    /// </remarks>
+    public string? DeepPassCaveat => Report?.DeepPassCaveat;
 
     public string VulnerabilitySummary => Report is null
         ? string.Empty

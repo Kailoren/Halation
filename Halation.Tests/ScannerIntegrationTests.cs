@@ -276,8 +276,10 @@ public class ScannerIntegrationTests : IDisposable
 
         var markdown = MarkdownReportWriter.Write(report with
         {
-            DeepPassRan = true,
+            DeepPassState = DeepPassOutcome.Reviewed,
             DeepPassBackend = "the Anthropic API (claude-opus-5)",
+            DeepPassCodeReviewedPercent = 100,
+            DeepPassTokens = 41_000,
             DeepPassCost = 0.42m,
         });
 
@@ -293,8 +295,10 @@ public class ScannerIntegrationTests : IDisposable
 
         var markdown = MarkdownReportWriter.Write(report with
         {
-            DeepPassRan = true,
+            DeepPassState = DeepPassOutcome.Reviewed,
             DeepPassBackend = "the Anthropic API (claude-opus-5)",
+            DeepPassCodeReviewedPercent = 100,
+            DeepPassTokens = 900,
             DeepPassCost = 0.003m,
         });
 
@@ -314,8 +318,11 @@ public class ScannerIntegrationTests : IDisposable
 
         var markdown = MarkdownReportWriter.Write(report with
         {
-            DeepPassRan = true,
+            DeepPassState = DeepPassOutcome.Reviewed,
             DeepPassBackend = "the Claude Code CLI bundled with the Claude desktop app (2.1.219)",
+            DeepPassCodeReviewedPercent = 100,
+            DeepPassTokens = 41_000,
+            DeepPassSpentSubscription = true,
             DeepPassCost = null,
         });
 
@@ -338,7 +345,7 @@ public class ScannerIntegrationTests : IDisposable
 
         var markdown = MarkdownReportWriter.Write(report with
         {
-            DeepPassRan = true,
+            DeepPassState = DeepPassOutcome.NotRun,
             DeepPassBackend = null,
             DeepPassCost = null,
         });
@@ -355,8 +362,10 @@ public class ScannerIntegrationTests : IDisposable
 
         var markdown = MarkdownReportWriter.Write(report with
         {
-            DeepPassRan = true,
+            DeepPassState = DeepPassOutcome.Reviewed,
             DeepPassBackend = "the Anthropic API (claude-opus-5)",
+            DeepPassCodeReviewedPercent = 100,
+            DeepPassTokens = 41_000,
             DeepPassCost = 0.42m,
         });
 

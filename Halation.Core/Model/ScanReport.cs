@@ -98,8 +98,45 @@ public sealed record ScanReport
     /// </remarks>
     public CheckSummary Checks { get; init; } = new();
 
-    /// <summary>Whether the optional BYOK deep pass contributed to this report.</summary>
-    public bool DeepPassRan { get; init; }
+    /// <summary>
+    /// What became of the optional AI deep pass.
+    /// </summary>
+    /// <remarks>
+    /// Every sentence in every export that mentions the deep pass is written from this. It used
+    /// to be a bool set from "was one asked for", which is why a pass whose every request failed
+    /// was reported as one that had read the files.
+    /// </remarks>
+    public DeepPassOutcome DeepPassState { get; init; } = DeepPassOutcome.NotRequested;
+
+    /// <summary>Whether the deep pass actually read any of this application.</summary>
+    public bool DeepPassRan =>
+        DeepPassState is DeepPassOutcome.Reviewed or DeepPassOutcome.PartlyReviewed;
+
+    /// <summary>Files triage chose for the deep pass.</summary>
+    public int DeepPassFilesSelected { get; init; }
+
+    /// <summary>Of those, how many the AI read in full.</summary>
+    public int DeepPassFilesReviewed { get; init; }
+
+    /// <summary>Of those, how many it read in part.</summary>
+    public int DeepPassFilesPartlyReviewed { get; init; }
+
+    /// <summary>Of those, how many it could not read at all.</summary>
+    public int DeepPassFilesFailed { get; init; }
+
+    /// <summary>
+    /// Share of the recovered code the AI actually read, or null when it read none.
+    /// </summary>
+    /// <remarks>
+    /// Not the same number as <see cref="CoverageReport.Percent"/>, and the difference is the
+    /// point: that one says how much of the application could be read at all, this one says how
+    /// much of it the model was shown. A pass over four of ninety files is not a second opinion
+    /// on the application.
+    /// </remarks>
+    public int? DeepPassCodeReviewedPercent { get; init; }
+
+    /// <summary>Whether the deep pass spent a subscription rather than money.</summary>
+    public bool DeepPassSpentSubscription { get; init; }
 
     /// <summary>
     /// What the deep pass cost the key holder, in US dollars, or null when it did not run.
@@ -286,25 +323,44 @@ public sealed record ScanReport
     {
         get
         {
+            // Said whether or not anything else was checked, because it is the one gap that
+            // hides behind a clean dependency result rather than beside it. An application that
+            // resolved nine packages and inlined four more has had four libraries go unexamined,
+            // and the nine checked ones do not speak for them.
+            var bundled = Effort.PackagesBundled > 0
+                ? $"{Effort.PackagesBundled:N0} librar"
+                  + (Effort.PackagesBundled == 1 ? "y is" : "ies are")
+                  + " compiled into this application's own files. A bundle records which package "
+                  + "was inlined but not which version, so nothing is known about whether they "
+                  + "carry published vulnerabilities."
+                : null;
+
             if (Effort.PackagesChecked > 0)
             {
-                return null;
+                return bundled;
             }
 
             if (Effort.PackagesResolved > 0)
             {
-                return $"The {Effort.PackagesResolved:N0} dependencies this application declares "
-                       + "were not checked against published advisories, so nothing above "
-                       + "accounts for them.";
+                return Join(
+                    $"The {Effort.PackagesResolved:N0} dependencies this application declares "
+                    + "were not checked against published advisories, so nothing above accounts "
+                    + "for them.",
+                    bundled);
             }
 
             return Effort.ManifestsUnresolved > 0
-                ? "This application declares dependencies but pins none of them, and ships no "
-                  + "lock file saying what it actually installed. Nothing is known about the "
-                  + "packages inside it, and nothing above accounts for them."
-                : null;
+                ? Join(
+                    "This application declares dependencies but pins none of them, and ships no "
+                    + "lock file saying what it actually installed. Nothing is known about the "
+                    + "packages inside it, and nothing above accounts for them.",
+                    bundled)
+                : bundled;
         }
     }
+
+    private static string Join(string first, string? second) =>
+        second is null ? first : $"{first} {second}";
 
     /// <summary>
     /// Share of minified code past which the reader is told, rather than left to infer it from
@@ -341,6 +397,35 @@ public sealed record ScanReport
               + "bundle, so judging a finding for yourself is harder here than the coverage "
               + "figure suggests."
             : null;
+
+    /// <summary>
+    /// Said beside the score when the deep pass was asked for and did not deliver what was asked.
+    /// </summary>
+    /// <remarks>
+    /// Beside the number for the same reason as <see cref="DependencyCaveat"/>. Somebody who
+    /// turned the deep pass on reads the result as a result that had a second opinion in it. When
+    /// it failed, that has to be visible where they are looking rather than in a list further
+    /// down, which is where it was when a measured run failed on every file and the report still
+    /// read as a completed pass. Null when it ran in full, because then there is nothing to say
+    /// that the footer does not already say.
+    /// </remarks>
+    public string? DeepPassCaveat => DeepPassState switch
+    {
+        DeepPassOutcome.NotRun =>
+            "The AI deep pass was switched on for this scan and did not run, so nothing here "
+            + "comes from it. The reason is under what could not be checked.",
+
+        DeepPassOutcome.Failed =>
+            $"The AI deep pass was switched on and every request it made failed, so nothing here "
+            + "comes from it. The checks ran in full either way; this result is what they found.",
+
+        DeepPassOutcome.PartlyReviewed =>
+            $"The AI deep pass read {DeepPassCodeReviewedPercent ?? 0}% of this application's "
+            + $"code, {DeepPassFilesReviewed} of the {DeepPassFilesSelected} files it selected in "
+            + "full. What it did not read, it did not judge.",
+
+        _ => null,
+    };
 
     /// <summary>
     /// What a statement of purpose moved out of the count, said in the same breath as the count.

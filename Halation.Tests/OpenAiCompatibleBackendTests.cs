@@ -26,8 +26,9 @@ public sealed class OpenAiCompatibleBackendTests : IDisposable
 
     public void Dispose() => _server.Dispose();
 
-    private static TriagedFile File(string content = "const x = req.query.id;") =>
-        new()
+    /// <summary>The first request for a file, which for a small one carries all of it.</summary>
+    private static DeepPassChunk File(string content = "const x = req.query.id;") =>
+        DeepPassChunker.Split(new TriagedFile
         {
             File = new RecoveredFile
             {
@@ -36,7 +37,7 @@ public sealed class OpenAiCompatibleBackendTests : IDisposable
                 Language = SourceLanguage.JavaScript,
             },
             Reason = "handles untrusted input",
-        };
+        }).Chunks[0];
 
     private OpenAiCompatibleBackend Backend(string model = "qwen2.5-coder") =>
         new(_server.Uri, apiKey: "sk-test", model: model, handler: _server.Handler);
@@ -325,7 +326,7 @@ public sealed class OpenAiCompatibleBackendTests : IDisposable
     // ---- A server that quietly dropped most of the file ---------------------
 
     /// <summary>A file large enough that no tokeniser could encode it into a few hundred tokens.</summary>
-    private static TriagedFile BigFile() =>
+    private static DeepPassChunk BigFile() =>
         File(string.Join("\n", Enumerable.Repeat("var value = request.query.identifier;", 1600)));
 
     [Fact]

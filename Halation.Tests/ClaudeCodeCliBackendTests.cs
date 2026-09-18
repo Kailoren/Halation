@@ -22,17 +22,19 @@ public class ClaudeCodeCliBackendTests
         Version = new Version(2, 1, 219),
     };
 
-    private static TriagedFile Triaged(string path = "handler.js") => new()
-    {
-        File = new RecoveredFile
+    /// <summary>One request's worth of a small file, which is the whole of it.</summary>
+    private static DeepPassChunk Triaged(string path = "handler.js") =>
+        DeepPassChunker.Split(new TriagedFile
         {
-            RelativePath = path,
-            Content = "app.get('/run', (q) => exec(q.cmd));",
-            Language = RecoveredFile.LanguageOf(path),
-        },
-        Reason = "handles untrusted input",
-        KnownFindings = [],
-    };
+            File = new RecoveredFile
+            {
+                RelativePath = path,
+                Content = "app.get('/run', (q) => exec(q.cmd));",
+                Language = RecoveredFile.LanguageOf(path),
+            },
+            Reason = "handles untrusted input",
+            KnownFindings = [],
+        }).Chunks[0];
 
     /// <summary>A result envelope in the shape the CLI actually produces.</summary>
     private static string Envelope(
@@ -323,11 +325,35 @@ public class ClaudeCodeCliBackendTests
         using var backend = new ClaudeCodeCliBackend(Cli);
 
         var review = backend.ReadResult(
-            Envelope(isError: true, result: "Invalid API key"), Triaged());
+            Envelope(isError: true, result: "model overloaded"), Triaged());
 
         Assert.Empty(review.Findings);
+        Assert.Equal(ReviewOutcome.Failed, review.Outcome);
         Assert.NotNull(review.Limitation);
         Assert.Contains("handler.js", review.Limitation, StringComparison.Ordinal);
+
+        // One file's failure, not the pass's. The rest are still worth trying.
+        Assert.False(review.StopsPass);
+    }
+
+    /// <summary>
+    /// The measured failure this is written for: <c>auth status</c> answered "logged in" while
+    /// the stored OAuth session had expired, and the pass then spent one call per file learning
+    /// the same thing five times over and reported the files as read.
+    /// </summary>
+    [Theory]
+    [InlineData("Failed to authenticate: OAuth session expired and could not be refreshed")]
+    [InlineData("Invalid API key")]
+    [InlineData("401 Unauthorized")]
+    public void A_sign_in_failure_stops_the_whole_pass_and_says_how_to_fix_it(string message)
+    {
+        using var backend = new ClaudeCodeCliBackend(Cli);
+
+        var review = backend.ReadResult(Envelope(isError: true, result: message), Triaged());
+
+        Assert.Equal(ReviewOutcome.Failed, review.Outcome);
+        Assert.True(review.StopsPass);
+        Assert.Contains("claude auth login", review.Limitation!, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -543,7 +569,7 @@ public class DeepPassBackendSelectionTests
 
         public bool Disposed { get; private set; }
 
-        public Task<FileReview> ReviewAsync(TriagedFile triaged, CancellationToken ct = default)
+        public Task<FileReview> ReviewAsync(DeepPassChunk chunk, CancellationToken ct = default)
         {
             Reviewed++;
             return Task.FromResult(new FileReview

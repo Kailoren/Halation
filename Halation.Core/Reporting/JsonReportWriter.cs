@@ -116,6 +116,11 @@ public static class JsonReportWriter
                 filesChecked = report.Effort.FilesChecked,
                 packagesResolved = report.Effort.PackagesResolved,
                 packagesChecked = report.Effort.PackagesChecked,
+
+                // Libraries inlined by a bundler: present, unversioned, and checked against
+                // nothing. A consumer reading packagesResolved alone would take an application
+                // whose dependencies were compiled in for one that has none.
+                packagesBundled = report.Effort.PackagesBundled,
                 summary = report.Effort.Describe(report.ScannedAt),
             },
 
@@ -123,12 +128,37 @@ public static class JsonReportWriter
             {
                 origin = report.VulnerabilityData.Origin.ToString(),
                 source = report.VulnerabilityData.Source,
-                asOf = report.VulnerabilityData.Origin == Dependencies.VulnerabilityDataOrigin.None
-                    ? null
-                    : (DateTimeOffset?)report.VulnerabilityData.AsOf,
-                ageInDays = report.VulnerabilityData.AgeInDays(report.ScannedAt),
+                asOf = Looked(report) ? (DateTimeOffset?)report.VulnerabilityData.AsOf : null,
+
+                // Nulled with the date it is measured from. Data that does not exist has no age,
+                // and the age of the .NET epoch came out as 739,876 days, which is a number a
+                // consumer would either ignore or believe.
+                ageInDays = Looked(report)
+                    ? report.VulnerabilityData.AgeInDays(report.ScannedAt)
+                    : (int?)null,
                 ecosystems = report.VulnerabilityData.Ecosystems,
             },
+
+            // What the AI actually did, counted. Absent when nobody asked for it, so a consumer
+            // can tell "not requested" from "requested and read nothing".
+            deepPass = report.DeepPassState == DeepPassOutcome.NotRequested
+                ? null
+                : new
+                {
+                    outcome = report.DeepPassState.ToString(),
+                    backend = report.DeepPassBackend,
+                    filesSelected = report.DeepPassFilesSelected,
+                    filesReviewed = report.DeepPassFilesReviewed,
+                    filesPartlyReviewed = report.DeepPassFilesPartlyReviewed,
+                    filesFailed = report.DeepPassFilesFailed,
+
+                    // The share of the application the model was shown, which is not the coverage
+                    // figure above and must not be read as it.
+                    codeReviewedPercent = report.DeepPassCodeReviewedPercent,
+                    tokens = report.DeepPassTokens,
+                    costUsd = report.DeepPassCost,
+                    spentSubscriptionQuota = report.DeepPassSpentSubscription,
+                },
 
             categoryScores = report.CategoryScores.ToDictionary(
                 kv => kv.Key.ToString(),
@@ -175,4 +205,8 @@ public static class JsonReportWriter
     /// key is simply absent and nobody has to know which zeros were real.
     /// </remarks>
     private static long? Positive(long value) => value > 0 ? value : null;
+
+    /// <summary>Whether any advisory data was actually consulted for this report.</summary>
+    private static bool Looked(ScanReport report) =>
+        report.VulnerabilityData.Origin != Dependencies.VulnerabilityDataOrigin.None;
 }

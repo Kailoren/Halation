@@ -361,6 +361,15 @@ public static class MarkdownReportWriter
             output.AppendLine();
         }
 
+        // And this one says the second opinion the reader asked for is not in here. It belongs
+        // beside the number rather than in the footer, because somebody who turned the deep pass
+        // on reads the result as one that had it.
+        if (report.DeepPassCaveat is { Length: > 0 } deepPass)
+        {
+            output.AppendLine($"> **The AI deep pass.** {deepPass}");
+            output.AppendLine();
+        }
+
         // The single most important sentence in the document.
         output.AppendLine("*A clean result is not proof that an application is safe. Static "
                           + "analysis can show that problems are present; it cannot show that "
@@ -571,9 +580,15 @@ public static class MarkdownReportWriter
             output.AppendLine();
         }
 
+        // With the place it was found, which the JSON export has always carried and this list
+        // did not. A one-line entry saying a block of code repeats itself, without saying where,
+        // is a finding the reader cannot act on or check, and they have to open the JSON to
+        // learn something the sentence beside it was describing.
         foreach (var finding in others)
         {
-            output.AppendLine($"- **{finding.Title}.** {finding.DescriptionFor(audience)}");
+            output.AppendLine(
+                $"- **{finding.Title}.** {finding.DescriptionFor(audience)} "
+                + $"`{finding.Location}`");
         }
 
         output.AppendLine();
@@ -686,42 +701,82 @@ public static class MarkdownReportWriter
 
         output.AppendLine("## Vulnerability data");
         output.AppendLine();
-        output.AppendLine($"Dependency checks used {provenance.Describe(report.ScannedAt)}.");
+
+        // Two sentences rather than one with a hole in it. The provenance phrase is written to
+        // finish "checked against ...", and dropping it into "Dependency checks used ..."
+        // produced "Dependency checks used no vulnerability data was available."
+        output.AppendLine(
+            provenance.Origin == Dependencies.VulnerabilityDataOrigin.None
+                ? "No vulnerability data was available, so no dependency was checked against "
+                  + "published advisories."
+                : $"Dependency checks used {provenance.Describe(report.ScannedAt)}.");
+
         output.AppendLine();
 
         output.AppendLine("---");
         output.AppendLine();
         output.AppendLine($"Halation {report.ScannerVersion}");
 
-        if (report.DeepPassRan)
+        if (report.DeepPassState != DeepPassOutcome.NotRequested)
         {
             output.AppendLine(" · " + DeepPassNote(report));
         }
     }
 
     /// <summary>
-    /// What the deep pass cost, in the terms the reader actually paid in.
+    /// What the deep pass did and what it cost, in the terms the reader actually paid in.
     /// </summary>
     /// <remarks>
-    /// Three outcomes, and conflating any two of them says something untrue. A pass answered
-    /// through a Claude subscription spends quota and bills nothing, so printing its
+    /// <para>
+    /// What it did comes first, because the cost sentence used to imply it. "Includes findings
+    /// from the optional AI deep pass" was printed whenever one had been requested, under a
+    /// report where every request had failed and no finding in it came from the AI at all.
+    /// </para>
+    /// <para>
+    /// Then the money, where conflating any two of three outcomes says something untrue. A pass
+    /// answered through a Claude subscription spends quota and bills nothing, so printing its
     /// API-equivalent price would tell somebody their card was charged when it was not. A pass
-    /// that never ran costs nothing at all, and "US$0.00" would read as one that ran and was
-    /// free.
+    /// answered by an endpoint this application has never seen a price list for is neither, and
+    /// was being described as subscription quota purely because it reported no bill.
+    /// </para>
     /// </remarks>
-    private static string DeepPassNote(ScanReport report) => report switch
+    private static string DeepPassNote(ScanReport report)
     {
-        { DeepPassBackend: null } =>
-            "The optional AI deep pass was requested but did not run; see the limitations above.",
+        var what = report.DeepPassState switch
+        {
+            DeepPassOutcome.NotRun =>
+                "The optional AI deep pass was requested and did not run, so nothing above comes "
+                + "from it; see what could not be checked.",
 
-        { DeepPassCost: { } cost } =>
-            $"Includes findings from the optional AI deep pass, answered by "
-            + $"{report.DeepPassBackend}, which cost {Money(cost)} on your API key.",
+            DeepPassOutcome.Failed =>
+                $"The optional AI deep pass was requested and every request failed, so nothing "
+                + "above comes from it; see what could not be checked.",
 
-        _ => "Includes findings from the optional AI deep pass, answered by "
-             + $"{report.DeepPassBackend}. It spent your Claude subscription's quota rather "
-             + "than money, so there is no charge to expect.",
-    };
+            _ => "Includes findings from the optional AI deep pass, which read "
+                 + $"{report.DeepPassCodeReviewedPercent ?? 0}% of this application's code, "
+                 + $"answered by {report.DeepPassBackend}.",
+        };
+
+        var spent = report switch
+        {
+            // Nothing was spent, and the sentences below all describe spending. A failed pass
+            // reporting subscription quota was the original of this whole class of mistake.
+            { DeepPassTokens: null or 0 } =>
+                report.DeepPassRan ? string.Empty : " No quota or money was spent.",
+
+            { DeepPassCost: { } cost } => $" It cost {Money(cost)} on your API key.",
+
+            { DeepPassSpentSubscription: true } =>
+                " It spent your Claude subscription's quota rather than money, so there is no "
+                + "charge to expect.",
+
+            { DeepPassTokens: { } tokens } =>
+                $" It spent {tokens:N0} tokens, and Halation has no price list for that endpoint, "
+                + "so what they cost is between you and whoever runs it.",
+        };
+
+        return what + spent;
+    }
 
     /// <summary>
     /// Rounds to cents, but never down to nothing: a pass that cost a third of a cent is cheap,

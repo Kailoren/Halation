@@ -52,10 +52,43 @@ public sealed record TokenUsage
     }
 }
 
-/// <summary>What one file's review produced.</summary>
+/// <summary>What became of one request.</summary>
+/// <remarks>
+/// Stated by the backend rather than inferred from whether any findings came back. An empty
+/// findings array is the normal answer for clean code, so a run that failed and a run that found
+/// nothing are indistinguishable by their contents, and the report used to count both as reading.
+/// </remarks>
+public enum ReviewOutcome
+{
+    /// <summary>The model read what it was sent and answered.</summary>
+    Reviewed,
+
+    /// <summary>It answered, but the answer was cut short, so the code was only partly judged.</summary>
+    Partly,
+
+    /// <summary>Nothing was reviewed: it failed, was declined, or returned nothing usable.</summary>
+    Failed,
+}
+
+/// <summary>What one request produced.</summary>
 public sealed record FileReview
 {
     private readonly string? _limitation;
+
+    /// <summary>What became of it, which is what the report counts.</summary>
+    public ReviewOutcome Outcome { get; init; } = ReviewOutcome.Reviewed;
+
+    /// <summary>
+    /// Set when the failure will repeat on every remaining request, so the pass should stop.
+    /// </summary>
+    /// <remarks>
+    /// Authentication is the case this exists for. A Claude Code session that has expired and
+    /// cannot refresh fails every call in about a second, so a scan of five files spent five
+    /// calls learning the same thing once, and a scan of forty would spend forty. It is also the
+    /// cheapest real sign-in check there is: the first request of the pass is one that had to be
+    /// made anyway.
+    /// </remarks>
+    public bool StopsPass { get; init; }
 
     public IReadOnlyList<Finding> Findings { get; init; } = [];
 
@@ -110,7 +143,42 @@ public sealed record DeepPassResult
         init => _limitations = [.. value.Select(Redaction.Scrub)];
     }
 
-    public int FilesExamined { get; init; }
+    /// <summary>What actually happened, which every sentence about the pass is written from.</summary>
+    public DeepPassOutcome Outcome { get; init; } = DeepPassOutcome.NotRequested;
+
+    /// <summary>Files triage chose for the pass.</summary>
+    public int FilesSelected { get; init; }
+
+    /// <summary>Files whose own code was read in full and answered for.</summary>
+    public int FilesReviewed { get; init; }
+
+    /// <summary>Files some of which was reviewed: part failed, or part was never sent.</summary>
+    public int FilesPartlyReviewed { get; init; }
+
+    /// <summary>Files where every request failed, so nothing about them was reviewed.</summary>
+    public int FilesFailed { get; init; }
+
+    /// <summary>Files selected and never attempted, because the pass stopped or ran out of budget.</summary>
+    public int FilesNotAttempted { get; init; }
+
+    /// <summary>Requests sent, which is what a backend charges for.</summary>
+    public int Requests { get; init; }
+
+    /// <summary>
+    /// Share of the application's recovered code the model actually read, or null when the pass
+    /// did not run at all.
+    /// </summary>
+    /// <remarks>
+    /// Measured against every character recovered rather than against what was sent, so a pass
+    /// that read one file of forty cannot report 100%. Code left out of the review on purpose,
+    /// the third-party regions a bundler inlined, counts in the denominator: it is inside the
+    /// application whether or not the AI was asked about it. This is the same rule the recovery
+    /// coverage figure follows, and for the same reason.
+    /// </remarks>
+    public int? CodeReviewedPercent { get; init; }
+
+    /// <summary>Third-party code a bundler inlined, left out of the review and named in the report.</summary>
+    public IReadOnlyList<VendoredRegion> Vendored { get; init; } = [];
 
     /// <summary>
     /// Capabilities the source's own comments explain, gathered across every file read.
@@ -130,6 +198,9 @@ public sealed record DeepPassResult
     /// What answered, in the words the report uses. Null when nothing did.
     /// </summary>
     public string? Backend { get; init; }
+
+    /// <summary>Whether the run spent a subscription rather than money, so the report can say which.</summary>
+    public bool SpendsSubscription { get; init; }
 
     /// <summary>Whether <see cref="EstimatedCost"/> describes money the reader was charged.</summary>
     /// <remarks>
@@ -212,14 +283,14 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
     }
 
     /// <summary>
-    /// Reviews one file. Returns an empty result rather than throwing, so a single failure
-    /// costs one file's coverage instead of the whole pass.
+    /// Reviews one request's worth of code. Returns a result carrying a limitation rather than
+    /// throwing, so a single failure costs that much coverage instead of the whole pass.
     /// </summary>
     public async Task<FileReview> ReviewAsync(
-        TriagedFile triaged,
+        DeepPassChunk chunk,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(triaged);
+        ArgumentNullException.ThrowIfNull(chunk);
 
         try
         {
@@ -262,7 +333,7 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
 
                     Messages =
                     [
-                        new() { Role = Role.User, Content = DeepPassPrompt.BuildPrompt(triaged) },
+                        new() { Role = Role.User, Content = DeepPassPrompt.BuildPrompt(chunk) },
                     ],
                 },
                 cancellationToken).ConfigureAwait(false);
@@ -280,8 +351,9 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
                 var category = response.StopDetails?.Category ?? "unspecified";
                 return new FileReview
                 {
-                    Limitation = $"The deep pass was declined for {triaged.File.RelativePath} "
-                                 + $"(policy category: {category}), so that file was not reviewed.",
+                    Outcome = ReviewOutcome.Failed,
+                    Limitation = $"The deep pass was declined for {Describe(chunk)} "
+                                 + $"(policy category: {category}), so it was not reviewed.",
                     Usage = usage,
                 };
             }
@@ -290,8 +362,9 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
             {
                 return new FileReview
                 {
-                    Limitation = $"The review of {triaged.File.RelativePath} was cut off before it "
-                                 + "finished, so that file was only partly examined.",
+                    Outcome = ReviewOutcome.Partly,
+                    Limitation = $"The review of {Describe(chunk)} was cut off before it "
+                                 + "finished, so it was only partly examined.",
                     Usage = usage,
                     ServedByFallback = servedByFallback,
                 };
@@ -304,25 +377,56 @@ public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepP
             return text is null
                 ? new FileReview
                 {
-                    Limitation = $"The deep pass returned nothing for {triaged.File.RelativePath}.",
+                    Outcome = ReviewOutcome.Failed,
+                    Limitation = $"The deep pass returned nothing for {Describe(chunk)}.",
                     Usage = usage,
                     ServedByFallback = servedByFallback,
                 }
-                : Read(DeepPassPrompt.Parse(text, triaged), usage, servedByFallback);
+                : Read(DeepPassPrompt.Parse(text, chunk), usage, servedByFallback);
         }
         catch (Anthropic.Exceptions.AnthropicRateLimitException)
         {
+            // Stops the pass. Every remaining request would meet the same limit, and spending
+            // the rest of them to be told so again costs the reader money for nothing.
             return new FileReview
             {
-                Limitation = "The deep pass was rate limited and stopped early. "
-                             + "Findings below the point it stopped were not looked for.",
+                Outcome = ReviewOutcome.Failed,
+                StopsPass = true,
+                Limitation = "The deep pass was rate limited and stopped. Nothing after the "
+                             + "point it stopped was read.",
+            };
+        }
+        catch (Anthropic.Exceptions.AnthropicUnauthorizedException ex)
+        {
+            // Same reasoning: a key that is refused once is refused every time, so the pass
+            // ends here rather than proving it forty more times.
+            return new FileReview
+            {
+                Outcome = ReviewOutcome.Failed,
+                StopsPass = true,
+                Limitation = "The deep pass could not authenticate, so it did not run: "
+                             + $"{ex.Message}. Check the API key in Halation's settings.",
             };
         }
         catch (Anthropic.Exceptions.AnthropicApiException ex)
         {
-            return new FileReview { Limitation = $"The deep pass failed: {ex.Message}" };
+            return new FileReview
+            {
+                Outcome = ReviewOutcome.Failed,
+                Limitation = $"The deep pass failed: {ex.Message}",
+            };
         }
     }
+
+    /// <summary>
+    /// How a request is named in a limitation: the file, and which part of it when there is
+    /// more than one.
+    /// </summary>
+    internal static string Describe(DeepPassChunk chunk) =>
+        chunk.Of == 1
+            ? chunk.File.RelativePath
+            : $"{chunk.File.RelativePath} (part {chunk.Index} of {chunk.Of}, lines "
+              + $"{chunk.FirstLine:N0} to {chunk.LastLine:N0})";
 
     /// <summary>Carries the discard count out with the findings rather than losing it here.</summary>
     private static FileReview Read(DeepPassAnswer answer, TokenUsage usage, bool servedByFallback) =>

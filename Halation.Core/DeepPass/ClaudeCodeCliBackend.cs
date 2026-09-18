@@ -74,6 +74,9 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
     /// <summary>The empty directory the agent is pointed at, so a test can assert it is empty.</summary>
     internal string WorkingDirectory => _workingDirectory;
 
+    /// <summary>True. This is the route that spends a Claude plan instead of money.</summary>
+    public bool SpendsSubscription => true;
+
     /// <summary>
     /// False. The run spends the reader's subscription quota, and nothing is charged to them.
     /// </summary>
@@ -101,9 +104,20 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
     /// Asks the CLI whether it can authenticate, before a scan starts spending time on files.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Installed and signed in are separate facts, and the bundled binary keeps its own
     /// credential rather than sharing the desktop app's. Asked with <c>auth status</c>, which
     /// answers without making a request.
+    /// </para>
+    /// <para>
+    /// <b>It cannot see an expired session, and is not asked to.</b> Measured: <c>auth status</c>
+    /// answered <c>loggedIn: true</c> while the stored OAuth session had expired and could not be
+    /// refreshed, and the pass then failed on every file. The real check is the first request,
+    /// which the pass was going to make anyway, so a probe request before it would add a process
+    /// and a little quota to every scan to learn a second earlier what the first file reports for
+    /// nothing. What was missing was not a better check but the willingness to stop, which
+    /// <see cref="FileReview.StopsPass"/> now does.
+    /// </para>
     /// </remarks>
     public static async Task<ClaudeCodeCliAuth> CheckAuthenticationAsync(
         ClaudeCodeCli cli,
@@ -148,10 +162,10 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
 
     /// <inheritdoc/>
     public async Task<FileReview> ReviewAsync(
-        TriagedFile triaged,
+        DeepPassChunk chunk,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(triaged);
+        ArgumentNullException.ThrowIfNull(chunk);
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         string output;
@@ -162,7 +176,7 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
                 _cli,
                 _workingDirectory,
                 Arguments(),
-                DeepPassPrompt.BuildPrompt(triaged),
+                DeepPassPrompt.BuildPrompt(chunk),
                 FileTimeout,
                 cancellationToken).ConfigureAwait(false);
 
@@ -171,7 +185,7 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
             if (string.IsNullOrWhiteSpace(stdout))
             {
                 return Failed(
-                    triaged,
+                    chunk,
                     string.IsNullOrWhiteSpace(stderr)
                         ? $"exited with code {exitCode} and said nothing"
                         : Trim(stderr));
@@ -181,15 +195,15 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Failed(triaged, $"took longer than {FileTimeout.TotalMinutes:0} minutes");
+            return Failed(chunk, $"took longer than {FileTimeout.TotalMinutes:0} minutes");
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException
                                       or System.ComponentModel.Win32Exception)
         {
-            return Failed(triaged, ex.Message);
+            return Failed(chunk, ex.Message);
         }
 
-        return ReadResult(output, triaged);
+        return ReadResult(output, chunk);
     }
 
     /// <summary>
@@ -243,7 +257,7 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
     ];
 
     /// <summary>Reads the CLI's result envelope into a review.</summary>
-    internal FileReview ReadResult(string output, TriagedFile triaged)
+    internal FileReview ReadResult(string output, DeepPassChunk chunk)
     {
         JsonDocument document;
 
@@ -253,7 +267,7 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
         }
         catch (JsonException)
         {
-            return Failed(triaged, "returned something that was not JSON");
+            return Failed(chunk, "returned something that was not JSON");
         }
 
         using (document)
@@ -266,7 +280,7 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
             if (root.TryGetProperty("is_error", out var isError)
                 && isError.ValueKind == JsonValueKind.True)
             {
-                return Failed(triaged, Trim(Text(root, "result") ?? "reported an error"), usage);
+                return Failed(chunk, Trim(Text(root, "result") ?? "reported an error"), usage);
             }
 
             var stopReason = Text(root, "stop_reason");
@@ -275,14 +289,15 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
             {
                 return new FileReview
                 {
+                    Outcome = ReviewOutcome.Failed,
                     // Unlike the API backend, which re-serves a decline on a substitute model
                     // inside the same call, nothing here retries. The file is simply not
                     // covered, and a reader comparing this report against an API-backed one is
                     // owed that difference rather than left to assume equal coverage.
                     Limitation =
-                        $"The deep pass was declined for {triaged.File.RelativePath} on policy "
-                        + "grounds. Claude Code has no substitute model to fall back to, so that "
-                        + "file was not reviewed at all.",
+                        $"The deep pass was declined for {DeepPassClient.Describe(chunk)} on "
+                        + "policy grounds. Claude Code has no substitute model to fall back to, "
+                        + "so it was not reviewed at all.",
                     Usage = usage,
                 };
             }
@@ -291,17 +306,18 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
             {
                 return new FileReview
                 {
-                    Limitation = $"The review of {triaged.File.RelativePath} was cut off before it "
-                                 + "finished, so that file was only partly examined.",
+                    Outcome = ReviewOutcome.Partly,
+                    Limitation = $"The review of {DeepPassClient.Describe(chunk)} was cut off "
+                                 + "before it finished, so it was only partly examined.",
                     Usage = usage,
                 };
             }
 
-            var answer = ReadFindings(root, triaged);
+            var answer = ReadFindings(root, chunk);
 
             if (answer is null)
             {
-                return Failed(triaged, "returned no structured answer", usage);
+                return Failed(chunk, "returned no structured answer", usage);
             }
 
             return new FileReview
@@ -312,7 +328,7 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
                 Usage = usage,
                 ServedByFallback = SubstituteModelAnswered(root),
                 Limitation = ToolUseAttempted(root)
-                    ? $"While reviewing {triaged.File.RelativePath}, the agent attempted to use a "
+                    ? $"While reviewing {chunk.File.RelativePath}, the agent attempted to use a "
                       + "tool despite having none. That is worth knowing: it can mean the code "
                       + "being reviewed contains text aimed at the reviewer rather than at a "
                       + "compiler."
@@ -325,16 +341,16 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
     /// The findings, preferring the pre-parsed object the CLI supplies over re-parsing the text.
     /// Null when neither is present, which is a failure rather than an empty result.
     /// </summary>
-    private static DeepPassAnswer? ReadFindings(JsonElement root, TriagedFile triaged)
+    private static DeepPassAnswer? ReadFindings(JsonElement root, DeepPassChunk chunk)
     {
         if (root.TryGetProperty("structured_output", out var structured)
             && structured.ValueKind == JsonValueKind.Object)
         {
-            return DeepPassPrompt.Parse(structured.GetRawText(), triaged);
+            return DeepPassPrompt.Parse(structured.GetRawText(), chunk);
         }
 
         return Text(root, "result") is { Length: > 0 } text
-            ? DeepPassPrompt.Parse(text, triaged)
+            ? DeepPassPrompt.Parse(text, chunk)
             : null;
     }
 
@@ -402,13 +418,49 @@ public sealed class ClaudeCodeCliBackend : IDeepPassBackend
         };
     }
 
-    private static FileReview Failed(TriagedFile triaged, string what, TokenUsage? usage = null) =>
-        new()
+    private static FileReview Failed(DeepPassChunk chunk, string what, TokenUsage? usage = null)
+    {
+        var signIn = IsAuthenticationFailure(what);
+
+        return new FileReview
         {
-            Limitation = $"The deep pass failed for {triaged.File.RelativePath}: Claude Code "
-                         + $"{what}. That file was not reviewed.",
+            Outcome = ReviewOutcome.Failed,
+
+            // The pass ends on a sign-in failure rather than proving it once per file. Measured
+            // against a real application: an expired session failed all five files in under
+            // seven seconds, and the report then listed the same sentence five times while
+            // claiming the files had been read.
+            StopsPass = signIn,
+            Limitation = signIn
+                ? $"The deep pass could not sign in to Claude Code, so it did not run: {what}. "
+                  + "Run \"claude auth login\" in a terminal and scan again."
+                : $"The deep pass failed for {DeepPassClient.Describe(chunk)}: Claude Code "
+                  + $"{what}. That was not reviewed.",
             Usage = usage ?? new TokenUsage(),
         };
+    }
+
+    /// <summary>
+    /// Whether what the CLI said is about the credential rather than about the code.
+    /// </summary>
+    /// <remarks>
+    /// Read out of the message because the CLI reports it no other way: an expired session
+    /// arrives as an ordinary error envelope carrying "Failed to authenticate: OAuth session
+    /// expired and could not be refreshed", indistinguishable in shape from any other failure.
+    /// The markers are ones that cannot describe a fault in the file being reviewed.
+    /// </remarks>
+    internal static bool IsAuthenticationFailure(string message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+
+        string[] markers =
+        [
+            "authenticate", "authentication", "oauth", "not logged in", "please run /login",
+            "invalid api key", "unauthorized", "401",
+        ];
+
+        return markers.Any(m => message.Contains(m, StringComparison.OrdinalIgnoreCase));
+    }
 
     private static string? Text(JsonElement element, string name) =>
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String

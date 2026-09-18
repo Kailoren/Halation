@@ -196,18 +196,35 @@ public sealed class Scanner
                 VulnerabilityData = lookup.Provenance,
                 MatchesDiscounted = analysis.MatchesDiscounted,
                 ManifestsUnresolved = dependencies.Unresolved.Count,
+
+                // Libraries with no manifest of their own, which is what a bundler leaves. They
+                // are unchecked rather than absent, and the report says so rather than reading
+                // the empty dependency list as an application that has none.
+                PackagesBundled = dependencies.Bundled.Count,
             },
             Checks = new CheckSummary { Checks = analysis.Checks },
-            DeepPassRan = options.DeepPassEnabled,
+
+            // What happened, not what was requested. The two were the same field until a pass
+            // that failed on every file reported itself as a pass that had read them.
+            DeepPassState = options.DeepPassEnabled
+                ? deepPass.Outcome
+                : DeepPassOutcome.NotRequested,
+            DeepPassFilesSelected = deepPass.FilesSelected,
+            DeepPassFilesReviewed = deepPass.FilesReviewed,
+            DeepPassFilesPartlyReviewed = deepPass.FilesPartlyReviewed,
+            DeepPassFilesFailed = deepPass.FilesFailed,
+            DeepPassCodeReviewedPercent = deepPass.CodeReviewedPercent,
+            DeepPassSpentSubscription = deepPass.SpendsSubscription && deepPass.Requests > 0,
 
             // BilledCost, not EstimatedCost. A subscription-backed pass has a real token cost
             // and a bill of nothing; reporting the former as the latter would tell somebody
             // their card was charged when it was not.
-            DeepPassCost = deepPass.Backend is not null ? deepPass.BilledCost : null,
+            DeepPassCost = deepPass.Requests > 0 ? deepPass.BilledCost : null,
 
             // Always available where a cost may not be, so a pass answered by an endpoint
-            // nobody can price still says what it consumed.
-            DeepPassTokens = deepPass.Backend is null
+            // nobody can price still says what it consumed. Null when nothing was sent, which
+            // is a different statement from zero.
+            DeepPassTokens = deepPass.Requests == 0
                 ? null
                 : deepPass.Usage.TotalInput + deepPass.Usage.Output,
             DeepPassBackend = deepPass.Backend,

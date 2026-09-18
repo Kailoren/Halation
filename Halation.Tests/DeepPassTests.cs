@@ -101,6 +101,78 @@ public class DeepPassTests
                                        && s.Reason.Contains("calls into", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// What "calls into" has to mean. The flagged file in a real Electron application was
+    /// <c>index.cjs</c>, and every other file in the archive counted as a caller because its
+    /// text contained the word "index" somewhere. The report then said so, four times.
+    /// </summary>
+    [Fact]
+    public void Mentioning_a_flagged_files_name_in_passing_is_not_calling_it()
+    {
+        var selected = DeepPassTriage.Select(
+            [
+                File("dist/main/index.cjs", "require('node:child_process');"),
+                File("dist/renderer/app.js", "const i = list.findIndex(x => x.index === 2);"),
+            ],
+            findings: [FindingIn("dist/main/index.cjs")]);
+
+        Assert.DoesNotContain(selected, s => s.File.RelativePath == "dist/renderer/app.js");
+    }
+
+    [Theory]
+    [InlineData("const main = require('./index.cjs');")]
+    [InlineData("import { run } from '../main/index.cjs';")]
+    [InlineData("const mod = await import('./index');")]
+    public void A_real_module_reference_counts_as_a_caller(string code)
+    {
+        var selected = DeepPassTriage.Select(
+            [
+                File("dist/main/index.cjs", "require('node:child_process');"),
+                File("dist/main/start.js", code),
+            ],
+            findings: [FindingIn("dist/main/index.cjs")]);
+
+        Assert.Contains(selected, s => s.File.RelativePath == "dist/main/start.js"
+                                       && s.Reason.Contains("calls into", StringComparison.Ordinal));
+    }
+
+    /// <summary>Markup reaches a script the same way, and is where a renderer bundle is named.</summary>
+    [Fact]
+    public void Markup_that_loads_a_flagged_script_counts_as_a_caller()
+    {
+        var selected = DeepPassTriage.Select(
+            [
+                File("dist/renderer/assets/index-CViRyDiH.js", "fetch(url);"),
+                File("dist/renderer/index.html",
+                     "<script type=\"module\" src=\"./assets/index-CViRyDiH.js\"></script>"),
+            ],
+            findings: [FindingIn("dist/renderer/assets/index-CViRyDiH.js")]);
+
+        Assert.Contains(selected, s => s.File.RelativePath == "dist/renderer/index.html");
+    }
+
+    /// <summary>
+    /// A package that happens to end in the same word is not this application's file. Decompiled
+    /// C# keeps the older rule, where naming the type is how one file reaches another.
+    /// </summary>
+    [Fact]
+    public void A_package_specifier_ending_in_the_same_word_is_not_a_caller()
+    {
+        var selected = DeepPassTriage.Select(
+            [
+                File("src/index.js", "fetch(url);"),
+                File("src/other.js", "const _ = require('lodash/index');"),
+            ],
+            findings: [FindingIn("src/index.js")]);
+
+        // It is still read, because requiring anything is untrusted surface in its own right.
+        // What it is not is a caller of the flagged file, and the report prints the reason.
+        Assert.DoesNotContain(
+            selected,
+            s => s.File.RelativePath == "src/other.js"
+                 && s.Reason.Contains("calls into", StringComparison.Ordinal));
+    }
+
     /// <summary>Flagged files carry their findings, so the model judges rather than rediscovers.</summary>
     [Fact]
     public void Passes_known_findings_along_with_the_flagged_file()
@@ -176,13 +248,181 @@ public class DeepPassTests
         Assert.True(triage.HitCeiling);
     }
 
+    /// <summary>
+    /// The silent truncation this replaced. An 11,112 line Electron bundle was sent as far as
+    /// line 1,895, the prompt still listed the rule findings at lines 5,276 and 9,608, and the
+    /// report said the file had been read.
+    /// </summary>
     [Fact]
-    public void Truncates_a_file_too_large_to_send_rather_than_dropping_it()
+    public void A_file_too_large_for_one_request_is_split_rather_than_cut_off()
     {
-        var excerpt = DeepPassTriage.Excerpt(File("Big.cs", new string('x', 200_000)));
+        var content = string.Join("\n", Enumerable.Repeat("var value = compute(input);", 20_000));
 
-        Assert.True(excerpt.Length < 200_000);
-        Assert.Contains("truncated", excerpt, StringComparison.Ordinal);
+        var split = DeepPassChunker.Split(new TriagedFile
+        {
+            File = File("Big.cs", content),
+            Reason = "test",
+        });
+
+        Assert.True(split.Chunks.Count > 1);
+
+        // Every line, in order, with no gap between one request and the next.
+        Assert.Equal(1, split.Chunks[0].FirstLine);
+        Assert.Equal(20_000, split.Chunks[^1].LastLine);
+
+        for (var i = 1; i < split.Chunks.Count; i++)
+        {
+            Assert.Equal(split.Chunks[i - 1].LastLine + 1, split.Chunks[i].FirstLine);
+        }
+
+        Assert.All(split.Chunks, c => Assert.True(c.Chars <= DeepPassChunker.MaxChunkChars));
+        Assert.DoesNotContain("truncated", split.Chunks[0].NumberedCode, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A minified bundle is 1.4 million characters on 34 lines, so splitting on line boundaries
+    /// alone would put the whole file in one request or drop it.
+    /// </summary>
+    [Fact]
+    public void A_single_line_longer_than_a_request_is_split_across_requests()
+    {
+        var split = DeepPassChunker.Split(new TriagedFile
+        {
+            File = File("bundle.js", new string('x', 200_000)),
+            Reason = "test",
+        });
+
+        Assert.True(split.Chunks.Count > 1);
+
+        // Every part keeps the line's own number, because that is what a quotation resolves
+        // against once the answer comes back.
+        Assert.All(split.Chunks, c => Assert.Equal(1, c.FirstLine));
+        Assert.Equal(200_000, split.Chunks.Sum(c => c.Chars) - split.Chunks.Count);
+    }
+
+    /// <summary>The numbers a model is asked to cite have to be the file's own.</summary>
+    [Fact]
+    public void Later_requests_number_lines_as_the_file_does()
+    {
+        var content = string.Join("\n", Enumerable.Repeat("var value = compute(input);", 8_000));
+
+        var split = DeepPassChunker.Split(new TriagedFile
+        {
+            File = File("Big.cs", content),
+            Reason = "test",
+        });
+
+        var second = split.Chunks[1];
+
+        Assert.Contains(
+            $"{second.FirstLine}| ", second.NumberedCode, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Findings from elsewhere in the file are not listed on a request that does not carry the
+    /// code they name, because a model asked about code it cannot see answers from the title.
+    /// </summary>
+    [Fact]
+    public void Each_request_carries_only_the_findings_inside_it()
+    {
+        var content = string.Join("\n", Enumerable.Repeat("var value = compute(input);", 8_000));
+
+        var split = DeepPassChunker.Split(new TriagedFile
+        {
+            File = File("Big.cs", content),
+            Reason = "test",
+            KnownFindings =
+            [
+                FindingIn("Big.cs") with { Title = "Early problem", Line = 5 },
+                FindingIn("Big.cs") with { Title = "Late problem", Line = 7_500 },
+            ],
+        });
+
+        var first = DeepPassPrompt.BuildPrompt(split.Chunks[0]);
+        var last = DeepPassPrompt.BuildPrompt(split.Chunks[^1]);
+
+        Assert.Contains("Early problem", first, StringComparison.Ordinal);
+        Assert.DoesNotContain("Late problem", first, StringComparison.Ordinal);
+        Assert.Contains("Late problem", last, StringComparison.Ordinal);
+
+        // And it says which part of the file this is, so reachability is answered honestly.
+        Assert.Contains("part 1 of", first, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A bundled library is somebody else's code. Skipping it is allowed; skipping it quietly
+    /// is not, so the prompt says so and the regions are carried out for the report.
+    /// </summary>
+    [Fact]
+    public void Bundled_third_party_regions_are_left_out_and_named()
+    {
+        var content = string.Join("\n",
+        [
+            "const own = require('./thing');",
+            "//#region node_modules/fflate/esm/browser.js",
+            "function inflate() { return 1; }",
+            "//#endregion",
+            "run(own);",
+        ]);
+
+        var split = DeepPassChunker.Split(new TriagedFile
+        {
+            File = File("bundle.js", content),
+            Reason = "test",
+        });
+
+        var region = Assert.Single(split.Vendored);
+
+        Assert.Equal("fflate", region.Name);
+        Assert.Equal(2, region.FirstLine);
+        Assert.Equal(4, region.LastLine);
+
+        var chunk = Assert.Single(split.Chunks);
+
+        Assert.DoesNotContain("function inflate", chunk.NumberedCode, StringComparison.Ordinal);
+        Assert.Contains("const own", chunk.NumberedCode, StringComparison.Ordinal);
+        Assert.Contains(
+            "fflate", DeepPassPrompt.BuildPrompt(chunk), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// An unclosed marker excludes nothing. Dropping the rest of a file on the strength of one
+    /// unmatched comment would hand the reader their own code back as somebody else's.
+    /// </summary>
+    [Fact]
+    public void An_unclosed_region_marker_excludes_nothing()
+    {
+        var content = "//#region node_modules/fflate/esm/browser.js\nconst own = read(input);";
+
+        var split = DeepPassChunker.Split(new TriagedFile
+        {
+            File = File("bundle.js", content),
+            Reason = "test",
+        });
+
+        Assert.Empty(split.Vendored);
+        Assert.Contains(
+            "const own", split.Chunks[0].NumberedCode, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The plan is what the pass sends and what anything estimating it reads, so the ceiling
+    /// has to bind requests rather than files.
+    /// </summary>
+    [Fact]
+    public void The_plan_stops_at_the_request_ceiling_and_says_so()
+    {
+        var big = File("Big.cs", string.Join(
+            "\n", Enumerable.Repeat("var value = compute(input);", 20_000)));
+
+        var plan = DeepPassPlan.Build(
+            [big],
+            [new TriagedFile { File = big, Reason = "test" }],
+            maxRequests: 2);
+
+        Assert.Equal(2, plan.Requests.Count);
+        Assert.True(plan.HitRequestCeiling);
+        Assert.Equal(1, plan.PartialFiles);
     }
 
     // ---- What comes back from the model ------------------------------------
@@ -388,11 +628,12 @@ public class DeepPassTests
             },
         });
 
-    private static TriagedFile Triaged(string content = "var x = 1;") => new()
-    {
-        File = File("app.cs", content),
-        Reason = "test",
-    };
+    private static DeepPassChunk Triaged(string content = "var x = 1;") =>
+        DeepPassChunker.Split(new TriagedFile
+        {
+            File = File("app.cs", content),
+            Reason = "test",
+        }).Chunks[0];
 
     // ---- The progress line -------------------------------------------------
 
@@ -404,7 +645,7 @@ public class DeepPassTests
 
         public decimal? PriceOf(TokenUsage usage) => usage.EstimatedCost;
 
-        public Task<FileReview> ReviewAsync(TriagedFile triaged, CancellationToken ct = default) =>
+        public Task<FileReview> ReviewAsync(DeepPassChunk chunk, CancellationToken ct = default) =>
             Task.FromResult(new FileReview());
 
         public void Dispose()

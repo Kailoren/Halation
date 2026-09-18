@@ -33,6 +33,17 @@ public interface IDeepPassBackend : IDisposable
     bool BillsTheReader { get; }
 
     /// <summary>
+    /// Whether the run spends a subscription the reader already holds rather than money.
+    /// </summary>
+    /// <remarks>
+    /// Asked outright because the footer used to infer it: any backend that reported no bill was
+    /// described as having spent "your Claude subscription's quota", which is a sentence about
+    /// Anthropic printed under a scan answered by a model on the reader's own graphics card.
+    /// False by default, so a new backend has to claim this rather than fall into it.
+    /// </remarks>
+    bool SpendsSubscription => false;
+
+    /// <summary>
     /// What this many tokens are worth in US dollars, or null when the backend cannot know.
     /// </summary>
     /// <remarks>
@@ -46,8 +57,8 @@ public interface IDeepPassBackend : IDisposable
     decimal? PriceOf(TokenUsage usage);
 
     /// <summary>
-    /// Reviews one file. Returns a result carrying a limitation rather than throwing, so a
-    /// single failure costs one file's coverage instead of the whole pass.
+    /// Reviews one request's worth of code. Returns a result carrying a limitation rather than
+    /// throwing, so a single failure costs that much coverage instead of the whole pass.
     /// </summary>
-    Task<FileReview> ReviewAsync(TriagedFile triaged, CancellationToken cancellationToken = default);
+    Task<FileReview> ReviewAsync(DeepPassChunk chunk, CancellationToken cancellationToken = default);
 }

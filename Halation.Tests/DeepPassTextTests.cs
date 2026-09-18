@@ -129,14 +129,15 @@ public class DeepPassTextTests
             },
         });
 
-    private static TriagedFile Triaged() => new()
-    {
-        File = new Core.Recovery.RecoveredFile
+    private static DeepPassChunk Triaged() =>
+        DeepPassChunker.Split(new TriagedFile
         {
-            RelativePath = "src/MainViewModel.cs",
-            Content = "var url = response.UpdateUrl;",
-            Language = Core.Recovery.SourceLanguage.CSharp,
-        },
-        Reason = "test",
-    };
+            File = new Core.Recovery.RecoveredFile
+            {
+                RelativePath = "src/MainViewModel.cs",
+                Content = "var url = response.UpdateUrl;",
+                Language = Core.Recovery.SourceLanguage.CSharp,
+            },
+            Reason = "test",
+        }).Chunks[0];
 }

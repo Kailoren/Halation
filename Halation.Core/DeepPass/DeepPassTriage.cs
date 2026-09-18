@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
 
 using Halation.Core.Model;
@@ -46,8 +44,17 @@ public static class DeepPassTriage
     /// <summary>Ceiling on files sent, so a large application cannot run away with the key holder's money.</summary>
     public const int DefaultMaxFiles = 40;
 
-    /// <summary>Files above this are truncated rather than dropped, so a big file is still looked at.</summary>
-    private const int MaxFileChars = 60_000;
+    /// <summary>
+    /// Ceiling on requests, which is what a file costs now that a large one takes several.
+    /// </summary>
+    /// <remarks>
+    /// Twice the file ceiling. Files are no longer truncated at sixty thousand characters, so
+    /// the file count stopped bounding the spend: one minified renderer bundle is two dozen
+    /// requests on its own. This holds the worst case near where the file ceiling used to put
+    /// it, and a pass that reaches it says so and reports the coverage it actually achieved
+    /// rather than reading on quietly.
+    /// </remarks>
+    public const int DefaultMaxRequests = 80;
 
     /// <summary>
     /// Calls that put data the application does not control into its hands, or hand its data
@@ -158,23 +165,57 @@ public static class DeepPassTriage
     }
 
     /// <summary>
-    /// Files that name a flagged file's type. A crude call graph, deliberately: resolving
-    /// real ones across decompiled C#, minified JavaScript and Python is a compiler's job,
-    /// and being approximate here costs a few extra files rather than a wrong answer.
+    /// How one file names another: a module specifier, an imported path, or a script the markup
+    /// pulls in.
     /// </summary>
+    /// <remarks>
+    /// The group name repeats across the alternatives on purpose, so whichever one matched, the
+    /// specifier lands in the same capture.
+    /// </remarks>
+    private static readonly Regex ModuleReference = PatternRule.Compile(
+        """
+        require\s*\(\s*["'](?<ref>[^"']+)["']
+        |import\s*\(\s*["'](?<ref>[^"']+)["']
+        |\bfrom\s+["'](?<ref>[^"']+)["']
+        |\bimport\s+["'](?<ref>[^"']+)["']
+        |importScripts\s*\(\s*["'](?<ref>[^"']+)["']
+        |\b(?:src|href)\s*=\s*["'](?<ref>[^"']+)["']
+        |@import\s+(?:url\()?\s*["'](?<ref>[^"']+)["']
+        """,
+        RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+
+    /// <summary>
+    /// Files that really do reach a flagged one. A crude call graph, deliberately: resolving
+    /// real ones across decompiled C#, minified JavaScript and Python is a compiler's job, and
+    /// being approximate here costs a few extra files rather than a wrong answer.
+    /// </summary>
+    /// <remarks>
+    /// <b>Approximate is not the same as meaningless.</b> This used to count any file whose text
+    /// contained the flagged file's stem anywhere. On an Electron application the flagged file
+    /// was <c>index.cjs</c>, so every other file in the archive "called" it on the strength of
+    /// the word "index", and the report said so in as many words. Script languages are matched on
+    /// the specifier they would actually import, and everything else on a whole-word occurrence
+    /// of the name, which for a decompiled assembly is the type it would have to mention.
+    /// </remarks>
     private static IEnumerable<RecoveredFile> CallersOf(
         IReadOnlyList<RecoveredFile> files,
         IReadOnlyList<string> flaggedPaths)
     {
-        var names = flaggedPaths
-            .Select(p => Path.GetFileNameWithoutExtension(p))
-            .Where(n => n.Length > 3)
-            .ToHashSet(StringComparer.Ordinal);
+        var flagged = flaggedPaths
+            .Select(p => (Path: p.Replace('\\', '/'), Stem: Path.GetFileNameWithoutExtension(p)))
+            .ToList();
 
-        if (names.Count == 0)
-        {
-            yield break;
-        }
+        var stems = flagged
+            .Select(f => f.Stem)
+            .Where(s => s.Length > 3)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        var identifier = stems.Count == 0
+            ? null
+            : new Regex(
+                @"\b(?:" + string.Join('|', stems.Select(Regex.Escape)) + @")\b",
+                RegexOptions.CultureInvariant);
 
         foreach (var file in files)
         {
@@ -183,57 +224,47 @@ public static class DeepPassTriage
                 continue;
             }
 
-            if (names.Any(n => file.Content.Contains(n, StringComparison.Ordinal)))
+            var imports = file.Language
+                is SourceLanguage.JavaScript or SourceLanguage.TypeScript
+                or SourceLanguage.Markup or SourceLanguage.Json;
+
+            if (imports
+                ? ModuleReference.Matches(file.Content).Any(m => NamesOneOf(m, flagged))
+                : identifier?.IsMatch(file.Content) == true)
             {
                 yield return file;
             }
         }
     }
 
-    private static bool HandlesUntrustedInput(RecoveredFile file) =>
-        UntrustedSurface.IsMatch(file.Content);
-
-    /// <summary>Trims a file to what will be sent, so cost is predictable before the call.</summary>
-    public static string Excerpt(RecoveredFile file)
-    {
-        ArgumentNullException.ThrowIfNull(file);
-
-        return file.Content.Length <= MaxFileChars
-            ? file.Content
-            : file.Content[..MaxFileChars] + "\n\n// [truncated by Halation at 60,000 characters]";
-    }
-
-    /// <summary>
-    /// The same excerpt with every line numbered, which is what actually goes to the model.
-    /// </summary>
+    /// <summary>Whether a specifier resolves to one of the flagged files.</summary>
     /// <remarks>
-    /// <para>
-    /// A model cannot cite a line it was never shown the number of. Sent as plain text, the only
-    /// way for it to indicate where something is was to reproduce the code, which is a thing
-    /// small models do badly and sometimes do not do at all: they describe the file instead and
-    /// the description reaches the reader dressed as a quotation. Numbering costs a few
-    /// characters a line and turns the answer into a reference this application can resolve
-    /// against its own copy. See <see cref="EvidenceLocator"/>.
-    /// </para>
-    /// <para>
-    /// Numbering happens after the trim rather than before it, so the ceiling continues to bound
-    /// the amount of the reader's code that is sent rather than a total that mostly is not code.
-    /// The prompt is therefore a little larger than <see cref="MaxFileChars"/>, by roughly the
-    /// number of lines times six.
-    /// </para>
+    /// Two ways to be sure enough. The specifier can end with the flagged file's own path, which
+    /// settles it outright; or it can be a relative path whose last segment is the flagged file's
+    /// name, which is what a sibling import looks like. A bare package specifier that happens to
+    /// end in the same word, <c>lodash/index</c> against this application's own <c>index.js</c>,
+    /// is neither.
     /// </remarks>
-    public static string NumberedExcerpt(RecoveredFile file)
+    private static bool NamesOneOf(Match match, IReadOnlyList<(string Path, string Stem)> flagged)
     {
-        var lines = Excerpt(file).ReplaceLineEndings("\n").Split('\n');
-        var builder = new StringBuilder(lines.Length * 8);
+        var specifier = match.Groups["ref"].Value.Split('?', '#')[0].Replace('\\', '/');
 
-        for (var i = 0; i < lines.Length; i++)
+        if (specifier.Length == 0)
         {
-            builder.Append((i + 1).ToString(CultureInfo.InvariantCulture).PadLeft(4))
-                   .Append("| ")
-                   .AppendLine(lines[i]);
+            return false;
         }
 
-        return builder.ToString().TrimEnd('\n');
+        var trimmed = specifier.TrimStart('.', '/');
+        var relative = specifier.StartsWith('.') || specifier.StartsWith('/');
+        var leaf = Path.GetFileNameWithoutExtension(specifier);
+
+        return flagged.Any(f =>
+            (trimmed.Length > 0
+             && (f.Path.Equals(trimmed, StringComparison.OrdinalIgnoreCase)
+                 || f.Path.EndsWith('/' + trimmed, StringComparison.OrdinalIgnoreCase)))
+            || (relative && leaf.Equals(f.Stem, StringComparison.OrdinalIgnoreCase)));
     }
+
+    private static bool HandlesUntrustedInput(RecoveredFile file) =>
+        UntrustedSurface.IsMatch(file.Content);
 }

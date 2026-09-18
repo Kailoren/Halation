@@ -180,3 +180,38 @@ public enum ArtifactKind
     /// <summary>A generic archive whose contents still need classifying.</summary>
     Archive,
 }
+
+/// <summary>
+/// What became of the optional AI deep pass.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Five states rather than a flag, because a flag could only say whether the pass was asked
+/// for. A pass where every request failed used to be reported as one that ran: the report said
+/// the files had been "read a second time by the AI", named the thing that "answered", and
+/// claimed its findings were included, all with zero tokens spent. Every sentence about the
+/// deep pass now reads this instead of the request.
+/// </para>
+/// <para>
+/// <see cref="PartlyReviewed"/> covers both halves of partial: some files reviewed and others
+/// not, and files read in part because the request budget ran out before the whole of them
+/// could be sent.
+/// </para>
+/// </remarks>
+public enum DeepPassOutcome
+{
+    /// <summary>Nobody asked for it.</summary>
+    NotRequested,
+
+    /// <summary>Asked for, and nothing was reviewed: no backend, no sign-in, or nothing worth reading.</summary>
+    NotRun,
+
+    /// <summary>Every file it tried to read failed.</summary>
+    Failed,
+
+    /// <summary>Some of the code selected for it was reviewed and some was not.</summary>
+    PartlyReviewed,
+
+    /// <summary>Everything selected for it was reviewed in full.</summary>
+    Reviewed,
+}

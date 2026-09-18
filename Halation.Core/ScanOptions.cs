@@ -67,6 +67,15 @@ public sealed record ScanOptions
     /// <summary>Ceiling on files the deep pass sends, since the key holder pays per file.</summary>
     public int DeepPassMaxFiles { get; init; } = DeepPass.DeepPassTriage.DefaultMaxFiles;
 
+    /// <summary>
+    /// Ceiling on requests the deep pass makes, which is what is actually billed.
+    /// </summary>
+    /// <remarks>
+    /// A large file is read in several requests rather than truncated, so the file ceiling
+    /// stopped being a bound on the spend. This is the one that is.
+    /// </remarks>
+    public int DeepPassMaxRequests { get; init; } = DeepPass.DeepPassTriage.DefaultMaxRequests;
+
     /// <summary>Overrides the deep pass model. Unset uses the current default.</summary>
     public string? DeepPassModel { get; init; }
 
