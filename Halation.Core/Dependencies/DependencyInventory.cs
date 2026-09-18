@@ -35,6 +35,19 @@ public sealed record DependencyInventoryResult
     /// </summary>
     public IReadOnlyList<string> Unresolved { get; init; } = [];
 
+    /// <summary>
+    /// Libraries a bundler compiled into the application's own files, named and unversioned.
+    /// </summary>
+    /// <remarks>
+    /// These are dependencies by every meaning except the one a manifest records. An Electron
+    /// build whose <c>package.json</c> declares nothing because everything was inlined used to
+    /// read as an application with no dependencies at all, which is the strongest possible
+    /// statement about its supply chain and was made on no evidence. They are counted here and
+    /// reported as unchecked: see <see cref="Recovery.BundleMarkers"/> for why no version can be
+    /// recovered for them.
+    /// </remarks>
+    public IReadOnlyList<string> Bundled { get; init; } = [];
+
     public IReadOnlyList<string> Notes { get; init; } = [];
 
     public static DependencyInventoryResult Empty { get; } = new() { Dependencies = [] };
@@ -68,9 +81,20 @@ public static class DependencyInventory
         var unresolved = new List<string>();
         var notes = new List<string>();
         var vendoredLocks = new List<string>();
+        var bundled = new List<string>();
 
         foreach (var file in files)
         {
+            // Read from the file's own text rather than from a manifest, because that is the
+            // only place it is recorded once a bundler has flattened everything into one file.
+            foreach (var package in Recovery.BundleMarkers.PackagesIn(file.Content))
+            {
+                if (!bundled.Contains(package, StringComparer.Ordinal))
+                {
+                    bundled.Add(package);
+                }
+            }
+
             if (found.Count >= MaxDependencies)
             {
                 notes.Add($"Stopped after {MaxDependencies:N0} dependencies.");
@@ -150,10 +174,26 @@ public static class DependencyInventory
                 + "similar, was not seen and is not included in this list.");
         }
 
+        // Named rather than counted. "Some libraries are bundled" is a sentence a reader cannot
+        // act on; a list of them is one they can look up themselves, which is the only check
+        // available once the version is gone.
+        if (bundled.Count > 0)
+        {
+            var shown = string.Join(", ", bundled.Take(10).Order(StringComparer.Ordinal));
+            var rest = bundled.Count > 10 ? $", and {bundled.Count - 10:N0} more" : "";
+
+            notes.Add(
+                $"{bundled.Count:N0} librar{(bundled.Count == 1 ? "y is" : "ies are")} compiled "
+                + "into this application's own files by its build tool, and could not be checked "
+                + "against published advisories because a bundle records the package but not the "
+                + $"version: {shown}{rest}.");
+        }
+
         return new DependencyInventoryResult
         {
             Dependencies = [.. found.Values.OrderBy(d => d.Coordinate, StringComparer.Ordinal)],
             Unresolved = unresolved,
+            Bundled = [.. bundled.Order(StringComparer.Ordinal)],
             Notes = notes,
         };
     }

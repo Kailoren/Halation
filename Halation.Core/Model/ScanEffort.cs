@@ -42,6 +42,18 @@ public sealed record ScanEffort
     /// </remarks>
     public int ManifestsUnresolved { get; init; }
 
+    /// <summary>
+    /// Libraries compiled into the application's own files by a bundler.
+    /// </summary>
+    /// <remarks>
+    /// Counted because they are the difference between an application that has no dependencies
+    /// and one whose dependencies are no longer separate files. Nothing about them can be checked
+    /// against an advisory database, since a bundle records which package was inlined and not
+    /// which version, so they belong in the receipt and in
+    /// <see cref="ScanReport.DependencyCaveat"/> rather than in the resolved count.
+    /// </remarks>
+    public int PackagesBundled { get; init; }
+
     public required VulnerabilityDataProvenance VulnerabilityData { get; init; }
 
     /// <summary>
@@ -101,6 +113,14 @@ public sealed record ScanEffort
             lines.Add(
                 $"Resolved {PackagesResolved:N0} packages, none of which could be checked: "
                 + $"{VulnerabilityData.Describe(scannedAt)}.");
+        }
+
+        if (PackagesBundled > 0)
+        {
+            lines.Add(
+                $"Found {PackagesBundled:N0} librar{(PackagesBundled == 1 ? "y" : "ies")} "
+                + "compiled into the application's own files, which carry no version and so "
+                + "could not be checked against advisories.");
         }
 
         return lines;

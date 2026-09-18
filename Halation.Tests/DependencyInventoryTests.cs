@@ -16,6 +16,46 @@ public class DependencyInventoryTests
     private static string Manifest(string name, string version) =>
         $$"""{"name":"{{name}}","version":"{{version}}"}""";
 
+    /// <summary>
+    /// The case that made an application with a supply chain look like one without. A bundled
+    /// Electron build ships a package.json declaring no dependencies at all, because the build
+    /// tool compiled them into the code, and the report read that as an application that
+    /// genuinely has none.
+    /// </summary>
+    [Fact]
+    public void Libraries_a_bundler_inlined_are_found_and_reported_as_unchecked()
+    {
+        var result = Extract(
+            ("package.json", """{"name":"app","version":"1.0.0"}"""),
+            ("dist/main/index.cjs", """
+                //#region node_modules/lossless-json/lib/esm/index.js
+                function parse() { }
+                //#endregion
+                //#region node_modules/@scope/fflate/esm/browser.js
+                function inflate() { }
+                //#endregion
+                """));
+
+        Assert.Empty(result.Dependencies);
+        Assert.Equal(["@scope/fflate", "lossless-json"], result.Bundled);
+
+        var note = result.Notes.Single(n => n.Contains("compiled into", StringComparison.Ordinal));
+
+        // Named, because a count is not something a reader can look up, and said to be
+        // unchecked rather than absent.
+        Assert.Contains("lossless-json", note, StringComparison.Ordinal);
+        Assert.Contains("not the version", note, StringComparison.Ordinal);
+    }
+
+    /// <summary>A file with no markers costs nothing and claims nothing.</summary>
+    [Fact]
+    public void Ordinary_code_reports_no_bundled_libraries()
+    {
+        var result = Extract(("src/app.js", "const x = require('fs');"));
+
+        Assert.Empty(result.Bundled);
+    }
+
     [Fact]
     public void Vendored_manifest_resolves_to_an_exact_package()
     {
