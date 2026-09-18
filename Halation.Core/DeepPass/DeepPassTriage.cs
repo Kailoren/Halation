@@ -50,11 +50,34 @@ public static class DeepPassTriage
     /// <remarks>
     /// Twice the file ceiling. Files are no longer truncated at sixty thousand characters, so
     /// the file count stopped bounding the spend: one minified renderer bundle is two dozen
-    /// requests on its own. This holds the worst case near where the file ceiling used to put
-    /// it, and a pass that reaches it says so and reports the coverage it actually achieved
-    /// rather than reading on quietly.
+    /// requests on its own. A pass that uses every request sends twice what forty truncated
+    /// files could, so the worst case is double the old one; <see cref="CeilingCostUsd"/> is
+    /// what the interface quotes for it. A pass that reaches the ceiling says so and reports the
+    /// coverage it actually achieved rather than reading on quietly.
     /// </remarks>
     public const int DefaultMaxRequests = 80;
+
+    /// <summary>
+    /// Roughly what a pass that uses every request costs on an Anthropic API key, in US dollars.
+    /// </summary>
+    /// <remarks>
+    /// Worked out on paper, with no scan measured at the ceiling. <see cref="CeilingChars"/>
+    /// characters is somewhere between 1.2 and 1.5 million input tokens at Claude Opus 5's
+    /// US$5 a million, plus the findings that come back at US$25 a million. The app's cost copy
+    /// interpolates this; docs/setup.html states it in prose and has to be changed by hand.
+    /// </remarks>
+    public const int CeilingCostUsd = 10;
+
+    /// <summary>
+    /// What a pass that uses every request sends, which is the size <see cref="CeilingCostUsd"/>
+    /// was worked out for.
+    /// </summary>
+    /// <remarks>
+    /// A test checks this against the two limits, so moving either one fails until the figure
+    /// is worked out again. The quoted figure stayed at five dollars once already after the
+    /// request ceiling doubled what a scan could send.
+    /// </remarks>
+    public const long CeilingChars = 4_800_000;
 
     /// <summary>
     /// Calls that put data the application does not control into its hands, or hand its data

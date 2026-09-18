@@ -106,7 +106,9 @@
           thousand characters used to be dropped silently, so an 11,000 line bundle was reviewed
           as far as line 1,895 while the prompt still listed findings past the cut. Files now go
           in parts with their own line numbers, and the pass is capped at 80 requests. Libraries
-          a bundler inlined are skipped and named.
+          a bundler inlined are skipped and named. A pass that reaches the cap can send twice
+          what it could before, so on an API key the most one scan costs is now around ten
+          dollars, up from five.
         </li>
         <li>
           <strong>Zipped and unpacked builds agree.</strong> The launcher signature check ran

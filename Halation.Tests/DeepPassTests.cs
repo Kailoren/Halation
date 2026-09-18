@@ -300,6 +300,18 @@ public class DeepPassTests
         Assert.Equal(200_000, split.Chunks.Sum(c => c.Chars) - split.Chunks.Count);
     }
 
+    /// <summary>
+    /// The worst-case figure the interface quotes was worked out for one size of pass. When a
+    /// limit moves, the figure has to be worked out again, here and in docs/setup.html.
+    /// </summary>
+    [Fact]
+    public void The_quoted_worst_case_cost_matches_the_current_limits()
+    {
+        Assert.Equal(
+            DeepPassTriage.CeilingChars,
+            (long)DeepPassTriage.DefaultMaxRequests * DeepPassChunker.MaxChunkChars);
+    }
+
     /// <summary>The numbers a model is asked to cite have to be the file's own.</summary>
     [Fact]
     public void Later_requests_number_lines_as_the_file_does()

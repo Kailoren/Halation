@@ -37,7 +37,7 @@ public enum AppState
 /// </remarks>
 public enum DeepPassSource
 {
-    /// <summary>An Anthropic key the reader bought. Costs money, per file read.</summary>
+    /// <summary>An Anthropic key the reader bought. Costs money, per request.</summary>
     ApiKey,
 
     /// <summary>Claude Code on this machine. Costs subscription quota, not money.</summary>
@@ -566,7 +566,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         // unpaused this sentence is the first thing that becomes untrue.
         DeepPassSource.LocalCli =>
             "Spends the Claude plan you already pay for rather than money, from the same usage "
-            + "limits as chat, so a large scan leaves you less for everything else.",
+            + $"limits as chat. A large scan can make up to {DeepPassTriage.DefaultMaxRequests} "
+            + "requests, which leaves you less for everything else.",
 
         DeepPassSource.Endpoint when DeepPassStaysLocal =>
             "Runs on your own hardware. Nothing is charged and nothing is uploaded.",
@@ -582,15 +583,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
         // The ceiling rather than the typical figure. "Cents per scan" was true of the small
         // projects it was measured on and badly wrong at the other end, and somebody who learns
         // the real number from their invoice has been misled by this application rather than by
-        // Anthropic. Both limits are interpolated so the sentence cannot drift from what the
-        // scan will actually do: a large file is now read a piece at a time rather than cut off
-        // at sixty thousand characters, so the file ceiling alone stopped describing the bill.
+        // Anthropic. Both limits and the dollar figure are interpolated so the sentence cannot
+        // drift from what the scan will actually do: a large file is now read a piece at a time
+        // rather than cut off at sixty thousand characters, so the file ceiling alone stopped
+        // describing the bill.
         _ => "Billed to your Anthropic API key, per request. A small project costs cents. At most "
              + $"{DeepPassTriage.DefaultMaxFiles} files are read, in up to "
              + $"{DeepPassTriage.DefaultMaxRequests} requests, because a large file takes several; "
-             + "an application big enough to reach that can cost around five dollars in a single "
-             + "scan, so treat cents as the floor rather than the usual figure. The report states "
-             + "what was spent and how much of the application was read.",
+             + "an application big enough to reach that can cost around "
+             + $"US${DeepPassTriage.CeilingCostUsd} in a single scan, so treat cents as the floor "
+             + "rather than the usual figure. The report states what was spent and how much of "
+             + "the application was read.",
     };
 
     /// <summary>
@@ -617,8 +620,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// </remarks>
     public string ApiKeyRouteTooltip =>
         "Where your code goes: to Anthropic, over the internet.\n\n"
-        + "What it costs: your API key is billed for every file read, on every scan. Tens of "
-        + "cents for a small application, a few dollars for a large one.\n\n"
+        + "What it costs: your API key is billed for every request, on every scan, and a large "
+        + "file takes several. Tens of cents for a small application, up to around "
+        + $"US${DeepPassTriage.CeilingCostUsd} for one large enough to reach the limit.\n\n"
         + "What you need: a key from console.anthropic.com. Nothing to install.\n\n"
         + "This route runs Claude Opus 5, the most capable of the three, so it finds the most.";
 
@@ -627,7 +631,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
         + "on this machine, but the reading does not happen here.\n\n"
         + "What it costs: the Claude plan you already pay for, rather than money. It draws on "
         + "the same usage limits as chat and as Claude Code itself, so a scan is not free of "
-        + "consequence: a large one leaves you less for the rest of the day.\n\n"
+        + $"consequence: a large one can make up to {DeepPassTriage.DefaultMaxRequests} requests "
+        + "and leaves you less for the rest of the day.\n\n"
         + "What you need: Claude Code installed and signed in.\n\n"
         + "Offered only for an application you built yourself, because Claude Code can act on "
         + "this computer and an API endpoint cannot.";

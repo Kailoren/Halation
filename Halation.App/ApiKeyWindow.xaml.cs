@@ -1,5 +1,7 @@
 using System.Windows;
 
+using Halation.Core.DeepPass;
+
 namespace Halation.App;
 
 /// <summary>
@@ -15,6 +17,13 @@ public partial class ApiKeyWindow : Window
     public ApiKeyWindow()
     {
         InitializeComponent();
+
+        CostNote.Text =
+            "Billed to you by Anthropic for every request, and a large file takes several: tens "
+            + "of cents for a small application, up to around "
+            + $"US${DeepPassTriage.CeilingCostUsd} for one large enough to reach the limit. The "
+            + "report states what was spent.";
+
         Loaded += (_, _) => KeyBox.Focus();
     }
 
