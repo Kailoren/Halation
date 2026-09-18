@@ -79,6 +79,56 @@
 
     <div class="release reveal">
       <div class="release__head">
+        <h2 class="release__version">0.1.6-beta</h2>
+        <span class="release__date">18 September 2026</span>
+      </div>
+      <p>
+        A scan of a real Electron application found Halation saying things about its own deep
+        pass that were not true. This release is that list.
+      </p>
+      <ul>
+        <li>
+          <strong>The deep pass reports what it read.</strong> A pass in which every request
+          failed was reported as one that had read the files, named the model that answered it
+          and claimed its findings were included, with no tokens spent. Every sentence about the
+          pass now comes from what happened: reviewed, partly reviewed, failed, or not run, per
+          file and overall, with the share of your code the model actually read.
+        </li>
+        <li>
+          <strong>An expired sign-in stops the pass instead of repeating itself.</strong> Claude
+          Code can report itself signed in while its stored session has expired, which is only
+          visible when a request is made. The first failure ends the pass and says to run
+          <code>claude auth login</code>, rather than spending one call per file to be told the
+          same thing again.
+        </li>
+        <li>
+          <strong>Large files are read in parts rather than cut off.</strong> Anything past sixty
+          thousand characters used to be dropped silently, so an 11,000 line bundle was reviewed
+          as far as line 1,895 while the prompt still listed findings past the cut. Files now go
+          in parts with their own line numbers, and the pass is capped at 80 requests. Libraries
+          a bundler inlined are skipped and named.
+        </li>
+        <li>
+          <strong>Zipped and unpacked builds agree.</strong> The launcher signature check ran
+          only for a folder, so the same application scored 99 unpacked and 100 zipped. The zip
+          is now checked the same way.
+        </li>
+        <li>
+          <strong>Bundled libraries count as unchecked, never as absent.</strong> An application
+          whose build tool compiled its dependencies into one file declares none, and was read as
+          having none. They are found, named and reported as impossible to check, because a
+          bundle records the package and not the version.
+        </li>
+        <li>
+          <strong>Smaller export fixes.</strong> Vulnerability data that was never fetched no
+          longer reports an age of 739,876 days, the sentence about it is a sentence, and
+          informational findings say where they are.
+        </li>
+      </ul>
+    </div>
+
+    <div class="release reveal">
+      <div class="release__head">
         <h2 class="release__version">0.1.5-beta</h2>
         <span class="release__date">7 August 2026</span>
       </div>

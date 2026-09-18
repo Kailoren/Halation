@@ -150,6 +150,14 @@ here is worse than an absent one.
 Every report states which source it used and when the data was current, so a check that could
 not run is never mistaken for one that came back clean.
 
+**Libraries a bundler compiled into the code are counted too.** A packed Electron or web build
+often declares no dependencies at all, because its build tool copied them into one file. That is
+not an application without a supply chain, and reading it as one was the quietest wrong answer
+this tool could give. Halation reads the `//#region node_modules/...` markers a bundler leaves
+behind, names the libraries in the report and states that they could not be checked: the marker
+records which package was inlined and never which version, so there is nothing to look up and
+nothing is guessed.
+
 ## Optional deep pass
 
 <img width="1200" height="1908" alt="The deep pass endpoint window, naming the detected graphics card and recommending the largest local model that fits it." src="docs/assets/img/screen-endpoint.png" />
@@ -180,11 +188,13 @@ One thing worth knowing: the check runs once, at startup. Sign in to Claude Code
 is already open and it will not notice until you press **Sign in** or restart it.
 
 **This spends the usage allowance of the Claude subscription you already pay for.** Nothing is
-charged on top. A deep pass is a handful of requests, so on a Pro or Max plan it is a small
+charged on top. A small project is a handful of requests, so on a Pro or Max plan it is a small
 share of a day's allowance, but it does come out of the same pot as your own work with Claude,
-and a large application read at the file ceiling will make a dent in it.
+and a large application read at the ceiling will make a dent in it.
 
-The report says which installation answered, and states plainly that no money was charged.
+The report says which installation answered, and states plainly that no money was charged. It
+also says whether the pass actually ran: a sign-in that has expired, or a model that declined,
+is reported as a pass that did not read the code rather than as one that found nothing.
 
 ### Route 2: bring your own Anthropic API key
 
@@ -200,6 +210,21 @@ month.
 
 Your key is encrypted to your Windows account and stored outside the application folder. It is
 never written to a report, and the interface only ever shows it masked.
+
+### What it reads, and what it says it read
+
+Triage picks the files that take in information the application does not control, plus the files
+that reach them, up to a ceiling of 40 files. A file too large for one request is read in parts
+rather than cut off at the first one, with the file's own line numbers throughout, so a finding
+still points at a line you can open. The whole pass is capped at 80 requests, which is what
+bounds the cost now that one file can take several.
+
+Third-party libraries a bundler inlined are skipped, since paying a frontier model to read a
+copy of a published package answers nothing. The report names them.
+
+**The report states how much of your code the model actually read**, as a share, separately from
+the coverage figure beside the score. Those measure different things: coverage says how much of
+the application could be read at all, and this says how much of it the AI was shown.
 
 ### Point it at your source, not your release build
 
@@ -241,8 +266,8 @@ matched. Both of those bounds are deliberate:
 
 The report lists exactly which files were read, what answered, and what the pass cost.
 
-**Bounds on it.** At most 40 files per scan, whichever route answers, so neither your allowance
-nor your credit can run away on one large application. Findings from this pass are labelled `AI`,
+**Bounds on it.** At most 40 files and 80 requests per scan, whichever route answers, so neither
+your allowance nor your credit can run away on one large application. Findings from this pass are labelled `AI`,
 carry a confidence level, and low-confidence ones are dropped rather than hedged. None of them
 can **trigger a "do not install" verdict**, because the strongest claim in a report must not
 depend on whether the reader happened to have a key or a subscription.

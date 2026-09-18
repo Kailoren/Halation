@@ -264,10 +264,11 @@
       <h3>What it costs</h3>
       <p>
         This spends the usage allowance of the subscription you already pay for, and nothing is
-        charged on top. A deep pass is a handful of requests, so on a Pro or Max plan it is a
+        charged on top. A small project is a handful of requests, so on a Pro or Max plan it is a
         small share of a day's allowance. It does come out of the same pot as your own work with
-        Claude, though, and a large application read at the file ceiling will make a dent in it. The
-        report says which installation answered and states plainly that no money was charged.
+        Claude, though, and a large application read at the ceiling will make a dent in it. The
+        report says which installation answered, whether the pass actually read anything, and
+        states plainly that no money was charged.
       </p>
       <h3>Why this route is fenced in</h3>
       <p>
@@ -300,18 +301,19 @@
         </p>
         <p>
           <strong>What it costs depends on how much code there is, and the range is wide.</strong>
-          A dozen small files runs to a few cents. A large application that reaches the ceiling of
-          forty files, each up to sixty thousand characters, is a different order of magnitude: at
-          Claude Opus 5's published rates of US$5 per million input tokens and US$25 per million
-          output, that worst case lands somewhere around <strong>four to five dollars for a single
-          scan</strong>. Cost scales with the bytes sent, so treat the small-project figure as the
-          floor rather than the typical case.
+          A dozen small files runs to a few cents. A large application that reaches the ceiling is
+          a different order of magnitude: at most 40 files are read, in up to 80 requests of sixty
+          thousand characters each, because a file too large for one request is read in parts
+          rather than cut off. At Claude Opus 5's published rates of US$5 per million input tokens
+          and US$25 per million output, that worst case lands somewhere around <strong>four to
+          five dollars for a single scan</strong>. Cost scales with the bytes sent, so treat the
+          small-project figure as the floor rather than the typical case.
         </p>
         <p>
           The report prints the estimate alongside the token counts it is based on, so you can see
-          what a scan cost rather than find out at the end of the month. The forty-file ceiling
-          exists to stop a large application running away with your credit; it is a limit, not a
-          target, and most scans land nowhere near it.
+          what a scan cost rather than find out at the end of the month. The ceilings exist to stop
+          a large application running away with your credit; they are limits, not targets, and most
+          scans land nowhere near them.
         </p>
       </div>
       <p>
@@ -621,9 +623,10 @@
         </li>
       </ul>
       <p>
-        At most <strong>40 files per scan</strong>, whichever route answers, so neither your
-        allowance nor your credit can run away on one large application. The report lists exactly
-        which files were read, what answered, and what the pass cost.
+        At most <strong>40 files and 80 requests per scan</strong>, whichever route answers, so
+        neither your allowance nor your credit can run away on one large application. The report
+        lists exactly which files were read, how much of the code the model was shown, what
+        answered, and what the pass cost.
       </p>
       <h3>Why downloads do not get a deep pass</h3>
       <p>

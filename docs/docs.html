@@ -270,6 +270,15 @@
         answer here is worse than an absent one.
       </p>
       <p>
+        <strong>Libraries a bundler compiled into the code count too.</strong> A packed Electron
+        or web build often declares no dependencies at all, because its build tool copied them
+        into one file, and reading that as an application without a supply chain is the quietest
+        wrong answer this tool could give. Halation reads the
+        <code>//#region node_modules/...</code> markers a bundler leaves, names the libraries and
+        states that they could not be checked: the marker records which package was inlined and
+        never which version, so there is nothing to look up and nothing is guessed.
+      </p>
+      <p>
         When a whole class of check could not run, that is said <em>beside the score</em> rather
         than four sections below it. An application can otherwise score 100 under "no known
         issues found" while nothing whatever is known about the packages inside it.
@@ -394,6 +403,21 @@
         low-confidence ones are dropped rather than hedged. <strong>None of them can move the
         score or trigger a do-not-install verdict</strong>, because the strongest claim in a
         report must not depend on whether the reader happened to have a key.
+      </p>
+      <p>
+        Triage picks the files that take in information the application does not control, plus
+        the files that reach them, up to 40 files and 80 requests. A file too large for one
+        request is read in parts with its own line numbers rather than cut off, and third-party
+        libraries a bundler inlined are skipped and named, since paying a model to read a copy of
+        a published package answers nothing.
+      </p>
+      <p>
+        <strong>The report says what the pass actually did.</strong> Reviewed, partly reviewed,
+        failed or not run, per file and overall, with the share of your code the model read. That
+        share is not the coverage figure beside the score: coverage says how much of the
+        application could be read at all, and this says how much of it the AI was shown. A pass
+        that failed on every file, because a sign-in had expired or a model declined, is reported
+        as one that read nothing rather than as one that found nothing.
       </p>
       <div class="callout">
         <span class="callout__title">Setting it up</span>
