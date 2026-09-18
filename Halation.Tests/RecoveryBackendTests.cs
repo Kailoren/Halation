@@ -75,6 +75,79 @@ public class RecoveryBackendTests : IDisposable
         Assert.Equal("renderer.js", result.Files[0].RelativePath);
     }
 
+    /// <summary>
+    /// The same build scanned two ways has to reach the same answer. It did not: the launcher
+    /// signature check ran only for a folder, so a real application scored 99 unpacked and 100
+    /// zipped, and the zip was the form it shipped in.
+    /// </summary>
+    [Fact]
+    public async Task Electron_ZippedApp_ChecksTheLauncherInsideTheZip()
+    {
+        var unsigned = typeof(RecoveryBackendTests).Assembly.Location;
+
+        if (!File.Exists(unsigned) || ExecutableSignature.HasCertificate(unsigned) != false)
+        {
+            return;
+        }
+
+        var zip = At("signed-check.zip");
+
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        {
+            WriteBytes(archive, "MyApp/MyApp.exe", File.ReadAllBytes(unsigned));
+
+            using var stream = archive.CreateEntry("MyApp/resources/app.asar").Open();
+            stream.Write(AsarBuilder.Build(("renderer.js", "console.log(1);")));
+        }
+
+        var zipped = await RecoverAsync(new ElectronRecoveryBackend(), zip);
+
+        var finding = Assert.Single(zipped.Findings);
+
+        Assert.Equal("VC-BIN-010", finding.RuleId);
+        Assert.Equal("MyApp/MyApp.exe", finding.FilePath);
+
+        // And the folder scan of the same layout still says the same thing, which is the point.
+        var folder = Directory.CreateDirectory(At("MyApp")).FullName;
+        Directory.CreateDirectory(Path.Combine(folder, "resources"));
+        File.Copy(unsigned, Path.Combine(folder, "MyApp.exe"));
+        File.WriteAllBytes(
+            Path.Combine(folder, "resources", "app.asar"),
+            AsarBuilder.Build(("renderer.js", "console.log(1);")));
+
+        var unpacked = await RecoverAsync(new ElectronRecoveryBackend(), folder);
+
+        Assert.Equal(finding.RuleId, Assert.Single(unpacked.Findings).RuleId);
+    }
+
+    /// <summary>Nothing is left behind: the entry is copied out, read, and deleted.</summary>
+    [Fact]
+    public async Task Electron_ZippedApp_LeavesNoExtractedLauncherBehind()
+    {
+        var unsigned = typeof(RecoveryBackendTests).Assembly.Location;
+
+        if (!File.Exists(unsigned))
+        {
+            return;
+        }
+
+        var zip = At("temp-check.zip");
+
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        {
+            WriteBytes(archive, "MyApp/MyApp.exe", File.ReadAllBytes(unsigned));
+
+            using var stream = archive.CreateEntry("MyApp/resources/app.asar").Open();
+            stream.Write(AsarBuilder.Build(("renderer.js", "console.log(1);")));
+        }
+
+        var before = Directory.GetFiles(Path.GetTempPath(), "halation-launcher-*").Length;
+
+        await RecoverAsync(new ElectronRecoveryBackend(), zip);
+
+        Assert.Equal(before, Directory.GetFiles(Path.GetTempPath(), "halation-launcher-*").Length);
+    }
+
     [Fact]
     public async Task Electron_VendoredCode_IsSkippedButManifestsAreKept()
     {

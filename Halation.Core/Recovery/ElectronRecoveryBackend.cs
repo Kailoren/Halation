@@ -39,7 +39,7 @@ public sealed class ElectronRecoveryBackend : IRecoveryBackend
         return Task.FromResult(new RecoveryResult
         {
             Files = files,
-            Findings = SignatureFindings(artifact),
+            Findings = SignatureFindings(artifact, warnings, cancellationToken),
             Coverage = new CoverageReport
             {
                 Percent = considered == 0
@@ -66,34 +66,244 @@ public sealed class ElectronRecoveryBackend : IRecoveryBackend
     /// full and never told the reader whether anybody had put their name to the file.
     /// </para>
     /// <para>
-    /// Only for a folder. A bare <c>.asar</c> is the code without the program around it, and
-    /// there is no launcher to ask about.
+    /// <b>The same question is asked of a zipped build.</b> It was asked only of a folder, so the
+    /// identical application scored 99 unpacked and 100 zipped: the launcher was sitting in the
+    /// archive and nothing looked at it. Two scans of one build disagreeing is worse than either
+    /// answer, because whichever one the reader took, the tool was wrong about the other.
+    /// </para>
+    /// <para>
+    /// Not for a bare <c>.asar</c>, which is the code without the program around it, so there is
+    /// no launcher to ask about.
     /// </para>
     /// </remarks>
-    private static IReadOnlyList<Finding> SignatureFindings(ArtifactDescriptor artifact)
+    private static IReadOnlyList<Finding> SignatureFindings(
+        ArtifactDescriptor artifact,
+        List<string> warnings,
+        CancellationToken cancellationToken)
     {
-        if (!artifact.IsDirectory)
+        if (artifact.IsDirectory)
+        {
+            try
+            {
+                return Directory
+                    .EnumerateFiles(artifact.Path, "*.exe", SearchOption.TopDirectoryOnly)
+                    .Take(MaxLaunchers)
+                    .Select(exe => ExecutableSignature.Check(
+                        exe, Path.GetRelativePath(artifact.Path, exe).Replace('\\', '/')))
+                    .OfType<Finding>()
+                    .ToList();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return [];
+            }
+            catch (IOException)
+            {
+                return [];
+            }
+        }
+
+        return artifact.Kind == ArtifactKind.ElectronApp
+            ? ZippedLauncherFindings(artifact, warnings, cancellationToken)
+            : [];
+    }
+
+    /// <summary>How many executables beside the asar are worth asking about.</summary>
+    private static int MaxLaunchers => 10;
+
+    /// <summary>
+    /// Ceiling on a launcher lifted out of an archive to be inspected.
+    /// </summary>
+    /// <remarks>
+    /// Larger than <see cref="ArchiveLimits.MaxFileBytes"/>, which is a source file's budget and
+    /// would reject every Electron launcher there is: the one measured here is 246 MB, because a
+    /// launcher is the whole Chromium runtime with the application's icon on it. Every other
+    /// bound the archive reader applies still applies, the compression ratio included, and this
+    /// is one entry per archive rather than a budget for all of them.
+    /// </remarks>
+    private const long MaxLauncherBytes = 512L * 1024 * 1024;
+
+    /// <summary>
+    /// Checks the launcher inside a zipped Electron build, one entry at a time.
+    /// </summary>
+    /// <remarks>
+    /// The entry goes to a temporary file because both halves of the answer need one: a PE
+    /// header read wants a seekable stream, and the catalogue lookup underneath
+    /// <see cref="ExecutableSignature"/> hashes a file by handle. It is deleted immediately
+    /// afterwards, and nothing else in this backend writes to disk.
+    /// </remarks>
+    private static IReadOnlyList<Finding> ZippedLauncherFindings(
+        ArtifactDescriptor artifact,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        ZipArchive archive;
+
+        try
+        {
+            archive = ZipFile.OpenRead(artifact.Path);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException
+                                      or UnauthorizedAccessException)
         {
             return [];
         }
 
+        using (archive)
+        {
+            var findings = new List<Finding>();
+
+            foreach (var entry in LauncherEntries(archive))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (entry.Length > MaxLauncherBytes
+                    || (entry.CompressedLength > 0
+                        && entry.Length / entry.CompressedLength
+                           > ArchiveLimits.Default.MaxCompressionRatio))
+                {
+                    // Reported rather than skipped quietly, because the finding this would have
+                    // produced is about a file the reader can see in their own archive.
+                    warnings.Add(
+                        $"{entry.FullName} was not checked for a signature: it is larger than "
+                        + $"{MaxLauncherBytes / (1024 * 1024)} MB or compressed beyond what this "
+                        + "scanner will expand.");
+
+                    continue;
+                }
+
+                var temporary = Path.Combine(
+                    Path.GetTempPath(), "halation-launcher-" + Guid.NewGuid().ToString("N") + ".exe");
+
+                try
+                {
+                    if (!ExtractTo(entry, temporary, cancellationToken))
+                    {
+                        warnings.Add(
+                            $"{entry.FullName} was not checked for a signature: it expanded "
+                            + "beyond its declared size.");
+
+                        continue;
+                    }
+
+                    if (ExecutableSignature.Check(temporary, entry.FullName.Replace('\\', '/'))
+                        is { } finding)
+                    {
+                        findings.Add(finding);
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                              or InvalidDataException)
+                {
+                    warnings.Add($"{entry.FullName} could not be read to check its signature.");
+                }
+                finally
+                {
+                    Delete(temporary);
+                }
+            }
+
+            return findings;
+        }
+    }
+
+    /// <summary>
+    /// The executables sitting beside the application's own resources folder.
+    /// </summary>
+    /// <remarks>
+    /// Anchored on the asar rather than on "any .exe in the zip", which would also pick up
+    /// whatever ships inside the application's own resources. The launcher is the file in the
+    /// same directory as <c>resources/</c>, which is exactly what the folder scan looks at.
+    /// </remarks>
+    private static IEnumerable<ZipArchiveEntry> LauncherEntries(ZipArchive archive)
+    {
+        var roots = archive.Entries
+            .Select(e => e.FullName.Replace('\\', '/'))
+            .Where(name => name.EndsWith(".asar", StringComparison.OrdinalIgnoreCase)
+                           && name.Contains("resources/", StringComparison.OrdinalIgnoreCase))
+            .Select(name => name[..name.IndexOf("resources/", StringComparison.OrdinalIgnoreCase)])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (roots.Count == 0)
+        {
+            yield break;
+        }
+
+        var found = 0;
+
+        foreach (var entry in archive.Entries)
+        {
+            var name = entry.FullName.Replace('\\', '/');
+
+            if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (roots.Any(root => name.StartsWith(root, StringComparison.OrdinalIgnoreCase)
+                                  && !name[root.Length..].Contains('/')))
+            {
+                yield return entry;
+
+                if (++found == MaxLaunchers)
+                {
+                    yield break;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Writes one entry to a file, stopping if it produces more than it declared.
+    /// </summary>
+    /// <remarks>
+    /// The budget is enforced while decompressing rather than taken from the central directory,
+    /// which is where <see cref="SafeArchive"/> enforces it and for the same reason: the
+    /// declared length is a number the archive's author chose.
+    /// </remarks>
+    private static bool ExtractTo(
+        ZipArchiveEntry entry, string path, CancellationToken cancellationToken)
+    {
+        using var source = entry.Open();
+        using var destination = new FileStream(
+            path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+
+        var buffer = new byte[81920];
+        long written = 0;
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var read = source.Read(buffer, 0, buffer.Length);
+
+            if (read == 0)
+            {
+                return true;
+            }
+
+            written += read;
+
+            if (written > MaxLauncherBytes)
+            {
+                return false;
+            }
+
+            destination.Write(buffer, 0, read);
+        }
+    }
+
+    private static void Delete(string path)
+    {
         try
         {
-            return Directory
-                .EnumerateFiles(artifact.Path, "*.exe", SearchOption.TopDirectoryOnly)
-                .Take(10)
-                .Select(exe => ExecutableSignature.Check(
-                    exe, Path.GetRelativePath(artifact.Path, exe).Replace('\\', '/')))
-                .OfType<Finding>()
-                .ToList();
+            File.Delete(path);
         }
-        catch (UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return [];
-        }
-        catch (IOException)
-        {
-            return [];
+            // Nothing worth failing a scan over. The file is in the temporary directory and
+            // carries no content of the reader's; it was copied out of the archive they dropped.
         }
     }
 
