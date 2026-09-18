@@ -84,7 +84,7 @@
       </div>
       <p>
         A scan of a real Electron application found Halation saying things about its own deep
-        pass that were not true. This release is that list.
+        pass that were not true. Most of this release is that list.
       </p>
       <ul>
         <li>
@@ -120,6 +120,12 @@
           whose build tool compiled its dependencies into one file declares none, and was read as
           having none. They are found, named and reported as impossible to check, because a
           bundle records the package and not the version.
+        </li>
+        <li>
+          <strong>Lock files inside installed packages are no longer read as yours.</strong> One
+          records how that package was built, and reading it pinned a stale third-party
+          toolchain on the application being scanned, at up to Critical severity. They are now
+          skipped and listed under what could not be checked.
         </li>
         <li>
           <strong>Smaller export fixes.</strong> Vulnerability data that was never fetched no
