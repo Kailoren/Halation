@@ -18,18 +18,18 @@
     <PackageReference Include="ICSharpCode.Decompiler" Version="10.1.1.8388" />
 
     <!-- Reads the 7z archive nested inside an NSIS installer; .NET has no LZMA decoder.
-         Pinned to 0.50.3, not 1.0.0: that version is unlisted upstream as a build mistake.
+         Pinned to 0.50.5, not 1.0.0: that version is unlisted upstream as a build mistake.
          Every advisory against this package (CVE-2026-44788, CVE-2021-39208,
          CVE-2018-1002206) is path traversal while extracting to disk, all fixed well before
          this version - and we never extract to disk, so the class does not apply. Keep it
          that way: read entries as streams, never WriteToDirectory. -->
-    <PackageReference Include="SharpCompress" Version="0.50.3" />
+    <PackageReference Include="SharpCompress" Version="0.50.5" />
 
     <!-- The optional deep pass. Official SDK rather than hand-rolled HTTP: the request
          surface it covers (structured outputs, refusal handling, server-side fallbacks) is
          exactly what this feature depends on, and getting any of it subtly wrong is a silent
          wrong answer rather than a compile error. Clean against OSV at this version. -->
-    <PackageReference Include="Anthropic" Version="12.39.0" />
+    <PackageReference Include="Anthropic" Version="12.55.0" />
   </ItemGroup>
 
 </Project>
