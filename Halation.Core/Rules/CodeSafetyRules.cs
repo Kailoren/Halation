@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 using Halation.Core.Model;
@@ -185,6 +186,50 @@ public static class CodeSafetyRules
             || Heuristics.IsInLineComment(context, match.Index),
     };
 
+    /// <summary>
+    /// The modules whose <c>exec</c> hands its argument to a shell, as the quoted specifier a
+    /// require or an import names them by.
+    /// </summary>
+    private const string ShellModule = """["'](?:node:)?(?:child_process|shelljs)["']""";
+
+    /// <summary>
+    /// The right-hand side of an assignment that loads a shell module, however the require was
+    /// wrapped: plain, inside a bundler's interop helper such as <c>__toESM(..)</c>, or as
+    /// webpack writes it, <c>__webpack_require__(/*! child_process */ "child_process")</c>.
+    /// </summary>
+    private const string LoadsShellModule =
+        $$"""=\s*(?:await\s+)?(?:[\w$.]+\s*\(\s*(?:/\*[^*]*\*/\s*)?)+{{ShellModule}}""";
+
+    /// <summary>A quoted string on one line, with escapes honoured.</summary>
+    private const string QuotedString = """(?:"(?:[^"\\\r\n]|\\.)*"|'(?:[^'\\\r\n]|\\.)*')""";
+
+    /// <summary>
+    /// A name a file gives to a shell module: <c>const cp = require("child_process")</c>,
+    /// <c>this.shell = require("shelljs")</c> or <c>import * as cp from "node:child_process"</c>.
+    /// </summary>
+    private static readonly Regex ShellModuleName = PatternRule.Compile(
+        $$"""
+        (?<![\w$.])(?<name>[\w$]+(?:\.[\w$]+)*)\s*{{LoadsShellModule}}
+        |import\s+(?:\*\s+as\s+)?(?<name>[\w$]+)\s+from\s*{{ShellModule}}
+        """,
+        RegexOptions.IgnorePatternWhitespace);
+
+    /// <summary>
+    /// <c>exec</c> or <c>execSync</c> taken out of a shell module under its own name, which is
+    /// what makes a bare call to it the shell rather than some other function called exec.
+    /// </summary>
+    /// <remarks>
+    /// The destructuring form is anchored on the word and looks back for the brace, rather than
+    /// starting at every brace and reading forward, so a bundle costs one pass for the word.
+    /// </remarks>
+    private static readonly Regex ShellExecImport = PatternRule.Compile(
+        $$"""
+        (?<=\{[^{}]{0,200})\bexec(?:Sync)?\b[^{}]{0,200}\}\s*{{LoadsShellModule}}
+        |import\s*\{[^{}]{0,200}\bexec(?:Sync)?\b[^{}]{0,200}\}\s*from\s*{{ShellModule}}
+        |\bexec(?:Sync)?\s*{{LoadsShellModule}}\s*\)\s*\.\s*exec(?:Sync)?\b
+        """,
+        RegexOptions.IgnorePatternWhitespace);
+
     private static PatternRule CommandInjection { get; } = new()
     {
         Id = "VC-CODE-003",
@@ -205,17 +250,119 @@ public static class CodeSafetyRules
             + "values comes from a file, a link, or a server response, someone who controls it can "
             + "get commands of their choosing to run on your computer.",
         UserRemediation ="Only open files and links from sources you trust in this application.",
+        // Node's exec is reached four ways: off the module (child_process.exec, or a bundler's
+        // child_process_1.exec), off a require, through the (0, x.exec)(..) call TypeScript and
+        // Babel emit, and bare after const { exec } = require("child_process"). Only the first
+        // used to be matched with concatenation, so the most common idiom, a bare
+        // exec("ping " + req.query.host), let a test Express app score 100/100.
+        //
+        // Matching exec by name alone would pull in RegExp and SQLite, which both have an exec
+        // that takes concatenated strings. The old template-literal branch already reported
+        // both in a sweep of 13,000 node_modules files. IsSomeOtherExec keeps a call only when
+        // the file binds that exec to a shell module. The concatenation must also reach
+        // something other than another literal, since a long command split across lines is
+        // still a constant.
         Pattern = PatternRule.Compile(
-            """
-            (?:child_process\.(?:exec|execSync)\s*\(\s*[`"'][^`"']*(?:\$\{|"\s*\+|'\s*\+)
-            |\bexec\s*\(\s*`[^`]*\$\{
+            $$"""
+            (?<exec>
+              (?:(?<module>require\s*\(\s*{{ShellModule}}\s*\))\.exec(?:Sync)?\s*\(
+              |(?<![\w$.])(?<receiver>[\w$]+(?:\.[\w$]+)*)\.exec(?:Sync)?\s*\(
+              |\(\s*0\s*,\s*(?<receiver>[\w$]+(?:\.[\w$]+)*)\.exec(?:Sync)?\s*\)\s*\(
+              |(?<![\w$.\#])exec(?:Sync)?\s*\()
+              \s*(?:`[^`]*\$\{|{{QuotedString}}(?:\s*\+\s*{{QuotedString}})*\s*\+\s*(?=[\w$(\[])))
             |os\.system\s*\(\s*(?:f["']|["'][^"']*["']\s*[%+])
             |subprocess\.\w+\([^)]*shell\s*=\s*True
-            |Process\.Start\s*\(\s*[$"][^"]*\{)
+            |Process\.Start\s*\(\s*[$"][^"]*\{
             """,
             RegexOptions.IgnorePatternWhitespace),
-        Ignore = (match, context) => Heuristics.IsInLineComment(context, match.Index),
+        Ignore = (match, context) =>
+            Heuristics.IsInLineComment(context, match.Index) || IsSomeOtherExec(match, context),
     };
+
+    /// <summary>
+    /// Whether an <c>exec</c> call belongs to something other than a shell.
+    /// </summary>
+    /// <remarks>
+    /// The answer comes from what the file binds. A file that never loads a shell module has no
+    /// shell exec to call, whatever its functions are named, and a receiver counts as the shell
+    /// only when the file assigns a shell module to that name. Bundlers name the binding after
+    /// the module (<c>child_process_1</c>, <c>import_child_process.default</c>), so a receiver
+    /// carrying the module's name is taken at its word, as <c>child_process.exec</c> always was.
+    /// </remarks>
+    private static bool IsSomeOtherExec(Match match, RuleContext context)
+    {
+        if (!match.Groups["exec"].Success || match.Groups["module"].Success)
+        {
+            return false;
+        }
+
+        var receiver = match.Groups["receiver"];
+
+        if (receiver.Success && receiver.Value.Contains("child_process", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var imports = ShellImports.Of(context);
+
+        return receiver.Success ? !imports.Names.Contains(receiver.Value) : !imports.ExecByName;
+    }
+
+    /// <summary>
+    /// What one file binds to a shell module, read once and shared by every exec call in it.
+    /// </summary>
+    /// <remarks>
+    /// Cached per file because the answer is a property of the file, and a bundle can hold
+    /// thousands of calls to some exec that would otherwise each search it again.
+    /// </remarks>
+    private sealed class ShellImports
+    {
+        private static readonly ConditionalWeakTable<RuleContext, ShellImports> ByFile = new();
+
+        private static readonly ShellImports None = new()
+        {
+            Names = new HashSet<string>(),
+            ExecByName = false,
+        };
+
+        /// <summary>Names assigned a shell module, such as <c>cp</c> or <c>this.shell</c>.</summary>
+        public required IReadOnlySet<string> Names { get; init; }
+
+        /// <summary>Whether exec or execSync was imported under its own name.</summary>
+        public required bool ExecByName { get; init; }
+
+        public static ShellImports Of(RuleContext context) => ByFile.GetValue(context, Read);
+
+        private static ShellImports Read(RuleContext context)
+        {
+            var content = context.Content;
+
+            // Most files never name a shell module, and a substring search settles those without
+            // running either pattern over the whole file.
+            if (!content.Contains("child_process", StringComparison.Ordinal)
+                && !content.Contains("shelljs", StringComparison.Ordinal))
+            {
+                return None;
+            }
+
+            try
+            {
+                return new ShellImports
+                {
+                    Names = ShellModuleName.Matches(content)
+                        .Select(m => m.Groups["name"].Value)
+                        .ToHashSet(StringComparer.Ordinal),
+                    ExecByName = ShellExecImport.IsMatch(content),
+                };
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                // Reported as the rule not finishing on this file, the same as its own pattern
+                // timing out, rather than guessed in either direction.
+                throw new RuleTimeoutException(CommandInjection.Id, context.File.RelativePath);
+            }
+        }
+    }
 
     private static PatternRule UnsafeDeserialisation { get; } = new()
     {

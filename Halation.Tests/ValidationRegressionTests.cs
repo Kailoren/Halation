@@ -162,6 +162,73 @@ public class ValidationRegressionTests : IDisposable
             RunRules("""var cs = "Server=db.example.com;Database=app;User Id=admin;Password=Tr0ub4dor3xY;";"""),
             f => f.RuleId == "VC-SEC-009");
 
+    // ---- Command injection through Node's exec -----------------------------
+
+    /// <summary>
+    /// Found by scanning a two-file Express app: exec destructured from child_process and
+    /// called bare with a concatenated string, the most common way Node code shells out. It
+    /// scored 100/100 and only the deep pass caught it.
+    /// </summary>
+    [Fact]
+    public async Task BareExecFromChildProcess_IsFlaggedInAScan()
+    {
+        var app = Path.Combine(_scratch, "express-ping");
+        Directory.CreateDirectory(app);
+
+        File.WriteAllText(Path.Combine(app, "server.js"), """
+            const express = require("express");
+            const { exec } = require("child_process");
+            const app = express();
+            app.get("/ping", (req, res) => {
+              exec("ping -n 1 " + req.query.host, (err, out) => res.send(out));
+            });
+            app.listen(3000);
+            """);
+        File.WriteAllText(
+            Path.Combine(app, "package.json"),
+            """{"name":"ping","dependencies":{"express":"4.21.2"}}""");
+
+        var report = await new Scanner().ScanAsync(app, ScanOptions.NoDependencyCheck);
+
+        var finding = Assert.Single(report.Findings, f => f.RuleId == "VC-CODE-003");
+        Assert.Equal(5, finding.Line);
+    }
+
+    [Theory]
+    [InlineData("const { execSync } = require(\"node:child_process\");\nexecSync('git checkout ' + branch);")]
+    [InlineData("import { exec } from \"child_process\";\nexec(\"convert \" + file + \" out.png\");")]
+    [InlineData("var exec = require('child_process').exec;\nexec(\"ls \" + dir, cb);")]
+    [InlineData("const { execSync } = require(\"child_process\");\nexecSync(`git log ${range}`);")]
+    [InlineData("const { exec } = require(\"child_process\");\nexec(\"echo \" + \"hi \" + name);")]
+    [InlineData("const cp = require(\"child_process\");\ncp.exec(\"start \" + url);")]
+    [InlineData("this.cp = require(\"child_process\");\nthis.cp.exec(\"open \" + target);")]
+    [InlineData("function open(u) { require(\"child_process\").exec(\"start \" + u); }")]
+    [InlineData("const shell = require(\"shelljs\");\nshell.exec(\"git commit -m '\" + msg + \"'\");")]
+    // What TypeScript and Babel emit for a named import, which is what a shipped Electron or
+    // Node build contains rather than the source above.
+    [InlineData("const child_process_1 = require(\"child_process\");\n(0, child_process_1.exec)(\"ping \" + host);")]
+    [InlineData("var _cp = _interopRequireDefault(require(\"child_process\"));\n(0, _cp.execSync)(\"rm -rf \" + target);")]
+    [InlineData("var import_child_process = __toESM(require(\"child_process\"), 1);\nimport_child_process.default.exec(`taskkill /pid ${pid}`);")]
+    public void ShellExecWithBuiltCommand_IsFlagged(string code) =>
+        Assert.Contains(RunRules(code), f => f.RuleId == "VC-CODE-003");
+
+    /// <summary>
+    /// RegExp and SQLite both have an exec taking a built string. The first two were reported
+    /// by the old template-literal pattern in real node_modules (got, undici); the rest guard
+    /// the concatenation form added beside it.
+    /// </summary>
+    [Theory]
+    [InlineData("const m = /(?<socketPath>.+?):(?<path>.+)/.exec(`${url.pathname}${url.search}`);")]
+    [InlineData("this.#db.exec(`CREATE TABLE IF NOT EXISTS ${table} (k TEXT)`);")]
+    [InlineData("const { spawn } = require(\"child_process\");\nconst m = pattern.exec(\"prefix \" + line);")]
+    [InlineData("const { exec } = require(\"child_process\");\ndb.exec(\"DELETE FROM log WHERE id = \" + id);")]
+    [InlineData("function exec(sql) { return db.run(sql); }\nexec(\"DELETE FROM t WHERE id = \" + id);")]
+    [InlineData("const { execFile } = require(\"child_process\");\nexec(\"ls \" + dir);")]
+    [InlineData("const { execSync } = require(\"child_process\");\nexecSync(\"git log --format=%H \" +\n  \"--no-merges\");")]
+    [InlineData("const { exec } = require(\"child_process\");\n// exec(\"ping \" + host) would be injectable")]
+    public void OtherExecOrConstantCommand_IsNotFlagged(string code) =>
+        Assert.DoesNotContain(RunRules(code), f => f.RuleId == "VC-CODE-003");
+
     // ---- Packaging ---------------------------------------------------------
 
     /// <summary>
