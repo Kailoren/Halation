@@ -79,6 +79,44 @@
 
     <div class="release reveal">
       <div class="release__head">
+        <h2 class="release__version">0.1.8</h2>
+        <span class="release__date">9 October 2026</span>
+      </div>
+      <p>
+        Command injection in Node code is now caught in the form people usually write it, and a
+        file built to slow a scan down no longer can.
+      </p>
+      <ul>
+        <li>
+          <strong>Node's exec is checked however it was imported.</strong> The check for a shell
+          command built from pasted-in values only recognised <code>child_process.exec</code>
+          with a value joined on by a plus sign. The most common way to write it,
+          <code>exec("ping " + host)</code> after <code>const { exec } = require("child_process")</code>,
+          let a test web server score 100 out of 100. Bare calls, calls through a module
+          variable and the form TypeScript and Babel compile to are all checked now.
+        </li>
+        <li>
+          <strong>Other methods called exec are left alone.</strong> Regular expressions and
+          SQLite both have an exec that takes a built string, and two well-known libraries were
+          reported for using them. A call now counts only when the file ties that exec to
+          Node's process module.
+        </li>
+        <li>
+          <strong>A minified file can no longer stall a scan.</strong> A check setting a match
+          aside read the whole line again each time, and in a bundle the line is the whole file.
+          A file written for the purpose could hold a scan up for minutes; it now takes about a
+          second. Across seven real applications and thirteen thousand library files, every
+          finding came out the same.
+        </li>
+        <li>
+          <strong>A check that runs out of time no longer ends the scan.</strong> It's listed as
+          a check that didn't finish, like any other, instead of failing the whole scan.
+        </li>
+      </ul>
+    </div>
+
+    <div class="release reveal">
+      <div class="release__head">
         <h2 class="release__version">0.1.7</h2>
         <span class="release__date">9 October 2026</span>
       </div>
