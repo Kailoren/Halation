@@ -239,20 +239,20 @@ public static class SecretRules
         Ignore = (match, context) =>
         {
             var secret = match.Groups["secret"].Value;
-            var line = context.LineFor(match);
+            var line = context.LineAt(match.Index);
 
             // A numeric assignment is a constant, not a credential. Observed firing on the
             // Win32 error constant FILTER_E_PASSWORD = -2147215613.
             if (secret.All(c => char.IsAsciiDigit(c) || c is '-' or '+' or 'x' or 'X')
                 || Heuristics.IsPlaceholder(secret)
-                || Heuristics.IsEnvironmentReference(line))
+                || context.TestLine(line, Heuristics.IsEnvironmentReference))
             {
                 return true;
             }
 
             // Anchor to an actual connection string rather than to any assignment whose
             // identifier happens to contain "password".
-            return !Heuristics.LooksLikeConnectionString(line);
+            return !context.TestLine(line, Heuristics.LooksLikeConnectionString);
         },
     };
 
@@ -293,7 +293,7 @@ public static class SecretRules
         SecretGroup = "secret",
         Ignore = (match, context) =>
             !Heuristics.LooksLikeRealSecret(match.Groups["secret"].Value)
-            || Heuristics.IsEnvironmentReference(context.LineFor(match))
+            || context.TestLine(context.LineAt(match.Index), Heuristics.IsEnvironmentReference)
             || Heuristics.IsInLineComment(context, match.Index),
     };
 }
@@ -325,6 +325,21 @@ public sealed class SupabaseServiceKeyRule : IRule
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        try
+        {
+            return Collect(context);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // The pattern runs lazily inside the loop, so this is where its timeout arrives.
+            // Raised as the engine's own exception so the scan records the check as unfinished
+            // rather than failing outright.
+            throw new RuleTimeoutException(Id, context.File.RelativePath);
+        }
+    }
+
+    private List<Finding> Collect(RuleContext context)
+    {
         var findings = new List<Finding>();
         var seenLines = new HashSet<int>();
 

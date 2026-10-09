@@ -251,7 +251,7 @@ public static class ConfigurationRules
             return false;
         }
 
-        return MetadataField.IsMatch(context.LineFor(match));
+        return context.TestLine(context.LineAt(match.Index), MetadataField.IsMatch);
     }
 
     private static readonly Regex MetadataField = new(

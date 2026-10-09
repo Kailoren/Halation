@@ -89,8 +89,8 @@ public static class UntrustedInputRules
         Languages = [SourceLanguage.CSharp],
         Ignore = (match, context) =>
             Heuristics.IsInLineComment(context, match.Index)
-            || IsGivenACeiling(context.LineFor(match))
-            || IsDecompilerArtifact(context.LineFor(match)),
+            || context.TestLine(context.LineAt(match.Index), IsGivenACeiling)
+            || context.TestLine(context.LineAt(match.Index), IsDecompilerArtifact),
     };
 
     /// <summary>
@@ -156,7 +156,8 @@ public static class UntrustedInputRules
             """stackalloc\s+\w+\s*\[\s*(?<size>[^\]]{1,80}?)\s*\]""",
             RegexOptions.IgnoreCase),
         Languages = [SourceLanguage.CSharp],
-        Ignore = (match, context) => IsBounded(match.Groups["size"].Value, context.LineFor(match)),
+        Ignore = (match, context) =>
+            IsBounded(match.Groups["size"].Value, context, context.LineAt(match.Index)),
     };
 
     /// <summary>
@@ -168,7 +169,7 @@ public static class UntrustedInputRules
     /// bound is often written against a local rather than a Length property, so this compares
     /// the actual size expression against the comparisons on the line.
     /// </remarks>
-    private static bool IsBounded(string sizeExpression, string line)
+    private static bool IsBounded(string sizeExpression, RuleContext context, int line)
     {
         var size = sizeExpression.Trim();
 
@@ -192,11 +193,16 @@ public static class UntrustedInputRules
 
         var escaped = Regex.Escape(size);
 
-        return Regex.IsMatch(
+        // Keyed by the size as well as the line, because the comparison searched for depends on
+        // which expression the allocation used.
+        return context.TestLine(
             line,
-            $@"{escaped}\s*(?:<=?|>=?)\s*\d+|\d+\s*(?:<=?|>=?)\s*{escaped}",
-            RegexOptions.None,
-            PatternRule.MatchTimeout);
+            text => Regex.IsMatch(
+                text,
+                $@"{escaped}\s*(?:<=?|>=?)\s*\d+|\d+\s*(?:<=?|>=?)\s*{escaped}",
+                RegexOptions.None,
+                PatternRule.MatchTimeout),
+            key: (nameof(IsBounded), size));
     }
 
     /// <summary>

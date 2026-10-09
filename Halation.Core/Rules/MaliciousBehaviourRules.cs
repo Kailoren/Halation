@@ -63,7 +63,7 @@ public static class MaliciousBehaviourRules
     /// matching a fetch in one method against an execution in an unrelated one.
     /// </summary>
     private static bool NoDownloadNearby(RuleContext context) =>
-        !Fetches.IsMatch(context.Content) || !WritesAFile.IsMatch(context.Content);
+        !context.TestContent(Fetches.IsMatch) || !context.TestContent(WritesAFile.IsMatch);
 
     /// <summary>
     /// Constructs that only appear in a regular expression, never in a command.

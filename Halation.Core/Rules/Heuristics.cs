@@ -150,11 +150,15 @@ public static class Heuristics
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var line = context.LineText(context.LineAt(offset));
-        var trimmed = line.TrimStart();
+        return context.TestLine(context.LineAt(offset), IsCommentLine);
+    }
+
+    private static bool IsCommentLine(string line)
+    {
+        var trimmed = line.AsSpan().TrimStart();
 
         return trimmed.StartsWith("//", StringComparison.Ordinal)
-            || trimmed.StartsWith('#')
+            || trimmed.StartsWith("#", StringComparison.Ordinal)
             || trimmed.StartsWith("*", StringComparison.Ordinal)
             || trimmed.StartsWith("<!--", StringComparison.Ordinal);
     }
@@ -178,7 +182,7 @@ public static class Heuristics
 
         for (var i = Math.Max(1, line - lines); i <= line; i++)
         {
-            if (guard.IsMatch(context.LineText(i)))
+            if (context.TestLine(i, guard.IsMatch))
             {
                 return true;
             }
@@ -311,16 +315,26 @@ public static class Heuristics
     /// True when the offset falls inside a quoted string on its own line.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Line-scoped and deliberately simple. Escapes are honoured so that a pattern full of
     /// <c>\\</c> does not read as the string ending early, which is exactly the text this is
     /// used on. Both quote characters count, because the languages here disagree about which
     /// one makes a string.
+    /// </para>
+    /// <para>
+    /// The scan carries on from where the previous question about the same line stopped,
+    /// because a rule asks about its matches in order and every one of them used to be scanned
+    /// from the start of the line. On a one-line bundle that is the start of the file each time.
+    /// The answer is the same either way: the scan only depends on the position it has reached
+    /// and which quote is open there, and that is exactly what is kept.
+    /// </para>
     /// </remarks>
     public static bool IsInsideStringLiteral(RuleContext context, int offset)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var line = context.LineText(context.LineAt(offset));
+        var lineNumber = context.LineAt(offset);
+        var line = context.LineText(lineNumber);
         var target = context.OffsetInLine(offset);
 
         if (target <= 0 || target >= line.Length)
@@ -328,33 +342,45 @@ public static class Heuristics
             return false;
         }
 
-        var quote = '\0';
+        var (scannedLine, i, quote) = context.StringScan;
 
-        for (var i = 0; i < target; i++)
+        if (scannedLine != lineNumber || i > target)
         {
+            (i, quote) = (0, '\0');
+        }
+
+        // The state before the last step, which is where to resume if that step was an escape
+        // that jumped past the target.
+        var before = (i, quote);
+
+        while (i < target)
+        {
+            before = (i, quote);
             var c = line[i];
 
             if (c == '\\' && quote != '\0')
             {
                 // Consumes whatever it escapes, so an escaped quote does not close the string.
-                i++;
+                i += 2;
                 continue;
             }
 
-            if (c is not ('"' or '\''))
+            if (c is '"' or '\'')
             {
-                continue;
+                if (quote == '\0')
+                {
+                    quote = c;
+                }
+                else if (quote == c)
+                {
+                    quote = '\0';
+                }
             }
 
-            if (quote == '\0')
-            {
-                quote = c;
-            }
-            else if (quote == c)
-            {
-                quote = '\0';
-            }
+            i++;
         }
+
+        context.StringScan = i <= target ? (lineNumber, i, quote) : (lineNumber, before.i, before.quote);
 
         return quote != '\0';
     }
@@ -407,7 +433,7 @@ public static class Heuristics
         var end = Math.Min(context.OffsetInLine(offset), line.Length);
         var start = Math.Max(0, end - PatternConstructionLookback);
 
-        return PatternConstruction.IsMatch(line[start..end]);
+        return PatternConstruction.IsMatch(line.AsSpan(start, end - start));
     }
 
     /// <summary>

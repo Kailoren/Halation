@@ -116,9 +116,22 @@ public sealed class RuleContext
 
     internal void Discount() => DiscountedMatches++;
 
+    private int _lastLineNumber;
+    private string? _lastLineText;
+
     /// <summary>The full text of a 1-indexed line, without its terminator.</summary>
+    /// <remarks>
+    /// The most recent line is kept, because every match on a line asks for it again. In a
+    /// minified bundle the line is the whole file, and copying it once per match made the cost
+    /// of a file grow with the square of its length.
+    /// </remarks>
     public string LineText(int lineNumber)
     {
+        if (lineNumber == _lastLineNumber && _lastLineText is not null)
+        {
+            return _lastLineText;
+        }
+
         var index = lineNumber - 1;
         if (index < 0 || index >= _lineStarts.Length)
         {
@@ -128,11 +141,76 @@ public sealed class RuleContext
         var start = _lineStarts[index];
         var end = index + 1 < _lineStarts.Length ? _lineStarts[index + 1] : Content.Length;
 
-        return Content[start..end].TrimEnd('\r', '\n');
+        _lastLineNumber = lineNumber;
+        _lastLineText = Content[start..end].TrimEnd('\r', '\n');
+
+        return _lastLineText;
     }
 
     /// <summary>The line a match landed on, for use as evidence.</summary>
     public string LineFor(Match match) => LineText(LineAt(match.Index));
+
+    private readonly Dictionary<(int Line, object Key), bool> _lineAnswers = [];
+
+    /// <summary>
+    /// Whether a test that looks only at a line's text holds for that line, worked out once per
+    /// line and test.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// For the checks that ask something of the whole line a match sits on, such as whether it
+    /// reads an environment variable or is a comment. Every match on the line gets the same
+    /// answer, so searching the line again for each one only costs time, and on a one-line
+    /// bundle it costs time in proportion to the file per match.
+    /// </para>
+    /// <para>
+    /// The test is remembered by <paramref name="key"/>, or by the delegate itself when no key
+    /// is given. A lambda that captures a value is a new delegate on every call, so it needs a
+    /// key that carries the captured value.
+    /// </para>
+    /// </remarks>
+    public bool TestLine(int lineNumber, Func<string, bool> test, object? key = null)
+    {
+        ArgumentNullException.ThrowIfNull(test);
+
+        var slot = (lineNumber, key ?? test);
+
+        if (!_lineAnswers.TryGetValue(slot, out var answer))
+        {
+            answer = test(LineText(lineNumber));
+            _lineAnswers[slot] = answer;
+        }
+
+        return answer;
+    }
+
+    private readonly Dictionary<Func<string, bool>, bool> _contentAnswers = [];
+
+    /// <summary>
+    /// Whether a test of the whole file holds, worked out once per file and test.
+    /// </summary>
+    /// <remarks>
+    /// The file-wide counterpart of <see cref="TestLine"/>, for checks such as "does this file
+    /// download anything", which would otherwise search the file once per match.
+    /// </remarks>
+    public bool TestContent(Func<string, bool> test)
+    {
+        ArgumentNullException.ThrowIfNull(test);
+
+        if (!_contentAnswers.TryGetValue(test, out var answer))
+        {
+            answer = test(Content);
+            _contentAnswers[test] = answer;
+        }
+
+        return answer;
+    }
+
+    /// <summary>
+    /// Where <see cref="Heuristics.IsInsideStringLiteral"/> stopped on its last question: the
+    /// line, the next character to read, and the quote open at that point.
+    /// </summary>
+    internal (int Line, int Index, char Quote) StringScan { get; set; }
 }
 
 /// <summary>A single check applied to recovered source.</summary>
@@ -256,22 +334,26 @@ public sealed class PatternRule : IRule
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var findings = new List<Finding>();
-        var seenPlaces = new HashSet<(int Line, int Region)>();
-
-        MatchCollection matches;
         try
         {
-            matches = Pattern.Matches(context.Content);
+            return Collect(context);
         }
         catch (RegexMatchTimeoutException)
         {
             // Treated as "this rule could not complete here", not as a clean result. The
-            // engine records it so coverage stays honest.
+            // engine records it so coverage stays honest. Caught around the whole loop because
+            // Matches runs the pattern lazily as the loop reads it, and the ignore checks run
+            // patterns of their own.
             throw new RuleTimeoutException(Id, context.File.RelativePath);
         }
+    }
 
-        foreach (Match match in matches)
+    private List<Finding> Collect(RuleContext context)
+    {
+        var findings = new List<Finding>();
+        var seenPlaces = new HashSet<(int Line, int Region)>();
+
+        foreach (Match match in Pattern.Matches(context.Content))
         {
             if (findings.Count >= MaxMatchesPerFile)
             {

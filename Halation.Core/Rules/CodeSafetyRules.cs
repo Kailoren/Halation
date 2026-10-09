@@ -41,6 +41,11 @@ public static class CodeSafetyRules
     /// <c>Des</c>, so title case is a sentence beginning rather than a cipher: two of the
     /// three that survived the first attempt were "Des privilèges administrateur…".
     /// </para>
+    /// <para>
+    /// Read outwards from the match to the nearest quote on each side, stopping at the first
+    /// space. Taking the whole quoted string first gave the same answer, but a long string
+    /// holding many matches was copied once for each of them.
+    /// </para>
     /// </remarks>
     private static bool IsWordInProse(Match match, RuleContext context)
     {
@@ -58,10 +63,23 @@ public static class CodeSafetyRules
             return false;
         }
 
-        var opening = line.LastIndexOfAny(['"', '\''], at - 1) + 1;
-        var closing = line.IndexOfAny(['"', '\''], at);
+        for (var i = at - 1; i >= 0 && line[i] is not ('"' or '\''); i--)
+        {
+            if (char.IsWhiteSpace(line[i]))
+            {
+                return true;
+            }
+        }
 
-        return line[opening..(closing < 0 ? line.Length : closing)].Any(char.IsWhiteSpace);
+        for (var i = at; i < line.Length && line[i] is not ('"' or '\''); i++)
+        {
+            if (char.IsWhiteSpace(line[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>The statement keyword a SQL match opens with. See <c>IsProseNotSql</c>.</summary>
@@ -391,20 +409,19 @@ public static class CodeSafetyRules
             |TypeNameHandling\s*=\s*TypeNameHandling\.(?:All|Objects|Auto))
             """,
             RegexOptions.IgnorePatternWhitespace),
+        // A runtime switch that turns the dangerous behaviour off is the mitigation, not the
+        // vulnerability. Observed firing on the .NET runtimeconfig entry
+        // "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false, which
+        // is exactly the setting that disables it.
         Ignore = (match, context) =>
-        {
-            var line = context.LineFor(match);
-
-            // A runtime switch that turns the dangerous behaviour off is the mitigation, not
-            // the vulnerability. Observed firing on the .NET runtimeconfig entry
-            // "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false,
-            // which is exactly the setting that disables it.
-            return line.Contains(": false", StringComparison.OrdinalIgnoreCase)
-                || line.Contains("=false", StringComparison.OrdinalIgnoreCase)
-                || line.Contains("= false", StringComparison.OrdinalIgnoreCase)
-                || Heuristics.IsInLineComment(context, match.Index);
-        },
+            context.TestLine(context.LineAt(match.Index), SwitchesSomethingOff)
+            || Heuristics.IsInLineComment(context, match.Index),
     };
+
+    private static bool SwitchesSomethingOff(string line) =>
+        line.Contains(": false", StringComparison.OrdinalIgnoreCase)
+        || line.Contains("=false", StringComparison.OrdinalIgnoreCase)
+        || line.Contains("= false", StringComparison.OrdinalIgnoreCase);
 
     private static PatternRule WeakPasswordHashing { get; } = new()
     {
@@ -479,7 +496,7 @@ public static class CodeSafetyRules
             // Naming a cipher is not using one. Observed firing on the members of
             // SharpZipLib's EncryptionAlgorithm enum, where "Des = 26113," is a declaration
             // of a value the library can recognise, not an algorithm the application chose.
-            return EnumMemberDeclaration.IsMatch(context.LineFor(match))
+            return context.TestLine(context.LineAt(match.Index), EnumMemberDeclaration.IsMatch)
                 || Heuristics.IsInLineComment(context, match.Index);
         },
     };
