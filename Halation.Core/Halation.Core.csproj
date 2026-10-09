@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="ICSharpCode.Decompiler" Version="10.1.1.8388" />
+    <PackageReference Include="ICSharpCode.Decompiler" Version="11.1.0.9782" />
 
     <!-- Reads the 7z archive nested inside an NSIS installer; .NET has no LZMA decoder.
          Pinned to 0.50.5, not 1.0.0: that version is unlisted upstream as a build mistake.
