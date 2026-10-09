@@ -262,6 +262,94 @@ public class DependencyInventoryTests
         Assert.Equal("8.0.0", dependency.Version);
     }
 
+    /// <summary>
+    /// A self-contained build lists the runtime it carries as "runtimepack" entries, which
+    /// used to be passed over with the projects, so the runtime never reached the advisory
+    /// lookup. Halation's own 0.1.6-beta release carries 10.0.10, with seven advisories against
+    /// its two packs, and its dependency check came back clean.
+    /// </summary>
+    [Fact]
+    public void DotNetDeps_CollectsTheBundledRuntimeUnderItsNuGetName()
+    {
+        var result = Extract(("Halation.deps.json", """
+            {
+              "libraries": {
+                "Halation/0.1.6-beta": { "type": "project", "serviceable": false, "sha512": "" },
+                "runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.10": {
+                  "type": "runtimepack", "serviceable": false, "sha512": ""
+                },
+                "runtimepack.Microsoft.WindowsDesktop.App.Runtime.win-x64/10.0.10": {
+                  "type": "runtimepack", "serviceable": false, "sha512": ""
+                },
+                "runtimepack.Microsoft.AspNetCore.App.Runtime.win-x64/10.0.10": {
+                  "type": "runtimepack", "serviceable": false, "sha512": ""
+                },
+                "SharpCompress/0.50.3": { "type": "package", "serviceable": true }
+              }
+            }
+            """));
+
+        // The prefix is the manifest's marker, not part of the name: OSV indexes the pack as
+        // Microsoft.NETCore.App.Runtime.win-x64 and answers nothing for the prefixed form.
+        var runtimes = result.Dependencies.Where(d => d.IsBundledRuntime).ToList();
+        Assert.Equal(
+            [
+                "NuGet:Microsoft.AspNetCore.App.Runtime.win-x64@10.0.10",
+                "NuGet:Microsoft.NETCore.App.Runtime.win-x64@10.0.10",
+                "NuGet:Microsoft.WindowsDesktop.App.Runtime.win-x64@10.0.10",
+            ],
+            runtimes.Select(d => d.Coordinate).Order(StringComparer.Ordinal));
+        Assert.All(runtimes, d => Assert.Equal("Halation.deps.json", d.DeclaredIn));
+
+        // An ordinary package is still read, and is not mistaken for the runtime.
+        var package = Assert.Single(result.Dependencies, d => d.Name == "SharpCompress");
+        Assert.False(package.IsBundledRuntime);
+
+        Assert.DoesNotContain(result.Dependencies, d => d.Name.StartsWith("runtimepack.", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Dependencies, d => d.Name == "Halation");
+    }
+
+    /// <summary>
+    /// A framework-dependent build lists no runtime pack, because it carries no runtime: the
+    /// machine's installed one is used and is serviced by its own updates.
+    /// </summary>
+    [Fact]
+    public void DotNetDeps_FindsNoRuntimeInAFrameworkDependentBuild()
+    {
+        var result = Extract(("MyApp.deps.json", """
+            {
+              "libraries": {
+                "MyApp/1.0.0":            { "type": "project" },
+                "Newtonsoft.Json/13.0.3": { "type": "package" }
+              }
+            }
+            """));
+
+        Assert.DoesNotContain(result.Dependencies, d => d.IsBundledRuntime);
+    }
+
+    /// <summary>
+    /// A library entry of the wrong shape is skipped rather than allowed to throw something
+    /// other than a JsonException, which nothing above would catch and which would fail the
+    /// whole scan over one malformed manifest.
+    /// </summary>
+    [Fact]
+    public void DotNetDeps_SkipsLibraryEntriesOfTheWrongShape()
+    {
+        var result = Extract(("MyApp.deps.json", """
+            {
+              "libraries": {
+                "Broken/1.0.0":  5,
+                "Numbered/1.0.0": { "type": 3 },
+                "runtimepack./1.0.0": { "type": "runtimepack" },
+                "Serilog/3.1.1": { "type": "package" }
+              }
+            }
+            """));
+
+        Assert.Equal("NuGet:Serilog@3.1.1", Assert.Single(result.Dependencies).Coordinate);
+    }
+
     [Fact]
     public void NuGetLockFile_UsesResolvedVersions()
     {

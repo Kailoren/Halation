@@ -21,6 +21,18 @@ public sealed record DependencyRef
     /// <summary>Manifest the dependency was read from, for the report.</summary>
     public required string DeclaredIn { get; init; }
 
+    /// <summary>
+    /// True when this is the .NET runtime the application carries inside itself, rather than
+    /// a package it referenced.
+    /// </summary>
+    /// <remarks>
+    /// Looked up exactly like a package, because NuGet publishes the runtime as one and OSV
+    /// answers for it by that name. What differs is the fix. Nobody can bump the runtime in a
+    /// package reference: it is whichever patch the SDK that built the application bundled, so
+    /// a finding against it has to give advice about the build rather than about a package.
+    /// </remarks>
+    public bool IsBundledRuntime { get; init; }
+
     public string Coordinate => $"{Ecosystem}:{Name}@{Version}";
 }
 
@@ -759,9 +771,31 @@ public static class DependencyInventory
         && !version.Any(c => c is '^' or '~' or '>' or '<' or '=' or '*' or '|' or ' ');
 
     /// <summary>
-    /// Reads the .NET dependency manifest. Entries typed "package" came from NuGet at a
-    /// resolved version; "project" entries are the application's own code.
+    /// What a .NET dependency manifest puts in front of a runtime pack's name. It marks the
+    /// entry rather than naming anything NuGet or OSV knows.
     /// </summary>
+    private const string RuntimePackPrefix = "runtimepack.";
+
+    /// <summary>
+    /// Reads the .NET dependency manifest. Entries typed "package" came from NuGet at a
+    /// resolved version; "project" entries are the application's own code; "runtimepack"
+    /// entries are the .NET runtime a self-contained build carries with it.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The runtime is listed as, for example,
+    /// <c>runtimepack.Microsoft.NETCore.App.Runtime.win-x64/10.0.10</c>, with a second entry for
+    /// the Windows Desktop or ASP.NET Core runtime when the application uses one. Reading only
+    /// packages left it out altogether: Halation's own 0.1.6-beta release carries runtime
+    /// 10.0.10, with seven published advisories against its two packs, and its dependency
+    /// check came back clean.
+    /// </para>
+    /// <para>
+    /// The prefix is stripped because NuGet publishes the pack, and OSV indexes advisories
+    /// against it, as <c>Microsoft.NETCore.App.Runtime.win-x64</c>. Asked for the prefixed
+    /// name, OSV returns nothing, which would read as a runtime with no known flaws.
+    /// </para>
+    /// </remarks>
     private static IEnumerable<DependencyRef> ReadDotNetDeps(RecoveredFile file)
     {
         using var document = JsonDocument.Parse(file.Content);
@@ -774,8 +808,21 @@ public static class DependencyInventory
 
         foreach (var library in libraries.EnumerateObject())
         {
-            if (!library.Value.TryGetProperty("type", out var type)
-                || !string.Equals(type.GetString(), "package", StringComparison.OrdinalIgnoreCase))
+            // Shapes checked before reading: asking a number for a property, or reading one as
+            // a string, throws something other than the JsonException the caller turns into a
+            // note, and would fail the whole scan over one malformed manifest.
+            if (library.Value.ValueKind != JsonValueKind.Object
+                || !library.Value.TryGetProperty("type", out var type)
+                || type.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var isRuntime = string.Equals(
+                type.GetString(), "runtimepack", StringComparison.OrdinalIgnoreCase);
+
+            if (!isRuntime
+                && !string.Equals(type.GetString(), "package", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -786,12 +833,25 @@ public static class DependencyInventory
                 continue;
             }
 
+            var name = library.Name[..slash];
+
+            if (isRuntime && name.StartsWith(RuntimePackPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                name = name[RuntimePackPrefix.Length..];
+            }
+
+            if (name.Length == 0)
+            {
+                continue;
+            }
+
             yield return new DependencyRef
             {
                 Ecosystem = "NuGet",
-                Name = library.Name[..slash],
+                Name = name,
                 Version = library.Name[(slash + 1)..],
                 DeclaredIn = file.RelativePath,
+                IsBundledRuntime = isRuntime,
             };
         }
     }

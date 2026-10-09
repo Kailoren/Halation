@@ -242,6 +242,11 @@
         <li><strong>Maven</strong>: <code>gradle.lockfile</code></li>
       </ul>
       <p>
+        A self-contained .NET application carries its own copy of the .NET runtime, which its
+        <code>*.deps.json</code> names, and that runtime is checked against published advisories
+        like any other package.
+      </p>
+      <p>
         A lock file is the only artifact that says what a project actually installed rather than
         what it asked for, which is the difference between a dependency that can be checked and
         one that cannot. A shipped Electron application has no lock file, so a
