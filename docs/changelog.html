@@ -79,6 +79,58 @@
 
     <div class="release reveal">
       <div class="release__head">
+        <h2 class="release__version">0.1.7-beta</h2>
+        <span class="release__date">9 October 2026</span>
+      </div>
+      <p>
+        Halation scanned its own release and gave it 98 out of 100. That release shipped with a
+        copy of .NET two security updates out of date, and the scan never looked at it.
+        This release fixes the scan and the build.
+      </p>
+      <ul>
+        <li>
+          <strong>The .NET runtime an application carries is now checked.</strong> A
+          self-contained .NET application brings its own copy of the runtime, and when it was
+          built with an out-of-date SDK that copy stays out of date whatever is installed on
+          the machine. The dependency check skipped it. It's now looked up like any other
+          package, and the finding tells the developer to rebuild rather than to update a
+          package that isn't one. Run on 0.1.6-beta itself, it finds seven published advisories
+          and the score drops from 98 to 58.
+        </li>
+        <li>
+          <strong>Built on .NET 10.0.12.</strong> 0.1.6-beta carried 10.0.10 because the SDK it
+          was built with knew nothing newer. This one carries the current runtime, and its own
+          scan says so.
+        </li>
+        <li>
+          <strong>Claude Code is found again.</strong> An update to the Claude desktop app moved
+          its copy of Claude Code one folder deeper, and Halation stopped finding it, so for
+          most people the subscription route for the deep pass reported Claude Code as missing.
+          It now looks in both places.
+        </li>
+        <li>
+          <strong>The deep pass runs on Claude Opus 5.5.</strong> It's Anthropic's current Opus
+          and costs a fifth less than Opus 5, so on an API key the most one scan can cost
+          comes down from around ten dollars to around eight.
+        </li>
+        <li>
+          <strong>Cleaner code from .NET 10 applications.</strong> The decompiler couldn't
+          resolve .NET 10's own libraries, so it printed the compiler's machinery for async
+          methods and records next to the code someone actually wrote. A newer version reads
+          them properly. Recovered source is roughly half the size it was, and line numbers in
+          findings point at the cleaner code. Across seven real applications, every score and
+          every finding stayed the same.
+        </li>
+        <li>
+          <strong>Smaller fixes.</strong> A malformed entry in an application's dependency
+          manifest is skipped instead of failing the whole scan, and the end-user wording
+          for a vulnerable component no longer says "a flaw that have".
+        </li>
+      </ul>
+    </div>
+
+    <div class="release reveal">
+      <div class="release__head">
         <h2 class="release__version">0.1.6-beta</h2>
         <span class="release__date">18 September 2026</span>
       </div>
