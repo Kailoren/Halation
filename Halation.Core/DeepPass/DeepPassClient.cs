@@ -24,18 +24,21 @@ public sealed record TokenUsage
     /// <summary>Tokens written to the cache, billed at 1.25x the input rate.</summary>
     public long CacheWrite { get; init; }
 
-    /// <summary>Tokens served from the cache, billed at 0.1x the input rate.</summary>
+    /// <summary>
+    /// Tokens served from the cache, billed at 0.05x the input rate: Claude Opus 5.5 charges half
+    /// the tenth that most models do.
+    /// </summary>
     public long CacheRead { get; init; }
 
     /// <summary>Everything the prompt contained, not just the part that missed the cache.</summary>
     public long TotalInput => Input + CacheWrite + CacheRead;
 
-    /// <summary>Cost in US dollars at Claude Opus 5 rates, for the key holder who is paying it.</summary>
+    /// <summary>Cost in US dollars at Claude Opus 5.5 rates, for the key holder who is paying it.</summary>
     public decimal EstimatedCost =>
-        (Input / 1_000_000m * 5.00m)
-        + (Output / 1_000_000m * 25.00m)
-        + (CacheWrite / 1_000_000m * 6.25m)
-        + (CacheRead / 1_000_000m * 0.50m);
+        (Input / 1_000_000m * 4.00m)
+        + (Output / 1_000_000m * 20.00m)
+        + (CacheWrite / 1_000_000m * 5.00m)
+        + (CacheRead / 1_000_000m * 0.20m);
 
     public static TokenUsage operator +(TokenUsage left, TokenUsage right)
     {
@@ -255,7 +258,7 @@ public sealed record DeepPassResult
 /// </remarks>
 public sealed class DeepPassClient(string apiKey, string? model = null) : IDeepPassBackend
 {
-    private const string DefaultModel = "claude-opus-5";
+    private const string DefaultModel = "claude-opus-5-5";
 
     /// <summary>Room for thinking and the findings together: on this model both share the cap.</summary>
     private const int MaxTokens = 16_000;

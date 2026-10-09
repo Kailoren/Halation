@@ -56,7 +56,7 @@ public class ClaudeCodeCliBackendTests
             "cache_creation_input_tokens": 12,
             "cache_read_input_tokens": 3289
           },
-          "modelUsage": {{modelUsage ?? """{"claude-opus-5": {"canonicalModel": "claude-opus-5"}}"""}},
+          "modelUsage": {{modelUsage ?? """{"claude-opus-5-5": {"canonicalModel": "claude-opus-5-5"}}"""}},
           "permission_denials": {{permissionDenials}},
           "terminal_reason": "completed",
           "subtype": "success",
@@ -235,7 +235,7 @@ public class ClaudeCodeCliBackendTests
         var index = arguments.ToList().IndexOf("--model");
 
         Assert.True(index >= 0);
-        Assert.Equal("claude-opus-5", arguments[index + 1]);
+        Assert.Equal("claude-opus-5-5", arguments[index + 1]);
     }
 
     // ---- What it bills -----------------------------------------------------
@@ -258,7 +258,7 @@ public class ClaudeCodeCliBackendTests
         using var backend = new ClaudeCodeCliBackend(Cli);
 
         Assert.Contains("Claude desktop app", backend.Description, StringComparison.Ordinal);
-        Assert.Contains("claude-opus-5", backend.Description, StringComparison.Ordinal);
+        Assert.Contains("claude-opus-5-5", backend.Description, StringComparison.Ordinal);
     }
 
     // ---- Reading the result envelope ---------------------------------------
@@ -499,7 +499,7 @@ public class ClaudeCodeCliBackendTests
                 modelUsage: """
                 {
                   "claude-haiku-4-5-20251001": {"canonicalModel": "claude-haiku-4-5"},
-                  "claude-opus-5": {"canonicalModel": "claude-opus-5"}
+                  "claude-opus-5-5": {"canonicalModel": "claude-opus-5-5"}
                 }
                 """),
             Triaged());
@@ -673,11 +673,11 @@ public class DeepPassBackendSelectionTests
         var quota = await DeepPassRunner.RunAsync(
             Files, [], new ScanOptions { DeepPassUseLocalCli = true }, new FakeBackend(false));
 
-        Assert.Equal(30.00m, billed.EstimatedCost);
-        Assert.Equal(30.00m, billed.BilledCost);
+        Assert.Equal(24.00m, billed.EstimatedCost);
+        Assert.Equal(24.00m, billed.BilledCost);
 
         // Same tokens, same estimate, no bill.
-        Assert.Equal(30.00m, quota.EstimatedCost);
+        Assert.Equal(24.00m, quota.EstimatedCost);
         Assert.Null(quota.BilledCost);
     }
 

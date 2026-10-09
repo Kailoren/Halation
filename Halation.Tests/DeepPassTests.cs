@@ -312,6 +312,27 @@ public class DeepPassTests
             (long)DeepPassTriage.DefaultMaxRequests * DeepPassChunker.MaxChunkChars);
     }
 
+    /// <summary>
+    /// And the dollar figure has to follow the rates, which change with the model while the
+    /// figure lives in a different file.
+    /// </summary>
+    /// <remarks>
+    /// Taken at the top of the 1.2 to 1.5 million token estimate, the ten dollars first quoted
+    /// left room for about 1,250 tokens of findings on each request. This keeps that split and
+    /// reprices it, so changing the rates fails here until the quoted figure is worked out again.
+    /// </remarks>
+    [Fact]
+    public void The_quoted_worst_case_cost_follows_the_rates()
+    {
+        var worstCase = new TokenUsage
+        {
+            Input = 1_500_000,
+            Output = DeepPassTriage.DefaultMaxRequests * 1_250,
+        };
+
+        Assert.Equal(DeepPassTriage.CeilingCostUsd, Math.Round(worstCase.EstimatedCost));
+    }
+
     /// <summary>The numbers a model is asked to cite have to be the file's own.</summary>
     [Fact]
     public void Later_requests_number_lines_as_the_file_does()
@@ -756,7 +777,7 @@ public class DeepPassTests
         using var backend = new DeepPassClient("sk-test");
 
         Assert.Equal(
-            30.00m,
+            24.00m,
             backend.PriceOf(new TokenUsage { Input = 1_000_000, Output = 1_000_000 }));
     }
 
@@ -808,7 +829,7 @@ public class DeepPassTests
     {
         var usage = new TokenUsage { CacheWrite = 1_000_000, CacheRead = 1_000_000 };
 
-        Assert.Equal(6.75m, usage.EstimatedCost);
+        Assert.Equal(5.20m, usage.EstimatedCost);
     }
 
     /// <summary>

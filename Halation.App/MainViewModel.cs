@@ -624,7 +624,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         + "file takes several. Tens of cents for a small application, up to around "
         + $"US${DeepPassTriage.CeilingCostUsd} for one large enough to reach the limit.\n\n"
         + "What you need: a key from console.anthropic.com. Nothing to install.\n\n"
-        + "This route runs Claude Opus 5, the most capable of the three, so it finds the most.";
+        + "This route runs Claude Opus 5.5, the most capable of the three, so it finds the most.";
 
     public string LocalCliRouteTooltip =>
         "Where your code goes: to Anthropic, the same as the key route. Claude Code is installed "
@@ -659,7 +659,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             + "so the files never reach the network.\n\n"
             + "What it costs: nothing but electricity.\n\n"
             + "What you need: Ollama or LM Studio running, with a model downloaded.\n\n"
-            + "A model on your own machine is smaller than Claude Opus 5 and will find less. The "
+            + "A model on your own machine is smaller than Claude Opus 5.5 and will find less. The "
             + "report names what answered, so a quiet result can be read for what it is.",
 
         // Its own case rather than folded in with the hosted providers, because this one looks

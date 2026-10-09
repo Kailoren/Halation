@@ -38,7 +38,7 @@ public sealed record ClaudeCodeCliAuth
 public sealed class ClaudeCodeCliBackend : IDeepPassBackend
 {
     /// <summary>Matches <see cref="DeepPassClient"/>, so the two backends are comparable.</summary>
-    private const string DefaultModel = "claude-opus-5";
+    private const string DefaultModel = "claude-opus-5-5";
 
     /// <summary>
     /// A hung CLI must not hang the scan. Generous, because a large file under a high effort

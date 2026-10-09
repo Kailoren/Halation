@@ -62,11 +62,14 @@ public static class DeepPassTriage
     /// </summary>
     /// <remarks>
     /// Worked out on paper, with no scan measured at the ceiling. <see cref="CeilingChars"/>
-    /// characters is somewhere between 1.2 and 1.5 million input tokens at Claude Opus 5's
-    /// US$5 a million, plus the findings that come back at US$25 a million. The app's cost copy
-    /// interpolates this; docs/setup.html states it in prose and has to be changed by hand.
+    /// characters is somewhere between 1.2 and 1.5 million input tokens at Claude Opus 5.5's
+    /// US$4 a million, plus the findings that come back at US$20 a million. It was ten under
+    /// Claude Opus 5, whose US$5 and US$25 were both a quarter higher, so the same pass costs a
+    /// fifth less. A test reprices it from <see cref="TokenUsage.EstimatedCost"/>, so changing the
+    /// rates fails until this is worked out again. The app's cost copy interpolates it;
+    /// docs/setup.html states it in prose and has to be changed by hand.
     /// </remarks>
-    public const int CeilingCostUsd = 10;
+    public const int CeilingCostUsd = 8;
 
     /// <summary>
     /// What a pass that uses every request sends, which is the size <see cref="CeilingCostUsd"/>
