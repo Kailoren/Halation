@@ -234,9 +234,19 @@ public static class ClaudeCodeCliLocator
     /// Picks the newest install under a directory of version-named subdirectories.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Compared as versions rather than text, because a string sort puts "2.1.99" above
     /// "2.1.219" and would pin a machine to an install two hundred releases stale. Names that do
     /// not parse are still considered, after every one that does.
+    /// </para>
+    /// <para>
+    /// Each version directory is looked in directly and then one level down, because the
+    /// desktop app has used both layouts: <c>claude-code\2.1.219\claude.exe</c>, and later
+    /// <c>claude-code\2.1.293\83cb0bd7fed4\claude.exe</c>. Looking only where the first layout
+    /// put it found nothing at all on a machine that had the second, which made the deep pass
+    /// look unavailable to somebody who had it installed. The version still decides which
+    /// install wins; the layout only decides where inside it the executable is looked for.
+    /// </para>
     /// </remarks>
     private static ClaudeCodeCli? HighestVersioned(string root, ClaudeCodeCliSource source)
     {
@@ -252,16 +262,70 @@ public static class ClaudeCodeCliLocator
 
         foreach (var (directory, version) in candidates)
         {
-            foreach (var name in ExecutableNames)
+            if ((ExecutableIn(directory) ?? NestedExecutable(directory)) is { } path)
             {
-                if (Exists(Combine(directory, name)) is { } path)
-                {
-                    return new ClaudeCodeCli { Path = path, Source = source, Version = version };
-                }
+                return new ClaudeCodeCli { Path = path, Source = source, Version = version };
             }
         }
 
         return null;
+    }
+
+    /// <summary>The first executable name present directly inside a directory, if any.</summary>
+    private static string? ExecutableIn(string directory)
+    {
+        foreach (var name in ExecutableNames)
+        {
+            if (Exists(Combine(directory, name)) is { } path)
+            {
+                return path;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// An executable one level below a version directory, which is where the desktop app puts
+    /// it once it verifies what it downloaded.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The inner directory is named after the payload's hash rather than anything readable:
+    /// on the machine this was found on, <c>83cb0bd7fed4</c> is the start of the SHA-256 in the
+    /// <c>.verified</c> file sitting beside the executable. Any subdirectory is accepted rather
+    /// than only twelve hex digits, so a change to how the name is cut does not lose the
+    /// install again.
+    /// </para>
+    /// <para>
+    /// Only one per version has been seen. If there are ever several, a directory with no
+    /// executable in it is passed over, then the executable written most recently wins, and
+    /// the directory name settles a tie so the same machine always gives the same answer.
+    /// Write time comes before the name because a hash says nothing about which copy is newer.
+    /// </para>
+    /// </remarks>
+    private static string? NestedExecutable(string versionDirectory) =>
+        Directories(versionDirectory, "*")
+            .Select(ExecutableIn)
+            .OfType<string>()
+            .OrderByDescending(LastWritten)
+            .ThenBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+    /// <summary>
+    /// When a file was last written, or the earliest possible time when that cannot be read,
+    /// so an unreadable copy loses a tie rather than failing the search.
+    /// </summary>
+    private static DateTime LastWritten(string path)
+    {
+        try
+        {
+            return System.IO.File.GetLastWriteTimeUtc(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return DateTime.MinValue;
+        }
     }
 
     /// <summary>

@@ -105,6 +105,160 @@ public sealed class ClaudeCodeCliLocatorTests : IDisposable
         Assert.Equal(ClaudeCodeCliSource.PackagedDesktopApp, found.Source);
     }
 
+    // ---- The nested layout -------------------------------------------------
+
+    /// <summary>
+    /// The layout the desktop app moved to: the executable sits one directory below the
+    /// version, in a directory named after the payload's hash, beside the files that record
+    /// its verification. Looking only directly inside the version found nothing on a machine
+    /// that had it, so the deep pass looked unavailable to somebody who had it installed.
+    /// </summary>
+    [Fact]
+    public void Finds_the_cli_one_level_down_inside_a_packaged_desktop_app()
+    {
+        string[] hashDirectory =
+        [
+            "AppData", "Local", "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Roaming",
+            "Claude", "claude-code", "2.1.293", "83cb0bd7fed4",
+        ];
+        Touch([.. hashDirectory, ".payload"]);
+        Touch([.. hashDirectory, ".verified"]);
+        var expected = Touch([.. hashDirectory, "claude.exe"]);
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(expected, found.Path);
+        Assert.Equal(ClaudeCodeCliSource.PackagedDesktopApp, found.Source);
+
+        // The version still comes from the version directory, not the hash below it.
+        Assert.Equal(new Version(2, 1, 293), found.Version);
+    }
+
+    [Fact]
+    public void Finds_the_cli_one_level_down_with_an_unpackaged_desktop_app()
+    {
+        var expected = Touch(
+            "AppData", "Roaming", "Claude", "claude-code", "2.1.293", "83cb0bd7fed4", "claude.exe");
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(expected, found.Path);
+        Assert.Equal(ClaudeCodeCliSource.DesktopApp, found.Source);
+        Assert.Equal(new Version(2, 1, 293), found.Version);
+    }
+
+    /// <summary>
+    /// The layout decides where inside a version the executable is looked for, never which
+    /// version wins. A machine that updated across the change has an older flat install and a
+    /// newer nested one, and the newer one is the one to run.
+    /// </summary>
+    [Fact]
+    public void Prefers_a_newer_nested_install_over_an_older_flat_one()
+    {
+        Touch("AppData", "Roaming", "Claude", "claude-code", "2.1.219", "claude.exe");
+        var newer = Touch(
+            "AppData", "Roaming", "Claude", "claude-code", "2.1.293", "83cb0bd7fed4", "claude.exe");
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(newer, found.Path);
+        Assert.Equal(new Version(2, 1, 293), found.Version);
+    }
+
+    /// <summary>The same rule the other way round, so neither layout is quietly preferred.</summary>
+    [Fact]
+    public void Prefers_a_newer_flat_install_over_an_older_nested_one()
+    {
+        Touch("AppData", "Local", "Packages", "Claude_x", "LocalCache", "Roaming",
+              "Claude", "claude-code", "2.1.99", "36aa8c97bf86", "claude.exe");
+        var newer = Touch("AppData", "Local", "Packages", "Claude_x", "LocalCache", "Roaming",
+                          "Claude", "claude-code", "2.1.300", "claude.exe");
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(newer, found.Path);
+        Assert.Equal(new Version(2, 1, 300), found.Version);
+    }
+
+    /// <summary>
+    /// A version directory holding a hash directory but no executable, as a half-finished
+    /// download would leave it, must not stop the search reaching an older install that works.
+    /// </summary>
+    [Fact]
+    public void Skips_a_nested_directory_with_no_executable_in_it()
+    {
+        Touch("AppData", "Roaming", "Claude", "claude-code", "2.1.293", "83cb0bd7fed4", ".payload");
+        var working = Touch(
+            "AppData", "Roaming", "Claude", "claude-code", "2.1.288", "36aa8c97bf86", "claude.exe");
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(working, found.Path);
+    }
+
+    /// <summary>
+    /// Only one hash directory per version has been seen, but if there are several the choice
+    /// has to be the same every time. One without an executable is passed over, and of the
+    /// rest the most recently written executable wins.
+    /// </summary>
+    [Fact]
+    public void Picks_the_most_recently_written_of_several_nested_executables()
+    {
+        Touch("AppData", "Roaming", "Claude", "claude-code", "2.1.293", "ffffffffffff", ".payload");
+        var older = Touch(
+            "AppData", "Roaming", "Claude", "claude-code", "2.1.293", "eeeeeeeeeeee", "claude.exe");
+        var newer = Touch(
+            "AppData", "Roaming", "Claude", "claude-code", "2.1.293", "000000000000", "claude.exe");
+
+        File.SetLastWriteTimeUtc(older, new DateTime(2026, 10, 6, 0, 0, 0, DateTimeKind.Utc));
+        File.SetLastWriteTimeUtc(newer, new DateTime(2026, 10, 8, 0, 0, 0, DateTimeKind.Utc));
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(newer, found.Path);
+    }
+
+    /// <summary>With identical write times the directory name decides, so a tie is not random.</summary>
+    [Fact]
+    public void Settles_a_tie_between_nested_executables_by_name()
+    {
+        var first = Touch(
+            "AppData", "Roaming", "Claude", "claude-code", "2.1.293", "36aa8c97bf86", "claude.exe");
+        var second = Touch(
+            "AppData", "Roaming", "Claude", "claude-code", "2.1.293", "83cb0bd7fed4", "claude.exe");
+
+        var same = new DateTime(2026, 10, 8, 0, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(first, same);
+        File.SetLastWriteTimeUtc(second, same);
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(first, found.Path);
+    }
+
+    /// <summary>
+    /// When a version directory has the executable both directly and below, the direct one is
+    /// taken, which is what every install before the nested layout relied on.
+    /// </summary>
+    [Fact]
+    public void Prefers_the_executable_directly_inside_a_version_over_one_below_it()
+    {
+        var direct = Touch("AppData", "Roaming", "Claude", "claude-code", "2.1.293", "claude.exe");
+        Touch("AppData", "Roaming", "Claude", "claude-code", "2.1.293", "83cb0bd7fed4", "claude.exe");
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(direct, found.Path);
+    }
+
     /// <summary>Packages belonging to other applications are not mistaken for this one.</summary>
     [Fact]
     public void Ignores_unrelated_packages()
