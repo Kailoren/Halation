@@ -437,28 +437,67 @@ public static class Heuristics
     }
 
     /// <summary>
+    /// What a test runner looks for in a file name, each with the separator that keeps it from
+    /// matching an ordinary word: Go and pytest's <c>_test.</c>, busted and RSpec's
+    /// <c>_spec.</c>, and the <c>.test.</c> and <c>.spec.</c> that Jest and Vitest accept in
+    /// any of their languages.
+    /// </summary>
+    private static readonly string[] TestNameForms = ["_test.", "_spec.", ".test.", ".spec."];
+
+    /// <summary>
+    /// Endings of a .NET test project's folder. A solution names its test project after the
+    /// code it tests, <c>Foo.Tests</c> beside <c>Foo</c>, so the ending is all there is to go on.
+    /// </summary>
+    private static readonly string[] DotNetTestProjectEndings =
+        [".tests", ".test", ".unittests", ".integrationtests"];
+
+    /// <summary>
     /// True for files whose contents are examples rather than shipped code.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Used to soften rather than suppress: a credential in a fixture is a weaker finding
     /// than one in production code, but keys committed to test files are leaked keys and get
     /// scraped from public repositories exactly the same way.
+    /// </para>
+    /// <para>
+    /// The path is relative to whatever was dropped on the scanner, so a test folder can be the
+    /// first thing in it with no slash in front. Every folder check here looks for that slash,
+    /// which meant a repository scanned from its own root kept <c>spec/</c> and <c>tests/</c> as
+    /// production code, while the same repository scanned from the folder above had them
+    /// softened. A slash is put in front of the path so the root reads like any other folder
+    /// boundary and where the scan started stops deciding the answer. The folder checks are
+    /// prefixes, so at the root as everywhere else they also take in names like
+    /// <c>special.js</c>; narrowing them would stop counting files that count today.
+    /// </para>
+    /// <para>
+    /// The name forms and <c>conftest.py</c> are tested against the file name alone, and every
+    /// form carries its separator, so <c>contest.js</c>, <c>latest.py</c> and
+    /// <c>inspector.ts</c> are not taken for tests because of a word they happen to contain.
+    /// </para>
     /// </remarks>
     public static bool IsTestOrExampleFile(string relativePath)
     {
         ArgumentNullException.ThrowIfNull(relativePath);
 
-        var lower = relativePath.ToLowerInvariant();
+        // Every recovery backend already hands over forward slashes. Normalised again so a path
+        // built anywhere else cannot slip past the folder checks for the want of one.
+        var path = "/" + relativePath.Replace('\\', '/').ToLowerInvariant();
+        var lastSlash = path.LastIndexOf('/');
+        var name = path[(lastSlash + 1)..];
 
-        return lower.Contains("/test", StringComparison.Ordinal)
-            || lower.Contains("/spec", StringComparison.Ordinal)
-            || lower.Contains("/__mocks__", StringComparison.Ordinal)
-            || lower.Contains("/example", StringComparison.Ordinal)
-            || lower.Contains("/fixture", StringComparison.Ordinal)
-            || lower.EndsWith(".test.js", StringComparison.Ordinal)
-            || lower.EndsWith(".spec.ts", StringComparison.Ordinal)
-            || lower.EndsWith(".example", StringComparison.Ordinal)
-            || lower.EndsWith(".sample", StringComparison.Ordinal);
+        return path.Contains("/test", StringComparison.Ordinal)
+            || path.Contains("/spec", StringComparison.Ordinal)
+            || path.Contains("/__mocks__", StringComparison.Ordinal)
+            || path.Contains("/__tests__", StringComparison.Ordinal)
+            || path.Contains("/example", StringComparison.Ordinal)
+            || path.Contains("/fixture", StringComparison.Ordinal)
+            || path.EndsWith(".example", StringComparison.Ordinal)
+            || path.EndsWith(".sample", StringComparison.Ordinal)
+            || name == "conftest.py"
+            || TestNameForms.Any(form => name.Contains(form, StringComparison.Ordinal))
+            || path[..lastSlash].Split('/').Any(folder =>
+                DotNetTestProjectEndings.Any(ending => folder.EndsWith(ending, StringComparison.Ordinal)));
     }
 
     /// <summary>

@@ -515,6 +515,78 @@ public class RuleEngineTests
         Assert.Equal(production.Severity, test.Severity);
     }
 
+    /// <summary>
+    /// Paths are relative to the scan root, so a test folder can arrive with no slash in front
+    /// of it. The first block is what already counted and must go on counting.
+    /// </summary>
+    [Theory]
+    [InlineData("src/__tests__/app.test.js")]
+    [InlineData("test/app.test.js")]
+    [InlineData("src/test/java/AppTest.java")]
+    [InlineData("lib/spec/parser.rb")]
+    [InlineData("src/__mocks__/fs.js")]
+    [InlineData("docs/examples/demo.py")]
+    [InlineData("src/fixtures/user.json")]
+    [InlineData("web/app.spec.ts")]
+    [InlineData("config/settings.example")]
+    [InlineData("config/app.sample")]
+    [InlineData("spec/sniper_dialog_verdict_spec.lua")]
+    [InlineData("GoldCap/spec/sniper_dialog_verdict_spec.lua")]
+    [InlineData("tests/conftest.py")]
+    [InlineData("tests/test_api.py")]
+    [InlineData("conftest.py")]
+    [InlineData("pkg/server_test.go")]
+    [InlineData("test/helpers.js")]
+    [InlineData("src/app.spec.js")]
+    [InlineData("src/Button.test.tsx")]
+    [InlineData("src/__tests__/helpers.js")]
+    [InlineData("Halation.Tests/RuleEngineTests.cs")]
+    [InlineData("src/Shop.UnitTests/CartTests.cs")]
+    [InlineData("Shop.Test/CartTest.cs")]
+    [InlineData(@"Halation.Tests\RuleEngineTests.cs")]
+    [InlineData(@"GoldCap\spec\verdict.lua")]
+    public void TestAndExamplePaths_AreRecognised(string path) =>
+        Assert.True(Heuristics.IsTestOrExampleFile(path), path);
+
+    /// <summary>
+    /// Each name form carries its separator, so a word that merely contains "test" or "spec"
+    /// does not turn production code into a fixture.
+    /// </summary>
+    [Theory]
+    [InlineData("src/contest.js")]
+    [InlineData("src/latest.py")]
+    [InlineData("Core/Ledger.lua")]
+    [InlineData("src/inspector.ts")]
+    [InlineData("src/attestation.go")]
+    [InlineData("Halation.Core/Rules/Heuristics.cs")]
+    [InlineData("Contest/Results.cs")]
+    [InlineData("app.js")]
+    public void ProductionPaths_AreNotTakenForTests(string path) =>
+        Assert.False(Heuristics.IsTestOrExampleFile(path), path);
+
+    /// <summary>
+    /// A busted spec at the root of a Lua addon, which is where a scan of the addon's own
+    /// folder puts it.
+    /// </summary>
+    [Fact]
+    public void FindingsInARootLevelSpecFolder_AreSoftened()
+    {
+        const string code = """local cipher = Cipher.getInstance("DES")""";
+
+        var production = Scan(code, "Core/Ledger.lua").Single(f => f.RuleId == "VC-CODE-006");
+        var test = Scan(code, "spec/sniper_dialog_verdict_spec.lua").Single(f => f.RuleId == "VC-CODE-006");
+
+        Assert.True(test.Severity < production.Severity);
+    }
+
+    /// <summary>The debug-mode rule's own exemption for tests sees the same folders.</summary>
+    [Fact]
+    public void DebugFlagInARootLevelTestFolder_IsIgnored()
+    {
+        Assert.True(Fired("VC-CFG-009", "DEBUG = True", "app/settings.py"));
+        Assert.False(Fired("VC-CFG-009", "DEBUG = True", "tests/conftest.py"));
+    }
+
     // ---- Engine behaviour --------------------------------------------------
 
     [Fact]
