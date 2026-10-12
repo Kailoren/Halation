@@ -326,7 +326,8 @@ public static class Heuristics
     /// because a rule asks about its matches in order and every one of them used to be scanned
     /// from the start of the line. On a one-line bundle that is the start of the file each time.
     /// The answer is the same either way: the scan only depends on the position it has reached
-    /// and which quote is open there, and that is exactly what is kept.
+    /// and which quote is open there, and that is exactly what is kept, along with where that
+    /// quote opened for <see cref="StringLiteralStart"/>.
     /// </para>
     /// </remarks>
     public static bool IsInsideStringLiteral(RuleContext context, int offset)
@@ -342,20 +343,20 @@ public static class Heuristics
             return false;
         }
 
-        var (scannedLine, i, quote) = context.StringScan;
+        var (scannedLine, i, quote, opened) = context.StringScan;
 
         if (scannedLine != lineNumber || i > target)
         {
-            (i, quote) = (0, '\0');
+            (i, quote, opened) = (0, '\0', -1);
         }
 
         // The state before the last step, which is where to resume if that step was an escape
         // that jumped past the target.
-        var before = (i, quote);
+        var before = (i, quote, opened);
 
         while (i < target)
         {
-            before = (i, quote);
+            before = (i, quote, opened);
             var c = line[i];
 
             if (c == '\\' && quote != '\0')
@@ -370,6 +371,7 @@ public static class Heuristics
                 if (quote == '\0')
                 {
                     quote = c;
+                    opened = i;
                 }
                 else if (quote == c)
                 {
@@ -380,10 +382,25 @@ public static class Heuristics
             i++;
         }
 
-        context.StringScan = i <= target ? (lineNumber, i, quote) : (lineNumber, before.i, before.quote);
+        context.StringScan = i <= target
+            ? (lineNumber, i, quote, opened)
+            : (lineNumber, before.i, before.quote, before.opened);
 
         return quote != '\0';
     }
+
+    /// <summary>
+    /// Where the quoted string holding an offset opens, as the position of its opening quote on
+    /// the offset's line, or null when the offset is not inside a string.
+    /// </summary>
+    /// <remarks>
+    /// Taken from the scan <see cref="IsInsideStringLiteral"/> has just made, which knows which
+    /// quote is open and so where it opened. Walking back from the offset to the nearest quote
+    /// would stop at the apostrophe in <c>"À L'HÔTEL DES VENTES"</c>, and would cost the length
+    /// of the string again for every match inside it.
+    /// </remarks>
+    public static int? StringLiteralStart(RuleContext context, int offset) =>
+        IsInsideStringLiteral(context, offset) ? context.StringScan.Opened : null;
 
     /// <summary>
     /// True when a match is a pattern being defined rather than code being run.

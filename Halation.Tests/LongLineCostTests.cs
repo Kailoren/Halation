@@ -35,6 +35,7 @@ public class LongLineCostTests
     [InlineData("VC-CODE-003", "a.js", "exec(\"a\" + b);", "", 20_000)]
     [InlineData("VC-CODE-004", "a.js", "BinaryFormatter;", "\"x\": false", 20_000)]
     [InlineData("VC-CODE-006", "a.js", "s=\"le des x\";", "", 20_000)]
+    [InlineData("VC-CODE-006", "a.lua", "s=\"À L'HÔTEL DES VENTES\";", "", 20_000)]
     [InlineData("VC-SEC-009", "a.js", "password=Tr0ub4dor3x;", "", 5_000)]
     [InlineData("VC-SEC-010", "a.js", "apiKey = \"7Xq2mVn8Kp4Rt6Yw9Zb3\";", "process.env.X", 5_000)]
     [InlineData("VC-CFG-007", "package.json", "\"x\": \"http://example.com/a\",", "\"url\":", 2_000)]
@@ -60,6 +61,27 @@ public class LongLineCostTests
         Assert.True(
             timer.ElapsedMilliseconds < 1_000,
             $"{ruleId}: {count:N0} ignored matches on one line took {timer.ElapsedMilliseconds:N0} ms");
+    }
+
+    /// <summary>
+    /// The capitalised-label test reads the whole string a match sits in. With every match
+    /// inside one string, reading it again for each of them would cost the square of its length.
+    /// </summary>
+    [Fact]
+    public void CapitalisedLabelHoldingEveryMatch_CostsLinearTime()
+    {
+        var engine = new RuleEngine();
+        engine.Analyse([File("warm.js", "x")]);
+
+        var content = "s = \"" + string.Concat(Enumerable.Repeat("L'HÔTEL DES VENTES ", 20_000)) + "\";";
+        var timer = Stopwatch.StartNew();
+        var result = engine.Analyse([File("a.lua", content)]);
+        timer.Stop();
+
+        Assert.DoesNotContain(result.Findings, f => f.RuleId == "VC-CODE-006");
+        Assert.True(
+            timer.ElapsedMilliseconds < 1_000,
+            $"20,000 matches in one capitalised string took {timer.ElapsedMilliseconds:N0} ms");
     }
 
     /// <summary>

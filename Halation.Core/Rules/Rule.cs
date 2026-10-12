@@ -208,9 +208,10 @@ public sealed class RuleContext
 
     /// <summary>
     /// Where <see cref="Heuristics.IsInsideStringLiteral"/> stopped on its last question: the
-    /// line, the next character to read, and the quote open at that point.
+    /// line, the next character to read, the quote open at that point, and where on the line
+    /// that quote was.
     /// </summary>
-    internal (int Line, int Index, char Quote) StringScan { get; set; }
+    internal (int Line, int Index, char Quote, int Opened) StringScan { get; set; }
 }
 
 /// <summary>A single check applied to recovered source.</summary>

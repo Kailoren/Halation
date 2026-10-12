@@ -326,6 +326,18 @@ public class RuleEngineTests
         Assert.False(Fired("VC-CODE-006", line));
 
     /// <summary>
+    /// The same article in a label set in capitals, where the match has no lower-case letter to
+    /// mark it as prose. The French pair are a WoW addon's frFR.lua, and the apostrophe in
+    /// <c>L'HÔTEL</c> sits inside a double-quoted string without ending it.
+    /// </summary>
+    [Theory]
+    [InlineData("""    ["ON THE AUCTION HOUSE"] = "À L'HÔTEL DES VENTES",""", "Locales/frFR.lua")]
+    [InlineData("""    ["WAITING FOR THE AUCTION HOUSE %d"] = "EN ATTENTE DE L'HÔTEL DES VENTES %d",""", "Locales/frFR.lua")]
+    [InlineData("""const t = "VERWALTUNG DES KONTEXTMENÜS";""", "src/i18n/de.js")]
+    public void TheWordDesInACapitalisedLabel_IsNotACipher(string line, string path) =>
+        Assert.False(Fired("VC-CODE-006", line, path));
+
+    /// <summary>
     /// The other half. Every real spelling still fires, including the lowercase ones, which is
     /// what stops the guard above from being a way to hide a cipher in a string.
     /// </summary>
@@ -335,8 +347,24 @@ public class RuleEngineTests
     [InlineData("""const c = crypto.createCipheriv("des", key, iv);""")]
     [InlineData("""cipher = Cipher.getInstance("DES/ECB/PKCS5Padding");""")]
     [InlineData("""var mode = CipherMode.ECB;""")]
+
+    // Capitals with nothing around them that reads as a sentence. Words joined by slashes are
+    // one token, and a cipher name does not count as the other word.
+    [InlineData("""cipher = Cipher.getInstance("DES");""")]
+    [InlineData("""algorithm = "DES";""")]
+    [InlineData("""var supported = "AES DES 3DES";""")]
+    [InlineData("""cipher = Cipher.getInstance("DES/CBC/NOPADDING");""")]
+    [InlineData("""var name = "DESCRYPTOSERVICEPROVIDER";""")]
     public void RealCipherUse_StillFires(string line) =>
         Assert.True(Fired("VC-CODE-006", line, "src/crypto.cs"));
+
+    /// <summary>
+    /// A label in capitals must be capitals throughout. One lower-case letter outside a
+    /// placeholder makes it code again.
+    /// </summary>
+    [Fact]
+    public void CapitalisedMatchInMixedCaseString_StillFires() =>
+        Assert.True(Fired("VC-CODE-006", """var spec = "DES MODE with padding";""", "src/crypto.cs"));
 
     // ---- Droppers ----------------------------------------------------------
 

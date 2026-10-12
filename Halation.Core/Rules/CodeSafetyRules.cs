@@ -25,7 +25,25 @@ public static class CodeSafetyRules
         """^\s*\w+\s*=\s*(?:0x[0-9a-fA-F]+|\d+)\s*,?\s*$""");
 
     /// <summary>
-    /// Whether a match is a lowercase word inside a sentence rather than an algorithm name.
+    /// A printf-style placeholder such as <c>%d</c> or <c>%1$s</c>, or a backslash escape. Neither
+    /// is a letter of the text, and both would read as a lower-case letter in a capitalised label.
+    /// </summary>
+    private static readonly Regex PlaceholderOrEscape = PatternRule.Compile(
+        """%[-+#0-9.$]*[A-Za-z]|\\.""");
+
+    /// <summary>
+    /// A word of four or more letters standing between spaces, allowing punctuation at either
+    /// end. Letters in any script count, so <c>KONTEXTMENÜS</c> is a word; a slash, digit or
+    /// hyphen inside the run means it is not one.
+    /// </summary>
+    private static readonly Regex LongWord = PatternRule.Compile(
+        """(?<!\S)\p{P}*\p{L}{4,}\p{P}*(?!\S)""");
+
+    /// <summary>Remembers each string's answer under where it opens. See <c>IsCapitalisedLabel</c>.</summary>
+    private static readonly object CapitalisedLabelKey = new();
+
+    /// <summary>
+    /// Whether a match is a word inside a sentence rather than an algorithm name.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -36,23 +54,40 @@ public static class CodeSafetyRules
     /// holds the word several times and only one of them needs to sit against punctuation.
     /// </para>
     /// <para>
-    /// Confined to quoted text, so ordinary code naming a cipher is untouched, and to matches
-    /// carrying a lowercase letter. An algorithm is written <c>DES</c> or <c>des</c> and never
-    /// <c>Des</c>, so title case is a sentence beginning rather than a cipher: two of the
-    /// three that survived the first attempt were "Des privilèges administrateur…".
+    /// Confined to quoted text, so ordinary code naming a cipher is untouched. An algorithm is
+    /// written <c>DES</c> or <c>des</c> and never <c>Des</c>, so title case is a sentence
+    /// beginning rather than a cipher: two of the three that survived the first attempt were
+    /// "Des privilèges administrateur…".
     /// </para>
     /// <para>
-    /// Read outwards from the match to the nearest quote on each side, stopping at the first
-    /// space. Taking the whole quoted string first gave the same answer, but a long string
-    /// holding many matches was copied once for each of them.
+    /// A match with no lower-case letter in it gets the stricter test in
+    /// <see cref="IsCapitalisedLabel"/>, because <c>"DES"</c> written that way is exactly how
+    /// code names the cipher. A space beside it is not enough: <c>"AES DES 3DES"</c> is a list
+    /// of algorithms. But interface labels are often set in capitals, and a French addon's
+    /// <c>"À L'HÔTEL DES VENTES"</c> is the auction house.
+    /// </para>
+    /// <para>
+    /// A lower-case match is read outwards to the nearest quote on each side, stopping at the
+    /// first space. Taking the whole quoted string first gave the same answer, but a long
+    /// string holding many matches was copied once for each of them.
     /// </para>
     /// </remarks>
     private static bool IsWordInProse(Match match, RuleContext context)
     {
-        if (!match.Value.Any(char.IsLower)
-            || !Heuristics.IsInsideStringLiteral(context, match.Index))
+        if (Heuristics.StringLiteralStart(context, match.Index) is not { } opening)
         {
             return false;
+        }
+
+        if (!match.Value.Any(char.IsLower))
+        {
+            // The captured position is in the key, so each string is read once however many
+            // matches it holds, which on a one-line bundle is the difference between linear and
+            // quadratic.
+            return context.TestLine(
+                context.LineAt(match.Index),
+                text => IsCapitalisedLabel(text, opening),
+                (CapitalisedLabelKey, opening));
         }
 
         var line = context.LineFor(match);
@@ -80,6 +115,41 @@ public static class CodeSafetyRules
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Whether the string that opens at <paramref name="opening"/> is a label set in capitals.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Two conditions on the whole string. It has no lower-case letter anywhere, so it is not
+    /// code that happens to be quoted, and it holds a word of four or more letters that is not
+    /// itself a cipher name, which a sentence does and <c>"DES"</c>, <c>"AES DES 3DES"</c> and
+    /// <c>"DES/CBC/NOPADDING"</c> do not.
+    /// </para>
+    /// <para>
+    /// Read from the opening quote to the one that closes it, honouring escapes the way
+    /// <see cref="Heuristics.IsInsideStringLiteral"/> does, so the apostrophe in a
+    /// double-quoted <c>L'HÔTEL</c> is part of the text rather than its end. Placeholders and
+    /// escapes are blanked before the lower-case test, because
+    /// <c>"EN ATTENTE DE L'HÔTEL DES VENTES %d"</c> is still all capitals.
+    /// </para>
+    /// </remarks>
+    private static bool IsCapitalisedLabel(string line, int opening)
+    {
+        var quote = line[opening];
+        var end = opening + 1;
+
+        while (end < line.Length && line[end] != quote)
+        {
+            end += line[end] == '\\' ? 2 : 1;
+        }
+
+        var text = PlaceholderOrEscape.Replace(
+            line[(opening + 1)..Math.Min(end, line.Length)], " ");
+
+        return !text.Any(char.IsLower)
+            && LongWord.Matches(text).Any(word => !WeakCipher.Pattern.IsMatch(word.Value));
     }
 
     /// <summary>The statement keyword a SQL match opens with. See <c>IsProseNotSql</c>.</summary>
