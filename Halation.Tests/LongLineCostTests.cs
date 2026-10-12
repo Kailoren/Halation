@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
+using Halation.Core.DeepPass;
 using Halation.Core.Model;
 using Halation.Core.Recovery;
 using Halation.Core.Rules;
@@ -82,6 +83,39 @@ public class LongLineCostTests
         Assert.True(
             timer.ElapsedMilliseconds < 1_000,
             $"20,000 matches in one capitalised string took {timer.ElapsedMilliseconds:N0} ms");
+    }
+
+    /// <summary>
+    /// Deep pass triage blanks a file's comments before it looks for surface calls, and on a
+    /// one-line file that has to be one pass. Each case is a few megabytes on a single line:
+    /// comment markers inside strings, surface words inside comments, and openers that never
+    /// close, which a scan that went looking for the closer every time would search for to the
+    /// end of the file once each.
+    /// </summary>
+    [Theory]
+    [InlineData("bundle.js", "a=\"//\";/* fetch( unsafe */b='/*';c=/\"\\/\\//g;d=`${e}//${`/*`}`;", "", 50_000)]
+    [InlineData("bundle.js", "x=1/*", "", 500_000)]
+    [InlineData("bundle.js", "q=/[", "", 600_000)]
+    [InlineData("Core.lua", "s=\"--[[\";--[[ loadstring(x) unsafe ]] t='--';", "", 60_000)]
+    [InlineData("Core.lua", "--[==[ io.open( ]] ]=] ]==]", "", 100_000)]
+    [InlineData("tool.py", "s=\"#\"+'#'+\"\"\"#\"\"\";", " # eval( unsafe", 150_000)]
+    [InlineData("page.html", "<p>a</p><!--", "", 200_000)]
+    [InlineData("Big.cs", "var u=\"//\";/* HttpClient */var v=@\"\\\";", "", 70_000)]
+    public void BlankingCommentsOnOneLine_CostsLinearTime(string path, string unit, string tail, int count)
+    {
+        // The surface patterns compile on first use, which is not what is being measured.
+        DeepPassTriage.Triage([File("warm.js", "x")], []);
+
+        var content = string.Concat(Enumerable.Repeat(unit, count)) + tail;
+        var timer = Stopwatch.StartNew();
+        var triage = DeepPassTriage.Triage([File(path, content)], []);
+        timer.Stop();
+
+        // Every surface word is in a comment, so a file that qualified was read wrongly.
+        Assert.Equal(0, triage.Qualified);
+        Assert.True(
+            timer.ElapsedMilliseconds < 1_000,
+            $"{path}: {content.Length:N0} characters on one line took {timer.ElapsedMilliseconds:N0} ms");
     }
 
     /// <summary>
