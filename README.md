@@ -213,8 +213,13 @@ never written to a report, and the interface only ever shows it masked.
 
 ### What it reads, and what it says it read
 
-Triage picks the files that take in information the application does not control, plus the files
-that reach them, up to a ceiling of 40 files. A file too large for one request is read in parts
+Triage picks the files a check flagged, the files that call into them, and the files that use
+calls bringing in data from outside the application, such as a download, an opened file or typed
+text, up to a ceiling of 40 files. It goes by the names of calls and ignores comments, so it
+cannot tell whether outside data really reaches a file, and test files only get the room the
+shipped code leaves. The list of calls is written for C#, JavaScript, TypeScript and Lua; the
+report names any other language in the scan, since a file in one can take in outside data
+without being picked. A file too large for one request is read in parts
 rather than cut off at the first one, with the file's own line numbers throughout, so a finding
 still points at a line you can open. The whole pass is capped at 80 requests, which is what
 bounds the cost now that one file can take several.

@@ -410,8 +410,13 @@
         report must not depend on whether the reader happened to have a key.
       </p>
       <p>
-        Triage picks the files that take in information the application does not control, plus
-        the files that reach them, up to 40 files and 80 requests. A file too large for one
+        Triage picks the files a check flagged, the files that call into them, and the files that
+        use calls bringing in data from outside the application, such as a download, an opened
+        file or typed text, up to 40 files and 80 requests. It goes by the names of calls and
+        ignores comments, so it cannot tell whether outside data really reaches a file, and test
+        files only get the room the shipped code leaves. The list of calls is written for C#,
+        JavaScript, TypeScript and Lua, and the report names any other language in the scan,
+        since a file in one can take in outside data without being picked. A file too large for one
         request is read in parts with its own line numbers rather than cut off, and third-party
         libraries a bundler inlined are skipped and named, since paying a model to read a copy of
         a published package answers nothing.
