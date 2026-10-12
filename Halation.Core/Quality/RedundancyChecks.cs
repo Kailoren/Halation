@@ -86,13 +86,24 @@ public static class RedundancyChecks
             // Two different reasons for the same silence, and saying the wrong one is a small
             // lie about what the scan had in front of it. An artifact can yield verbatim files
             // that are all configuration and markup, which is not the same as yielding none.
+            //
+            // Nor is it the same as yielding no code. A Lua addon or a Go service is source
+            // through and through, and "none of it was code" told its author something false
+            // about their own project. What is true is narrower: the check reads five
+            // languages and these files are in none of them.
             var verbatim = files.Count(f => !f.IsDecompiled);
 
-            limitations.Add(verbatim == 0
-                ? "No original source was available, so nothing was checked for duplication or "
-                  + "dead weight."
-                : $"None of the {verbatim:N0} verbatim file{(verbatim == 1 ? "" : "s")} recovered "
-                  + "were code, so nothing was checked for duplication or dead weight.");
+            limitations.Add(verbatim switch
+            {
+                0 => "No original source was available, so nothing was checked for duplication "
+                    + "or dead weight.",
+                1 => "The only verbatim file recovered is not in a language the duplication "
+                    + $"check reads ({CodeLanguageNames}), so nothing was checked for "
+                    + "duplication or dead weight.",
+                _ => $"None of the {verbatim:N0} verbatim files recovered are in a language the "
+                    + $"duplication check reads ({CodeLanguageNames}), so nothing was checked "
+                    + "for duplication or dead weight.",
+            });
 
             return new RedundancyResult { Limitations = limitations };
         }
@@ -344,6 +355,12 @@ public static class RedundancyChecks
     private static bool IsCode(SourceLanguage language) => language is SourceLanguage.CSharp
         or SourceLanguage.JavaScript or SourceLanguage.TypeScript or SourceLanguage.Python
         or SourceLanguage.Java;
+
+    /// <summary>
+    /// <see cref="IsCode"/>'s languages as the report names them. Kept beside it so the two
+    /// change together.
+    /// </summary>
+    private const string CodeLanguageNames = "C#, JavaScript, TypeScript, Python or Java";
 
     /// <summary>
     /// Lines that carry logic. Imports, blank lines, lone braces and comments are excluded,

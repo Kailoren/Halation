@@ -238,10 +238,35 @@ public class RedundancyChecksTests
 
         Assert.Contains(
             result.Limitations,
-            l => l.Contains("were code", StringComparison.Ordinal));
+            l => l.StartsWith("The only verbatim file recovered is not in a language", StringComparison.Ordinal));
 
         Assert.DoesNotContain(
             result.Limitations,
             l => l.Contains("No original source", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Lua and Go are code, just not code this check reads, so the report says which languages
+    /// it does read rather than calling a project's source something else.
+    /// </summary>
+    [Fact]
+    public void Source_in_other_languages_is_not_called_something_other_than_code()
+    {
+        var result = RedundancyChecks.Run(
+        [
+            File("Core/Ledger.lua", Block("x")),
+            File("pkg/server.go", Block("y")),
+        ]);
+
+        var limitation = Assert.Single(
+            result.Limitations,
+            l => l.Contains("verbatim files recovered", StringComparison.Ordinal));
+
+        Assert.Equal(
+            "None of the 2 verbatim files recovered are in a language the duplication check reads "
+            + "(C#, JavaScript, TypeScript, Python or Java), so nothing was checked for "
+            + "duplication or dead weight.",
+            limitation);
+        Assert.Empty(result.Findings);
     }
 }
