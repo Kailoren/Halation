@@ -79,6 +79,54 @@
 
     <div class="release reveal">
       <div class="release__head">
+        <h2 class="release__version">0.1.9</h2>
+        <span class="release__date">12 October 2026</span>
+      </div>
+      <p>
+        Fewer false alarms in translated and tested code, and the deep pass now picks the right
+        files in Lua projects.
+      </p>
+      <ul>
+        <li>
+          <strong>The deep pass ignores comments when choosing files.</strong> A file used to be
+          sent because a comment happened to say "unsafe" or "fetch". On one Lua addon, four of
+          the six files it read were chosen that way.
+        </li>
+        <li>
+          <strong>It knows where Lua code takes outside input.</strong> Addon messages, chat
+          events, edit boxes, <code>loadstring</code> and file reads all count now, so a World of
+          Warcraft addon gets its input handling read.
+        </li>
+        <li>
+          <strong>Test files no longer use up the deep pass.</strong> They only get the room the
+          shipped code leaves. On one repository, 38 of the 40 files it would have read were
+          tests.
+        </li>
+        <li>
+          <strong>The report says what the deep pass looked for.</strong> It used to say the files
+          it passed over had nothing coming in from outside, which it had no way of knowing. It
+          now names any language in the scan that its list of calls isn't written for.
+        </li>
+        <li>
+          <strong>Test folders at the top of a scanned project count as tests.</strong> A
+          <code>tests/</code> or <code>spec/</code> folder in the folder you scanned was treated as
+          shipped code, so a debug flag in a test raised a finding. Names like
+          <code>_test.go</code> and <code>.spec.js</code>, and .NET test projects, count too.
+        </li>
+        <li>
+          <strong>"DES" in a capitalised French or German label is no longer a broken
+          cipher.</strong> Two headings reading "L'HÔTEL DES VENTES" scored one translated app 86
+          instead of 100.
+        </li>
+        <li>
+          <strong>The duplication check says which languages it reads.</strong> It used to call
+          everything else "not code".
+        </li>
+      </ul>
+    </div>
+
+    <div class="release reveal">
+      <div class="release__head">
         <h2 class="release__version">0.1.8</h2>
         <span class="release__date">9 October 2026</span>
       </div>
