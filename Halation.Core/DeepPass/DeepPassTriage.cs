@@ -132,6 +132,14 @@ public static class DeepPassTriage
     /// which most addons use in place of the raw addon-message calls.
     /// </para>
     /// <para>
+    /// An edit box is known by what makes one: being created as one, the handlers that fire as
+    /// somebody types into it or leaves it, and the two stock templates that build one. Reading
+    /// its text is not enough on its own, because <c>:GetText()</c> reads a label or a button
+    /// just the same, and on an addon whose interface sets text everywhere that picked files
+    /// with no box in them at all. The handler and template names are matched inside strings,
+    /// which is where <c>SetScript</c> and <c>CreateFrame</c> take them.
+    /// </para>
+    /// <para>
     /// Case-sensitive, because Lua is: <c>Load(</c> is somebody's own function. A method call
     /// named <c>load</c> is left out for the same reason.
     /// </para>
@@ -142,7 +150,8 @@ public static class DeepPassTriage
         |(?<![.:\w])load\s*\(
         |\b(?:BN_)?CHAT_MSG_[A-Z_]+
         |\b(?:SendAddonMessage(?:Logged)?|RegisterAddonMessagePrefix|RegisterComm|SendCommMessage)\b
-        |:GetText\s*\(
+        |\bCreateFrame\s*\(\s*["']EditBox["']
+        |\b(?:OnEnterPressed|OnTextChanged|OnEditFocusLost|InputBoxTemplate|SearchBoxTemplate)\b
         |\bio\.(?:open|read|lines|popen)\b
         |\bos\.execute\b
         |\b(?:DecodeForPrint|DecodeForWoWAddonChannel|DecodeForWoWChatChannel|DecompressDeflate|DecompressZlib)\b
@@ -187,7 +196,7 @@ public static class DeepPassTriage
         // worth paying to read, since it does not ship.
         var shipped = files.Where(f => !Heuristics.IsTestOrExampleFile(f.RelativePath)).ToList();
 
-        // Each file with its place in the order: flagged, flagged test, caller, surface.
+        // Each file with its place in the order: flagged, caller, surface, flagged test.
         var selected = new Dictionary<string, (TriagedFile File, int Rank)>(StringComparer.OrdinalIgnoreCase);
 
         // 1. Files the deterministic pass already flagged. The model's job on these is to
@@ -203,7 +212,7 @@ public static class DeepPassTriage
                     ? "a deterministic rule matched here, in a test or example file"
                     : "a deterministic rule matched here",
                 KnownFindings = byPath[file.RelativePath],
-            }, test ? 1 : 0);
+            }, test ? 3 : 0);
         }
 
         // 2. Callers of anything flagged. This is the hop that turns "unbounded allocation"
@@ -220,7 +229,7 @@ public static class DeepPassTriage
                 {
                     File = file,
                     Reason = "calls into a file that a rule matched",
-                }, 2);
+                }, 1);
             }
         }
 
@@ -236,12 +245,12 @@ public static class DeepPassTriage
             {
                 File = file,
                 Reason = "handles input the application does not control",
-            }, 3);
+            }, 2);
         }
 
         // Flagged files first, then their callers, then the wider surface: if the budget runs
-        // out, it should run out on the least likely candidates. A flagged test still goes
-        // after every flagged file that ships, however many findings it has.
+        // out, it should run out on the least likely candidates. A flagged test goes after all
+        // of them, however many findings it has, so it only gets a slot the shipped code left.
         var ranked = selected.Values
             .OrderBy(s => s.Rank)
             .ThenByDescending(s => s.File.KnownFindings.Count)

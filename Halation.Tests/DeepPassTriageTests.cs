@@ -129,9 +129,9 @@ public class DeepPassTriageTests
 
     /// <summary>
     /// The ways a Lua addon takes data in or runs it: chunks loaded from strings and files,
-    /// chat and addon-channel events, an edit box, the standard library's file and shell
-    /// calls, and an import string decoded and decompressed. None of these match the general
-    /// list, so each is down to the Lua one.
+    /// chat and addon-channel events, an edit box being made or typed into, the standard
+    /// library's file and shell calls, and an import string decoded and decompressed. None of
+    /// these match the general list, so each is down to the Lua one.
     /// </summary>
     [Theory]
     [InlineData("local f = loadstring(code)")]
@@ -144,7 +144,13 @@ public class DeepPassTriageTests
     [InlineData("C_ChatInfo.SendAddonMessage(prefix, payload, \"GUILD\")")]
     [InlineData("C_ChatInfo.RegisterAddonMessagePrefix(\"MyAddon\")")]
     [InlineData("self:RegisterComm(\"MyAddon\")")]
-    [InlineData("local text = editBox:GetText()")]
+    [InlineData("local box = CreateFrame(\"EditBox\", nil, parent)")]
+    [InlineData("local box = CreateFrame ( 'EditBox' , nil, parent)")]
+    [InlineData("box:SetScript(\"OnEnterPressed\", submit)")]
+    [InlineData("box:SetScript(\"OnTextChanged\", refresh)")]
+    [InlineData("box:SetScript(\"OnEditFocusLost\", save)")]
+    [InlineData("local box = CreateFrame(\"Frame\", nil, parent, \"InputBoxTemplate\")")]
+    [InlineData("local search = CreateFrame(\"Frame\", nil, parent, \"SearchBoxTemplate\")")]
     [InlineData("local handle = io.open(path, \"r\")")]
     [InlineData("local line = io.read(\"*l\")")]
     [InlineData("for line in io.lines(path) do end")]
@@ -164,7 +170,17 @@ public class DeepPassTriageTests
     public void Lua_calls_do_not_qualify_a_file_in_another_language(string path) =>
         Assert.False(Qualifies(
             path,
-            "var f = loadstring(code); os.execute(cmd); var t = box:GetText(); RegisterEvent(\"CHAT_MSG_ADDON\");"));
+            "var f = loadstring(code); os.execute(cmd); var b = CreateFrame(\"EditBox\"); RegisterEvent(\"CHAT_MSG_ADDON\");"));
+
+    /// <summary>
+    /// Reading text is not an edit box. <c>:GetText()</c> reads a label or a button just the same,
+    /// and on an addon that sets text all over its interface it picked files with no box in them.
+    /// </summary>
+    [Fact]
+    public void Reading_text_without_an_edit_box_does_not_qualify() =>
+        Assert.False(Qualifies(
+            "Row.lua",
+            "row.hint:SetText(row.hint:GetText() or \"\")\nlocal label = button:GetText()"));
 
     /// <summary>Lua is case-sensitive, and a method that happens to be called load is not Lua's load.</summary>
     [Fact]
@@ -223,27 +239,37 @@ public class DeepPassTriageTests
     }
 
     /// <summary>
-    /// A rule match in a test is still worth a look, after every flagged file that ships,
-    /// whatever the counts.
+    /// A rule match in a test is still worth a look, but only in a slot the shipped code leaves
+    /// over: after every file that ships, flagged, caller and surface alike, whatever the counts.
     /// </summary>
     [Fact]
-    public void A_flagged_test_file_ranks_after_every_flagged_file_that_ships()
+    public void A_flagged_test_file_ranks_after_every_file_that_ships()
     {
-        var triage = DeepPassTriage.Triage(
-            [
-                File("spec/import_spec.lua", "local x = 1"),
-                File("src/Import.lua", "local y = 2"),
-            ],
-            findings:
-            [
-                FindingIn("spec/import_spec.lua"),
-                FindingIn("spec/import_spec.lua"),
-                FindingIn("spec/import_spec.lua"),
-                FindingIn("src/Import.lua"),
-            ]);
+        IReadOnlyList<RecoveredFile> files =
+        [
+            File("spec/import_spec.lua", "local x = 1"),
+            File("src/Import.lua", "local y = 2"),
+            File("src/Window.lua", "local rows = Import.Read()"),
+            File("src/Comms.lua", "C_ChatInfo.SendAddonMessage(prefix, payload, \"GUILD\")"),
+        ];
 
-        Assert.Equal(new[] { "src/Import.lua", "spec/import_spec.lua" }, Picked(triage));
-        Assert.Contains("test or example file", triage.Selected[1].Reason, StringComparison.Ordinal);
+        IReadOnlyList<Finding> findings =
+        [
+            FindingIn("spec/import_spec.lua"),
+            FindingIn("spec/import_spec.lua"),
+            FindingIn("spec/import_spec.lua"),
+            FindingIn("src/Import.lua"),
+        ];
+
+        var triage = DeepPassTriage.Triage(files, findings);
+
+        Assert.Equal(
+            new[] { "src/Import.lua", "src/Window.lua", "src/Comms.lua", "spec/import_spec.lua" },
+            Picked(triage));
+        Assert.Contains("test or example file", triage.Selected[3].Reason, StringComparison.Ordinal);
+
+        // So a ceiling that the shipped code fills leaves the test out.
+        Assert.DoesNotContain("spec/import_spec.lua", Picked(DeepPassTriage.Triage(files, findings, maxFiles: 3)));
     }
 
     // ---- Languages the lists are not written for ------------------------------
