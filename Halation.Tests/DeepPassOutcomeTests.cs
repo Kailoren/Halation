@@ -126,6 +126,173 @@ public class DeepPassOutcomeTests
         Assert.InRange(result.CodeReviewedPercent ?? 0, 1, 99);
     }
 
+    // ---- What it says about the files it did not read -----------------------
+
+    private static async Task<string> SaidAbout(params RecoveredFile[] files)
+    {
+        var result = await DeepPassRunner.RunAsync(
+            files,
+            [],
+            new ScanOptions { DeepPassApiKey = "sk-ant-test" },
+            new Scripted(Reviewed));
+
+        return string.Join("\n", result.Limitations);
+    }
+
+    /// <summary>
+    /// The files triage passed over used to be described as having "nothing arriving from
+    /// outside them for the AI to follow". Triage looks for findings and the names of calls,
+    /// so it cannot know that, and the report now says what it looked for instead.
+    /// </summary>
+    [Fact]
+    public async Task Files_the_selection_passed_over_are_not_said_to_have_nothing_coming_in()
+    {
+        var said = await SaidAbout(
+            File("client.js", "const body = await fetch(url);"),
+            File("format.js", "const s = a + b;"),
+            File("maths.js", "const n = 1;"));
+
+        Assert.DoesNotContain("nothing arriving", said, StringComparison.Ordinal);
+        Assert.DoesNotContain("checked in full like the rest", said, StringComparison.Ordinal);
+        Assert.Contains("files a check flagged", said, StringComparison.Ordinal);
+        Assert.Contains(
+            "The other 2 were not picked. The selection goes by the names of calls in the code, "
+            + "so it cannot say whether outside data reaches them.",
+            said,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task One_file_passed_over_is_spoken_of_as_one()
+    {
+        var said = await SaidAbout(
+            File("client.js", "const body = await fetch(url);"),
+            File("maths.js", "const n = 1;"));
+
+        Assert.Contains(
+            "The other file was not picked. The selection goes by the names of calls in the "
+            + "code, so it cannot say whether outside data reaches that file.",
+            said,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>A partial pass was picked the same way, so it says the same about what was passed over.</summary>
+    [Fact]
+    public async Task A_partial_pass_says_what_the_selection_looked_for_too()
+    {
+        var result = await DeepPassRunner.RunAsync(
+            [.. Files, File("maths.js", "const n = 1;")],
+            [],
+            new ScanOptions { DeepPassApiKey = "sk-ant-test" },
+            new Scripted(Reviewed, Failed()));
+
+        var said = string.Join("\n", result.Limitations);
+
+        Assert.Equal(DeepPassOutcome.PartlyReviewed, result.Outcome);
+        Assert.Contains("files a check flagged", said, StringComparison.Ordinal);
+        Assert.Contains("The other file was not picked.", said, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The test-file rule is mentioned where there are test files for it to have left out, and
+    /// not on a scan of something that ships none.
+    /// </summary>
+    [Fact]
+    public async Task Mentions_test_files_only_when_there_are_some()
+    {
+        const string rule = "Test and example files are only included when a check flagged them.";
+
+        Assert.DoesNotContain(
+            rule, await SaidAbout(File("client.js", "fetch(url);")), StringComparison.Ordinal);
+
+        Assert.Contains(
+            rule,
+            await SaidAbout(File("client.js", "fetch(url);"), File("client.test.js", "fetch(url);")),
+            StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("main.go", "Go")]
+    [InlineData("app.py", "Python")]
+    public async Task Names_a_language_the_list_of_calls_is_not_written_for(string path, string language)
+    {
+        var said = await SaidAbout(File("client.js", "fetch(url);"), File(path, "x = 1"));
+
+        Assert.Contains(
+            "The list of calls the selection looks for is written for C#, JavaScript, TypeScript "
+            + $"and Lua. This application also has code in {language}, so a file in that "
+            + "language can take in data from outside without being picked.",
+            said,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Names_two_languages_as_either_of_them()
+    {
+        var said = await SaidAbout(
+            File("client.js", "fetch(url);"), File("main.go", "x"), File("app.py", "x"));
+
+        Assert.Contains(
+            "also has code in Go and Python, so a file in either of them can take in data",
+            said,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Names_three_languages_as_any_of_them()
+    {
+        var said = await SaidAbout(
+            File("client.js", "fetch(url);"),
+            File("main.go", "x"),
+            File("app.py", "x"),
+            File("lib.rs", "x"));
+
+        Assert.Contains(
+            "also has code in Go, Python and Rust, so a file in any of them can take in data",
+            said,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Nothing to say when the code is all in languages with patterns. SQL is not a program, and
+    /// a Go test does not ship.
+    /// </summary>
+    [Fact]
+    public async Task Says_nothing_about_languages_when_every_one_has_patterns()
+    {
+        var said = await SaidAbout(
+            File("client.js", "fetch(url);"),
+            File("App.cs", "int x;"),
+            File("ui.ts", "let x = 1;"),
+            File("Core.lua", "local x = 1"),
+            File("schema.sql", "SELECT 1;"),
+            File("main_test.go", "package main"));
+
+        Assert.DoesNotContain("also has code in", said, StringComparison.Ordinal);
+        Assert.DoesNotContain("is written for", said, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A pass with nothing to read used to say no file "handles input it does not control",
+    /// which is the same claim about the code, made about all of it.
+    /// </summary>
+    [Fact]
+    public async Task A_pass_with_nothing_to_read_says_what_it_looked_for()
+    {
+        var result = await DeepPassRunner.RunAsync(
+            [File("main.go", "package main")],
+            [],
+            new ScanOptions { DeepPassApiKey = "sk-ant-test" },
+            new Scripted(Reviewed));
+
+        var said = string.Join("\n", result.Limitations);
+
+        Assert.Equal(DeepPassOutcome.NotRun, result.Outcome);
+        Assert.DoesNotContain("handles input it does not control", said, StringComparison.Ordinal);
+        Assert.Contains("had nothing to read", said, StringComparison.Ordinal);
+        Assert.Contains("also has code in Go", said, StringComparison.Ordinal);
+    }
+
     // ---- Stopping -----------------------------------------------------------
 
     /// <summary>

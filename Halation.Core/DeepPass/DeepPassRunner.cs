@@ -81,19 +81,30 @@ public static class DeepPassRunner
 
         if (triaged.Count == 0)
         {
+            // Nothing was read, so nothing may be claimed, and that includes a claim about the
+            // files themselves. All triage found was that none of them had a finding or used a
+            // call on its list, which is a fact about the list as much as about the code.
+            List<string> said =
+            [
+                "The deep pass ran but had nothing to read. It reads files a check flagged and "
+                + "files outside the tests that use one of a list of calls that bring in data "
+                + "from outside the application, and there were none of either here. The list "
+                + "goes by the names of calls in the code, so it cannot say whether outside data "
+                + "reaches this application some other way.",
+            ];
+
+            if (triage.LanguagesWithoutPatterns.Count > 0)
+            {
+                said.Add(Unpatterned(triage.LanguagesWithoutPatterns));
+            }
+
             return new DeepPassResult
             {
-                // Nothing was read, so nothing may be claimed. It is not a failure either: the
-                // pass looked at what there was and there was nothing in it worth a second read.
                 Outcome = DeepPassOutcome.NotRun,
                 Backend = client.Description,
                 Billed = client.BillsTheReader,
                 SpendsSubscription = client.SpendsSubscription,
-                Limitations =
-                [
-                    "The deep pass ran but found nothing worth reading: no file in this "
-                    + "application handles input it does not control.",
-                ],
+                Limitations = said,
             };
         }
 
@@ -327,20 +338,22 @@ public static class DeepPassRunner
         lines.Add($"The deep pass was answered by {client.Description}.");
 
         // Every recovered file went through the rule pass; this is the second read of the
-        // subset that handles untrusted input, and the two must not be confused.
+        // subset triage picked, and the two must not be confused.
         var second = outcome == DeepPassOutcome.Reviewed
             ? $"{reviewed} of them {(reviewed == 1 ? "was" : "were")} also read a second time by "
-              + $"the AI, in {sent} request{(sent == 1 ? "" : "s")}. That second reading is "
-              + "slower, so it is saved for the files that take in information from outside the "
-              + "application (anything downloaded, opened, or typed in) and for the code those "
-              + "files hand their results to, because that is where problems usually start. The "
-              + $"remaining {fileCount - reviewed:N0} were checked in full like the rest; there "
-              + "was nothing arriving from outside them for the AI to follow."
+              + $"the AI, in {sent} request{(sent == 1 ? "" : "s")}."
             : $"The AI read part of it as well: {reviewed} file"
               + $"{(reviewed == 1 ? "" : "s")} in full, {partly} in part, {failed} it could not "
               + $"read at all, and {untouched} it did not reach.";
 
-        lines.Add($"Every one of the {fileCount:N0} files in this application was checked. {second}");
+        lines.Add(
+            $"Every one of the {fileCount:N0} files in this application was checked. {second} "
+            + Selection(fileCount, triage));
+
+        if (triage.LanguagesWithoutPatterns.Count > 0)
+        {
+            lines.Add(Unpatterned(triage.LanguagesWithoutPatterns));
+        }
 
         // The deep pass's own coverage, which is not the coverage figure beside the score: that
         // one says how much of the application could be read at all, and this one says how much
@@ -353,10 +366,10 @@ public static class DeepPassRunner
         if (triage.HitCeiling)
         {
             lines.Add(
-                $"{triage.Qualified:N0} files were worth a second reading and the file limit "
+                $"{triage.Qualified:N0} files were picked for a second reading and the file limit "
                 + $"stopped the pass at {triage.Selected.Count}, so "
-                + $"{triage.Qualified - triage.Selected.Count:N0} that take in information from "
-                + "outside the application did not get one. Raising the limit would cover them.");
+                + $"{triage.Qualified - triage.Selected.Count:N0} of them did not get one. Raising "
+                + "the limit would cover them.");
         }
 
         if (plan.HitRequestCeiling)
@@ -381,6 +394,69 @@ public static class DeepPassRunner
         }
 
         return lines;
+    }
+
+    /// <summary>
+    /// What triage looked for, and what being passed over by it does not mean.
+    /// </summary>
+    /// <remarks>
+    /// This replaced a sentence saying the files left out "were checked in full like the rest;
+    /// there was nothing arriving from outside them for the AI to follow". Triage cannot know
+    /// that. It looks for findings and for the names of calls, and a file that receives outside
+    /// data through a function defined in another file names none of them. What it can say is
+    /// what it looked for.
+    /// </remarks>
+    private static string Selection(int fileCount, TriageResult triage)
+    {
+        var text = "That reading is slower, so it is kept for files a check flagged, files that "
+                   + "call into one of those, and files that use one of a list of calls that bring "
+                   + "in data from outside the application, such as downloading something, "
+                   + "opening a file or reading what was typed.";
+
+        if (triage.TestFiles > 0)
+        {
+            text += " Test and example files are only included when a check flagged them.";
+        }
+
+        var passedOver = fileCount - triage.Qualified;
+
+        if (passedOver <= 0)
+        {
+            return text;
+        }
+
+        return text
+               + (passedOver == 1
+                   ? " The other file was not picked. The selection goes by the names of calls in "
+                     + "the code, so it cannot say whether outside data reaches that file."
+                   : $" The other {passedOver:N0} were not picked. The selection goes by the names "
+                     + "of calls in the code, so it cannot say whether outside data reaches them.");
+    }
+
+    /// <summary>
+    /// Names the languages here that the selection's list of calls was not written for.
+    /// </summary>
+    /// <remarks>
+    /// A Go service that takes every byte it handles off the network can match nothing on a list
+    /// written in C# and JavaScript terms, and without this sentence the report would read as
+    /// though it had nothing worth a second look.
+    /// </remarks>
+    private static string Unpatterned(IReadOnlyList<string> languages)
+    {
+        var named = languages.Count == 1
+            ? languages[0]
+            : $"{string.Join(", ", languages.Take(languages.Count - 1))} and {languages[^1]}";
+
+        var which = languages.Count switch
+        {
+            1 => "a file in that language",
+            2 => "a file in either of them",
+            _ => "a file in any of them",
+        };
+
+        return "The list of calls the selection looks for is written for C#, JavaScript, "
+               + $"TypeScript and Lua. This application also has code in {named}, so {which} can "
+               + "take in data from outside without being picked.";
     }
 
     /// <summary>
