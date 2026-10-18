@@ -4,8 +4,8 @@
 <img width="200" height="200" alt="Halation" src="docs/assets/img/logo.png" />
 
 # Halation
-[![License](https://img.shields.io/github/license/Kailoren/Halation?style=plastic)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/Kailoren/Halation?include_prereleases&style=plastic)](https://github.com/kailoren/halation/releases)
+[![License](https://img.shields.io/badge/license-MIT-green?style=plastic)](LICENSE)
+[![Release](https://img.shields.io/badge/release-v0.1.9-orange?style=plastic)](https://github.com/kailoren/halation/releases)
 [![Downloads](https://img.shields.io/github/downloads/kailoren/halation/total?style=plastic)](https://github.com/kailoren/halation/releases)
 ![Platform](https://img.shields.io/badge/platform-Windows-blue?style=plastic)
 
