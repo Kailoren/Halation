@@ -79,6 +79,39 @@
 
     <div class="release reveal">
       <div class="release__head">
+        <h2 class="release__version">0.1.11</h2>
+        <span class="release__date">21 November 2026</span>
+      </div>
+      <p>
+        Another runtime update, and the deep pass works with the current Claude desktop app
+        again.
+      </p>
+      <ul>
+        <li>
+          <strong>The bundled .NET runtime is updated to 10.0.15.</strong> Seven advisories
+          have been published against the 10.0.13 runtime inside 0.1.10, and scanning the
+          0.1.10 download now scores it 62 out of 100. None of the seven touch anything
+          Halation does, but a scanner shouldn't fail its own check.
+        </li>
+        <li>
+          <strong>Claude Code is found again.</strong> The Claude desktop app keeps its copy in
+          a new folder now, so the deep pass said Claude Code wasn't there when it was.
+        </li>
+        <li>
+          <strong>One file can no longer hold up the deep pass.</strong> A Python, Java,
+          Kotlin, Scala, Groovy, Swift or Dart file that was one long run of quote marks took
+          minutes to get through before the deep pass even chose its files. A 1 MB one took
+          close to three.
+        </li>
+        <li>
+          <strong>The archive reader used for installer payloads is updated.</strong>
+          Nothing changes in what gets found inside them.
+        </li>
+      </ul>
+    </div>
+
+    <div class="release reveal">
+      <div class="release__head">
         <h2 class="release__version">0.1.10</h2>
         <span class="release__date">24 October 2026</span>
       </div>
