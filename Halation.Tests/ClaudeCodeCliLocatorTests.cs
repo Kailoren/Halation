@@ -259,6 +259,59 @@ public sealed class ClaudeCodeCliLocatorTests : IDisposable
         Assert.Equal(direct, found.Path);
     }
 
+    // ---- The Claude-Data folder ----------------------------------------------
+
+    /// <summary>
+    /// Where newer builds of the packaged app keep the CLI, outside the package altogether.
+    /// The old <c>LocalCache</c> location is left empty, so a search that stopped there found
+    /// nothing on a machine running the deep pass's own CLI.
+    /// </summary>
+    [Fact]
+    public void Finds_the_cli_in_the_desktop_apps_data_folder()
+    {
+        Directory.CreateDirectory(Dir(
+            "AppData", "Local", "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Roaming", "Claude"));
+        var expected = Touch(
+            "AppData", "Local", "Claude-Data", "claude_pzs8sxrjxfjjc",
+            "claude-code", "2.1.330", "9424831ad51c", "claude.exe");
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(expected, found.Path);
+        Assert.Equal(ClaudeCodeCliSource.DesktopAppData, found.Source);
+        Assert.Equal(new Version(2, 1, 330), found.Version);
+        Assert.Contains("desktop app (2.1.330)", found.Description, StringComparison.Ordinal);
+    }
+
+    /// <summary>A copy left behind in the package's storage is older than the one in use.</summary>
+    [Fact]
+    public void Prefers_the_data_folder_over_a_copy_left_in_the_package()
+    {
+        Touch("AppData", "Local", "Packages", "Claude_pzs8sxrjxfjjc", "LocalCache", "Roaming",
+              "Claude", "claude-code", "2.1.293", "83cb0bd7fed4", "claude.exe");
+        var current = Touch("AppData", "Local", "Claude-Data", "claude_pzs8sxrjxfjjc",
+                            "claude-code", "2.1.330", "9424831ad51c", "claude.exe");
+
+        var found = ClaudeCodeCliLocator.Locate(Probe());
+
+        Assert.NotNull(found);
+        Assert.Equal(current, found.Path);
+    }
+
+    /// <summary>
+    /// The data folder holds a <c>claude-code-spare</c> beside <c>claude-code</c>. Only the
+    /// directory the app runs from is searched.
+    /// </summary>
+    [Fact]
+    public void Ignores_directories_beside_claude_code_in_the_data_folder()
+    {
+        Touch("AppData", "Local", "Claude-Data", "claude_pzs8sxrjxfjjc",
+              "claude-code-spare", "2.1.330", "9424831ad51c", "claude.exe");
+
+        Assert.Null(ClaudeCodeCliLocator.Locate(Probe()));
+    }
+
     /// <summary>Packages belonging to other applications are not mistaken for this one.</summary>
     [Fact]
     public void Ignores_unrelated_packages()
@@ -437,9 +490,9 @@ public sealed class ClaudeCodeCliLocatorTests : IDisposable
 
         Assert.All(descriptions, d => Assert.False(string.IsNullOrWhiteSpace(d)));
 
-        // The two bundled sources share wording, since the distinction between them is an
+        // The three bundled sources share wording, since the distinction between them is an
         // installation detail no reader can act on.
-        Assert.Equal(descriptions.Count - 1, descriptions.Distinct().Count());
+        Assert.Equal(descriptions.Count - 2, descriptions.Distinct().Count());
     }
 
     [Fact]

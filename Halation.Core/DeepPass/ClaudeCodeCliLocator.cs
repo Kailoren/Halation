@@ -4,7 +4,7 @@ namespace Halation.Core.DeepPass;
 /// Which install a Claude Code executable came from.
 /// </summary>
 /// <remarks>
-/// Recorded because the five kinds are not equally durable: a standalone install has a stable
+/// Recorded because the six kinds are not equally durable: a standalone install has a stable
 /// path, while the bundled copy sits in another app's private storage under a version-numbered
 /// directory that moves on every update. Naming which one answered explains a scan that worked
 /// last week and does not today.
@@ -27,6 +27,12 @@ public enum ClaudeCodeCliSource
 
     /// <summary>Bundled with an unpackaged desktop app install.</summary>
     DesktopApp,
+
+    /// <summary>
+    /// Bundled in the desktop app's own data folder, <c>%LOCALAPPDATA%\Claude-Data</c>, which
+    /// newer builds of the packaged app use in place of the package's private storage.
+    /// </summary>
+    DesktopAppData,
 }
 
 /// <summary>A Claude Code executable that was actually found on disk.</summary>
@@ -48,7 +54,9 @@ public sealed record ClaudeCodeCli
         ClaudeCodeCliSource.Path => "a Claude Code CLI on PATH",
         ClaudeCodeCliSource.NpmGlobal => "an npm-installed Claude Code CLI",
         ClaudeCodeCliSource.NativeInstaller => "a Claude Code CLI from the native installer",
-        ClaudeCodeCliSource.PackagedDesktopApp or ClaudeCodeCliSource.DesktopApp =>
+        ClaudeCodeCliSource.PackagedDesktopApp
+            or ClaudeCodeCliSource.DesktopApp
+            or ClaudeCodeCliSource.DesktopAppData =>
             $"the Claude Code CLI bundled with the Claude desktop app{VersionSuffix}",
         _ => "a Claude Code CLI",
     };
@@ -109,7 +117,13 @@ public sealed record ClaudeCodeCliProbe
 /// the same absolute path ran inside the package and was "not recognized" from a normal shell.
 /// </para>
 /// <para>
-/// Ordered most durable first, with the bundled copy last rather than not at all, since for
+/// Newer builds of the packaged app moved their data out of the package altogether, to
+/// <c>%LOCALAPPDATA%\Claude-Data\claude_*\</c>, and left the <c>LocalCache</c> copy empty. That
+/// folder is real to every process, so no redirection applies to it. It is searched before the
+/// package's private storage because an old install left behind there would be stale.
+/// </para>
+/// <para>
+/// Ordered most durable first, with the bundled copies last rather than not at all, since for
 /// most people the desktop app is the only Claude Code they have.
 /// </para>
 /// </remarks>
@@ -120,6 +134,12 @@ public static class ClaudeCodeCliLocator
 
     /// <summary>The desktop app's package family, whose publisher suffix varies by channel.</summary>
     private const string PackagePattern = "Claude_*";
+
+    /// <summary>
+    /// The desktop app's folder inside <c>Claude-Data</c>, seen as <c>claude_</c> plus the
+    /// package's publisher suffix. Matched loosely so a build without the suffix still resolves.
+    /// </summary>
+    private const string DataFolderPattern = "claude*";
 
     /// <summary>
     /// Searches for a usable executable and returns the first one found, or null when the
@@ -133,6 +153,7 @@ public static class ClaudeCodeCliLocator
         return FindOnPath(probe)
                ?? FindNpmGlobal(probe)
                ?? FindNativeInstaller(probe)
+               ?? FindDesktopAppData(probe)
                ?? FindPackagedDesktopApp(probe)
                ?? FindDesktopApp(probe);
     }
@@ -196,8 +217,28 @@ public static class ClaudeCodeCliLocator
         return null;
     }
 
+    /// <summary>4. Bundled in the desktop app's own data folder under <c>Claude-Data</c>.</summary>
+    private static ClaudeCodeCli? FindDesktopAppData(ClaudeCodeCliProbe probe)
+    {
+        if (probe.LocalApplicationData is not { } localAppData)
+        {
+            return null;
+        }
+
+        foreach (var folder in Directories(Combine(localAppData, "Claude-Data"), DataFolderPattern))
+        {
+            if (HighestVersioned(Combine(folder, "claude-code"), ClaudeCodeCliSource.DesktopAppData)
+                is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>
-    /// 4. Bundled inside the packaged desktop app. The publisher suffix on the package
+    /// 5. Bundled inside the packaged desktop app. The publisher suffix on the package
     /// directory is not hardcoded, so a differently-signed channel still resolves.
     /// </summary>
     private static ClaudeCodeCli? FindPackagedDesktopApp(ClaudeCodeCliProbe probe)
@@ -222,7 +263,7 @@ public static class ClaudeCodeCliLocator
         return null;
     }
 
-    /// <summary>5. Bundled with an unpackaged desktop app install, where no redirection applies.</summary>
+    /// <summary>6. Bundled with an unpackaged desktop app install, where no redirection applies.</summary>
     private static ClaudeCodeCli? FindDesktopApp(ClaudeCodeCliProbe probe) =>
         probe.ApplicationData is { } appData
             ? HighestVersioned(
