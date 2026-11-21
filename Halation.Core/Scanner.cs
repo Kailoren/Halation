@@ -483,13 +483,13 @@ public sealed class Scanner
                 ? $", and {dependencies.Unresolved.Count - 5} more"
                 : "";
 
-            var (subject, pronoun) = dependencies.Unresolved.Count == 1
-                ? ("One manifest declares", "it")
-                : ($"{dependencies.Unresolved.Count} manifests declare", "they");
+            var (subject, naming) = dependencies.Unresolved.Count == 1
+                ? ("One manifest declares", "it names")
+                : ($"{dependencies.Unresolved.Count} manifests declare", "they name");
 
             limitations.Add(
                 $"{subject} only version ranges with no lock file, so the dependencies "
-                + $"{pronoun} name could not be checked: {shown}{rest}");
+                + $"{naming} could not be checked: {shown}{rest}");
         }
 
         return limitations.Count == coverage.ChecksNotPossible.Count
