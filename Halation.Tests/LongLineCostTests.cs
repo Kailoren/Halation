@@ -101,6 +101,12 @@ public class LongLineCostTests
     [InlineData("tool.py", "s=\"#\"+'#'+\"\"\"#\"\"\";", " # eval( unsafe", 150_000)]
     [InlineData("page.html", "<p>a</p><!--", "", 200_000)]
     [InlineData("Big.cs", "var u=\"//\";/* HttpClient */var v=@\"\\\";", "", 70_000)]
+    // Nothing but quotes. Every third one closes a triple-quoted string, and the closer used to
+    // count the rest of the run each time it saw a quote, so the file was read once per string.
+    [InlineData("tool.py", "'", "", 300_000)]
+    [InlineData("tool.py", "\"", "", 300_000)]
+    [InlineData("Main.java", "\"", "", 300_000)]
+    [InlineData("App.kt", "'", "", 300_000)]
     public void BlankingCommentsOnOneLine_CostsLinearTime(string path, string unit, string tail, int count)
     {
         // The surface patterns compile on first use, which is not what is being measured.

@@ -431,17 +431,11 @@ internal static class CommentBlanker
                     continue;
                 }
 
-                if (c == quote)
+                // Three in a row close it, and only the next two need looking at. Counting the
+                // whole run here read a file of nothing but quotes once per string it closed.
+                if (c == quote && At(j + 1, quote) && At(j + 2, quote))
                 {
-                    var run = RunOf(j, quote);
-
-                    if (run >= 3)
-                    {
-                        return j + 3;
-                    }
-
-                    j += run;
-                    continue;
+                    return j + 3;
                 }
 
                 j++;
